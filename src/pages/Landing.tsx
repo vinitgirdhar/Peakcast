@@ -12,11 +12,11 @@ import {
   Play,
   Plus,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { BrandMark } from "../ui.js";
 import { useTheme } from "../theme.js";
 import { motion, useReducedMotion } from "motion/react";
-import { itemMotion, listMotion } from "../motion.js";
+import { Collapse, itemMotion, listMotion } from "../motion.js";
 
 const features = [
   {
@@ -83,6 +83,45 @@ const faqs = [
       "Choose Developers at the top of this page or Build with our API in the footer. The developer guide includes API documentation, integration examples, and setup instructions.",
   },
 ];
+
+function FAQItem({ question, answer }: (typeof faqs)[number]) {
+  const answerId = useId();
+  const [expanded, setExpanded] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const open = expanded || hovered;
+  return (
+    <div
+      className="landing-faq-item"
+      onPointerEnter={(event) => {
+        if (
+          event.pointerType === "mouse" &&
+          matchMedia("(hover: hover)").matches
+        )
+          setHovered(true);
+      }}
+      onPointerLeave={() => setHovered(false)}
+    >
+      <button
+        type="button"
+        className="landing-faq-question"
+        aria-expanded={open}
+        aria-controls={answerId}
+        onClick={() => {
+          setExpanded(!open);
+          setHovered(false);
+        }}
+      >
+        {question}
+        <Plus size={18} aria-hidden="true" />
+      </button>
+      <div inert={!open}>
+        <Collapse open={open} id={answerId}>
+          <p>{answer}</p>
+        </Collapse>
+      </div>
+    </div>
+  );
+}
 
 export function Landing({
   onContinue,
@@ -296,14 +335,8 @@ export function Landing({
           <p>Everything you need to get settled in.</p>
         </div>
         <div className="landing-faq-list">
-          {faqs.map(({ question, answer }) => (
-            <details key={question}>
-              <summary>
-                {question}
-                <Plus size={18} aria-hidden="true" />
-              </summary>
-              <p>{answer}</p>
-            </details>
+          {faqs.map((faq) => (
+            <FAQItem key={faq.question} {...faq} />
           ))}
         </div>
       </motion.section>
