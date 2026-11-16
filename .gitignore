@@ -13,6 +13,10 @@ playwright-report/
 output/
 coverage/
 
+# Local launch-film projects, source captures, audio and intermediate renders
+brag-output*/
+.hyperframes/
+
 # Assignment brief belongs to its authors; local editor tooling
 AI_Prediction_Market_Platform_RFP.pdf
 .claude/

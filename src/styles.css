@@ -1,4 +1,83 @@
 @layer components {
+  .product-film {
+    max-width: 1440px;
+    margin: 80px auto 0;
+    padding: 0 48px;
+  }
+  .product-film-heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 32px;
+    margin-bottom: 28px;
+  }
+  .product-film-heading .landing-eyebrow {
+    margin-bottom: 14px;
+  }
+  .product-film-heading h2 {
+    margin: 0;
+    color: var(--ink);
+    font-size: clamp(28px, 3vw, 44px);
+    font-weight: 600;
+    letter-spacing: -1.6px;
+    line-height: 1.15;
+  }
+  .product-film-heading > p {
+    max-width: 35ch;
+    margin: 0;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+  .product-film-frame {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    background: #151517;
+    box-shadow: 0 18px 55px #0000000d;
+  }
+  .product-film video {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+  .product-film-details {
+    margin-top: 18px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  .product-film-details summary {
+    cursor: pointer;
+    width: fit-content;
+    padding: 6px 0;
+  }
+  .product-film-details p {
+    max-width: 100ch;
+    margin: 14px 0;
+  }
+  .product-film-details a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  @media (max-width: 760px) {
+    .product-film {
+      margin-top: 48px;
+      padding: 0 22px;
+    }
+    .product-film-heading {
+      display: block;
+      margin-bottom: 20px;
+    }
+    .product-film-heading > p {
+      margin-top: 16px;
+    }
+    .product-film-frame {
+      border-radius: 14px;
+    }
+  }
   :root {
     font-family:
       -apple-system, BlinkMacSystemFont, "Inter Variable", "Segoe UI",

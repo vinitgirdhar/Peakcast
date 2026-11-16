@@ -285,6 +285,76 @@ export function Landing({
           </div>
         </motion.div>
       </main>
+      <section
+        id="product-film"
+        className="product-film"
+        aria-labelledby="product-film-title"
+      >
+        <div className="product-film-heading">
+          <div>
+            <span className="landing-eyebrow">
+              The product film · 1 min 54 sec
+            </span>
+            <h2 id="product-film-title">A closer look at Wildcatter.</h2>
+          </div>
+          <p>
+            From your first question to a considered forecast. See the real app
+            across Windows, web and Android.
+          </p>
+        </div>
+        <div className="product-film-frame">
+          <video
+            controls
+            playsInline
+            preload="none"
+            poster="/media/wildcatter-product-introduction.jpg"
+            width="1920"
+            height="1080"
+            aria-label="Introducing Wildcatter — narrated product film"
+          >
+            <source
+              src="/media/wildcatter-product-introduction.mp4"
+              type="video/mp4"
+            />
+            <track
+              kind="captions"
+              src="/media/wildcatter-product-introduction.en.vtt"
+              srcLang="en"
+              label="English"
+              default
+            />
+            <p>
+              <a href="/media/wildcatter-product-introduction.mp4">
+                Download the Wildcatter product film
+              </a>
+              .
+            </p>
+          </video>
+        </div>
+        <details className="product-film-details">
+          <summary>About the film & credits</summary>
+          <p>
+            Filmed using the actual application and demo credits. Windows has a
+            separate local workspace. Web and Android share hosted market data;
+            the refresh interval is compressed in the demonstration.
+          </p>
+          <p>
+            Music: “Happy Beats / Business Moves, Vol. 12” by Sascha Ende,
+            ende.app, under{" "}
+            <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>
+            . Android is a trademark of Google LLC. The Android robot is
+            reproduced or modified from work created and shared by Google and
+            used according to terms described in the{" "}
+            <a href="https://creativecommons.org/licenses/by/3.0/">
+              Creative Commons 3.0 Attribution License
+            </a>
+            . Windows is a trademark of Microsoft Corporation.
+          </p>
+          <a href="/media/wildcatter-product-introduction.mp4" download>
+            Download the film (MP4)
+          </a>
+        </details>
+      </section>
       <motion.section
         className="landing-features"
         aria-label="What you can do"

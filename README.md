@@ -1,6 +1,6 @@
 # Wildcatter
 
-**An AI-native prediction market platform.** Anyone can draft a market with AI help, launch it with their own staked liquidity, trade it, and see it resolved through a transparent propose, dispute and rule process, on the web, as an installable mobile app, and as a Windows desktop app, all on one backend and one public API.
+**An AI-native prediction market platform.** Anyone can draft a market with AI help, launch it with their own staked liquidity, trade it, and see it resolved through a transparent propose, dispute and rule process. Web, mobile and Windows share the same interface and API contract; web and Android use the hosted service, while Windows includes its own local server and database.
 
 **Live demo:** https://wildcatter-welcome.onrender.com · **API reference:** https://wildcatter-p3yy.onrender.com/api-docs/ · **Windows and Android apps:** [latest release](https://github.com/vinitgirdhar/wildcatter/releases/latest)
 
@@ -9,6 +9,18 @@
 A quiet forecasting workspace: crisp typography, a persistent desktop sidebar, and a touch-friendly mobile tab bar. A compact market pulse shows open questions, actual demo activity and upcoming deadlines. The hero offers the web app, Windows desktop download and Android download together. Light and dark appearances, hidden scrollbars that preserve scrolling, section reveals, sliding selections, animated charts and values, expanding panels, and tactile controls work across the shared frontend, with reduced-motion support.
 
 > Wildcatter runs on demo credits. Every account starts with 10,000 credits; nothing here is real money, a wallet, or an on-chain asset. See [Scope and honesty](#scope-and-honesty).
+
+## Product film
+
+[![Watch the Wildcatter product introduction](public/media/wildcatter-product-introduction.jpg)](public/media/wildcatter-product-introduction.mp4)
+
+**[Watch the product introduction — 1 min 54 sec](public/media/wildcatter-product-introduction.mp4)** · [English captions](public/media/wildcatter-product-introduction.en.vtt)
+
+The film uses real application captures and English narration. Its shared-market update demonstrates the web and mobile clients receiving data from the same backend. Windows keeps a separate local workspace; automatic account or portfolio synchronization with the hosted service is not implemented. All records shown use practice credits, and the refresh interval is compressed for the film.
+
+Music: “Happy Beats / Business Moves, Vol. 12” by Sascha Ende, [ende.app](https://ende.app), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Android is a trademark of Google LLC. The Android robot is reproduced or modified from work created and shared by Google and used according to terms described in the [Creative Commons 3.0 Attribution License](https://creativecommons.org/licenses/by/3.0/). Windows is a trademark of Microsoft Corporation.
+
+Video production files, source captures, narration sources and intermediate renders are local and gitignored. The repository contains only the final web video and its playback assets.
 
 ## Contents
 
