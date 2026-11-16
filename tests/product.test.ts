@@ -344,13 +344,13 @@ test("hosted deployments redirect the Windows download to its release asset", as
     const redirect = await download();
     assert.equal(redirect.statusCode, 302);
     assert.equal(redirect.headers.location, "https://example.org/app.zip");
-    assert.equal(
-      (await app.inject({ url: "/downloads/Wildcatter-Android.apk" }))
-        .statusCode,
-      404,
-    );
+    const apk = () => app.inject({ url: "/downloads/Wildcatter-Android.apk" });
+    assert.equal((await apk()).statusCode, 404);
+    process.env.ANDROID_DOWNLOAD_URL = "https://example.org/app.apk";
+    assert.equal((await apk()).headers.location, "https://example.org/app.apk");
   } finally {
     delete process.env.WINDOWS_DOWNLOAD_URL;
+    delete process.env.ANDROID_DOWNLOAD_URL;
     process.chdir(home);
     await app.close();
   }

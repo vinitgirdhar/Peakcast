@@ -2,7 +2,7 @@
 
 **An AI-native prediction market platform.** Anyone can draft a market with AI help, launch it with their own staked liquidity, trade it, and see it resolved through a transparent propose, dispute and rule process, on the web, as an installable mobile app, and as a Windows desktop app, all on one backend and one public API.
 
-**Live demo:** LIVE_URL · **API reference:** LIVE_URL/api-docs/ · **Windows app:** [latest release](https://github.com/vinitgirdhar/wildcatter/releases/latest)
+**Live demo:** https://wildcatter-p3yy.onrender.com · **API reference:** https://wildcatter-p3yy.onrender.com/api-docs/ · **Windows app:** [latest release](https://github.com/vinitgirdhar/wildcatter/releases/latest)
 
 ![Wildcatter market explorer](docs/assets/markets-desktop.png)
 
@@ -138,8 +138,8 @@ The desktop app is self-contained: it starts its own local server and needs no i
 Everything the UI does is available over `/api/v1`. Create a session to get a bearer token, then trade:
 
 ```bash
-curl -X POST LIVE_URL/api/v1/sessions
-curl LIVE_URL/api/v1/markets
+curl -X POST https://wildcatter-p3yy.onrender.com/api/v1/sessions
+curl https://wildcatter-p3yy.onrender.com/api/v1/markets
 ```
 
 - Guide with every route, status code and rule: [docs/API.md](docs/API.md)

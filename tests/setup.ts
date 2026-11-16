@@ -16,6 +16,7 @@ for (const name of [
   "OPERATOR_TOKEN",
   "DISPUTE_WINDOW_SECONDS",
   "WINDOWS_DOWNLOAD_URL",
+  "ANDROID_DOWNLOAD_URL",
   "RENDER_EXTERNAL_URL",
 ])
   delete process.env[name];

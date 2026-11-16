@@ -995,12 +995,10 @@ export async function buildApp(options: AppOptions = {}) {
         throw new DomainError("Download not found.", 404);
       const path = resolve("release/downloads", name);
       // Hosted demos do not ship the 170 MB build; they point at the release asset.
-      const hosted = process.env.WINDOWS_DOWNLOAD_URL;
-      if (
-        !existsSync(path) &&
-        name.endsWith(".zip") &&
-        hosted?.startsWith("https://")
-      )
+      const hosted = name.endsWith(".zip")
+        ? process.env.WINDOWS_DOWNLOAD_URL
+        : process.env.ANDROID_DOWNLOAD_URL;
+      if (!existsSync(path) && hosted?.startsWith("https://"))
         return reply.redirect(hosted);
       if (!existsSync(path))
         throw new DomainError("This app build is not available yet.", 404);
