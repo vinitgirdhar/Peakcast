@@ -99,8 +99,15 @@ test("startup retry, unknown pages and browser history recover through visible c
     "Temporary startup error.",
   );
   fail = false;
+  await page.evaluate(() => {
+    document.documentElement.dataset.startupMarker = "kept";
+  });
   await page.getByRole("button", { name: "Retry", exact: true }).click();
   await expect(page.locator(".market-card")).toHaveCount(6);
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-startup-marker",
+    "kept",
+  );
   await page.goto("/markets/not-a-market");
   await expect(
     page.getByRole("heading", { name: "Market not found" }),

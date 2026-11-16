@@ -1,4 +1,4 @@
-const CACHE = 'wildcatter-shell-v4';
+const CACHE = 'wildcatter-shell-v5';
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE);
@@ -6,7 +6,7 @@ self.addEventListener('install', event => {
     if (!response.ok) throw new Error('Application shell could not be cached');
     const html = await response.text();
     const assets = [...html.matchAll(/(?:src|href)="(\/assets\/[^\"]+)"/g)].map(match => match[1]);
-    await cache.addAll(['/', '/index.html', '/icon-192.png', '/icon-512.png', '/icon-maskable.png', '/icon.svg', ...assets]);
+    await cache.addAll(['/', '/index.html', '/theme-bootstrap.js', '/wake/wake.css', '/icon-192.png', '/icon-512.png', '/icon-maskable.png', '/icon.svg', ...assets]);
   })());
 });
 self.addEventListener('activate', event => {

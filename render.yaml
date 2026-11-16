@@ -3,6 +3,16 @@
 # reset on every deploy or restart; the seeded markets are recreated at boot.
 services:
   - type: web
+    name: wildcatter-welcome
+    runtime: static
+    buildCommand: node --check public/wake/wake.js
+    staticPublishPath: public/wake
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: SKIP_INSTALL_DEPS
+        value: "true"
+  - type: web
     name: wildcatter
     runtime: node
     plan: free

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#f7f8fa" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https://wildcatter-p3yy.onrender.com; base-uri 'none'; form-action 'none'"
+    />
+    <meta
+      name="description"
+      content="Your Wildcatter forecasting workspace is getting ready."
+    />
+    <title>Opening Wildcatter</title>
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./wake.css" />
+    <script src="./wake.js" defer></script>
+  </head>
+  <body class="wake-page">
+    <main class="startup-screen">
+      <div class="startup-mark" aria-hidden="true">
+        <span class="startup-halo"></span><span class="startup-halo"></span>
+        <svg width="48" height="48" viewBox="0 0 32 32" fill="none">
+          <rect width="32" height="32" rx="9" fill="currentColor" />
+          <path
+            d="m6 11 4.5 12L16 9l5.5 14L26 11"
+            stroke="var(--on-selected, white)"
+            stroke-width="2.6"
+            stroke-linejoin="round"
+            stroke-linecap="round"
+          />
+        </svg>
+      </div>
+      <span class="startup-brand">wildcatter.</span>
+      <div role="status" aria-live="polite" aria-atomic="true">
+        <h1 id="wake-title">Getting your workspace ready.</h1>
+        <p id="wake-message">Connecting to the demo server…</p>
+      </div>
+      <div class="startup-progress" id="wake-progress" aria-hidden="true">
+        <span></span>
+      </div>
+      <p class="startup-caption" id="wake-caption">
+        We’ll open the app automatically when it’s ready.
+      </p>
+      <button id="wake-retry" class="startup-retry" hidden>Try again</button>
+      <noscript
+        ><p>
+          JavaScript is needed to check when the server is ready. Enable it and
+          reload this page.
+        </p></noscript
+      >
+      <small class="startup-footnote">Practice credits. No real money.</small>
+    </main>
+  </body>
+</html>

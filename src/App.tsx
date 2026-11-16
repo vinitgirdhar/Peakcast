@@ -32,6 +32,7 @@ import { Developers } from "./pages/Developers.js";
 import { LeaderboardView } from "./pages/Leaderboard.js";
 import { Settings } from "./pages/Settings.js";
 import { Landing } from "./pages/Landing.js";
+import { BackendStartup, waitForBackend } from "./BackendStartup.js";
 const navItems = [
   { path: "/markets", label: "Markets", icon: LayoutGrid },
   { path: "/portfolio", label: "Portfolio", icon: Wallet },
@@ -52,6 +53,8 @@ export function App() {
   const [capabilities, setCapabilities] = useState<Capabilities | null>(null);
   const [error, setError] = useState("");
   const [ready, setReady] = useState(false);
+  const [warming, setWarming] = useState(false);
+  const [startupAttempt, setStartupAttempt] = useState(0);
   const [notice, setNotice] = useState("");
   const [menu, setMenu] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -92,8 +95,17 @@ export function App() {
     window.addEventListener("popstate", back);
     window.addEventListener("beforeinstallprompt", onInstall);
     let active = true;
+    const controller = new AbortController();
+    setReady(false);
+    setWarming(false);
+    setError("");
+    const warmingTimer = setTimeout(() => {
+      if (active) setWarming(true);
+    }, 3000);
     void (async () => {
       try {
+        await waitForBackend(controller.signal);
+        if (!active) return;
         let current = localStorage.getItem(storageKey) ?? "";
         if (current) {
           try {
@@ -117,15 +129,18 @@ export function App() {
       } catch (e) {
         if (active) setError(errorMessage(e));
       } finally {
+        clearTimeout(warmingTimer);
         if (active) setReady(true);
       }
     })();
     return () => {
       active = false;
+      controller.abort();
+      clearTimeout(warmingTimer);
       window.removeEventListener("popstate", back);
       window.removeEventListener("beforeinstallprompt", onInstall);
     };
-  }, []);
+  }, [startupAttempt]);
   useEffect(() => {
     if (!token) return;
     const timer = setInterval(() => {
@@ -421,9 +436,9 @@ export function App() {
               <span>{error}</span>
               <button
                 onClick={() =>
-                  token
+                  portfolio
                     ? void refresh().catch((e) => setError(errorMessage(e)))
-                    : location.reload()
+                    : setStartupAttempt((attempt) => attempt + 1)
                 }
               >
                 Retry
@@ -431,10 +446,12 @@ export function App() {
             </div>
           )}
           {!ready ? (
-            <div className="loading-state">
-              <BrandMark />
-              <p>Opening your forecasting workspace…</p>
-            </div>
+            <BackendStartup warming={warming} />
+          ) : error && !portfolio ? (
+            <EmptyState
+              title="Your workspace isn’t ready yet."
+              text="Use Retry above to reconnect. Your current page will stay open."
+            />
           ) : (
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
