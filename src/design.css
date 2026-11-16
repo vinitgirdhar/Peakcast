@@ -1239,6 +1239,92 @@ button.notification-row:hover {
 .landing > footer a {
   color: var(--ink);
 }
+.landing > footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+}
+.landing-faq {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+  gap: 64px;
+  padding: 56px 0 72px;
+  border-top: 1px solid var(--border);
+  scroll-margin-top: 28px;
+}
+.landing-faq-heading h2 {
+  margin: 22px 0 14px;
+  font-size: clamp(28px, 3vw, 38px);
+  font-weight: 600;
+  letter-spacing: -1.4px;
+  line-height: 1.15;
+}
+.landing-faq-heading p,
+.landing-faq-list p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.8;
+}
+.landing-faq-heading p {
+  margin: 0;
+}
+.landing-faq-list details {
+  border-bottom: 1px solid var(--border);
+}
+.landing-faq-list summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  min-height: 64px;
+  padding: 20px 0;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 550;
+  line-height: 1.5;
+  cursor: pointer;
+  list-style: none;
+}
+.landing-faq-list summary::-webkit-details-marker {
+  display: none;
+}
+.landing-faq-list summary svg {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.landing-faq-list details[open] summary svg {
+  transform: rotate(45deg);
+}
+.landing-faq-list p {
+  margin: 0;
+  padding: 0 36px 22px 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .landing-faq-list summary svg {
+    transition: transform 0.2s ease;
+  }
+  .landing-faq-list details[open] p {
+    animation: faq-reveal 0.2s ease;
+  }
+  @keyframes faq-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+@media (max-width: 760px) {
+  .landing-faq {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+    padding: 36px 0 48px;
+  }
+}
 @media (max-width: 1250px) and (min-width: 761px) {
   .page {
     padding: 24px 28px 40px;

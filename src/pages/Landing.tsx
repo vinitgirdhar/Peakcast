@@ -10,6 +10,7 @@ import {
   Sparkles,
   Sun,
   Play,
+  Plus,
 } from "lucide-react";
 import { useRef, useState } from "react";
 import { BrandMark } from "../ui.js";
@@ -37,6 +38,49 @@ const features = [
     icon: Code2,
     title: "Open developer API",
     text: "The same versioned HTTP API and typed client that power this app, documented with OpenAPI.",
+  },
+];
+
+const faqs = [
+  {
+    question: "Can I try Wildcatter without installing anything?",
+    answer:
+      "Yes. Choose Continue on the web above to open the workspace in your browser. You start with 10,000 practice credits.",
+  },
+  {
+    question: "How do I install the Windows desktop app?",
+    answer:
+      "Choose Download desktop app above, extract the entire ZIP into a folder, then open Wildcatter.exe. The download is for Windows 64-bit and includes its own local server and database.",
+  },
+  {
+    question: "Is there an Android app?",
+    answer:
+      "Yes. Choose Download for Android above, open the downloaded APK on your phone, and follow the installation prompts. The Android app connects to the hosted service and needs an internet connection.",
+  },
+  {
+    question: "Can I use it on iPhone, iPad, or Mac?",
+    answer:
+      "Use the web app in your browser. On iPhone or iPad, open the site in Safari and choose Share, then Add to Home Screen. Other supported browsers offer an Install app option in their menu. There is no native iOS or macOS download.",
+  },
+  {
+    question: "Does my workspace sync across devices?",
+    answer:
+      "Web and Android use the same hosted service and show shared public market updates. Your session belongs to the browser or app you use; signing into the same account across devices is not currently available. Windows stores a separate local workspace, so its balance, portfolio, and drafts do not sync with the hosted service.",
+  },
+  {
+    question: "Does Wildcatter use real money?",
+    answer:
+      "No. This is a demo with practice credits. Credits cannot be purchased, withdrawn, or exchanged for money, and there are no real-money payouts.",
+  },
+  {
+    question: "Why does the app sometimes take a moment to start?",
+    answer:
+      "The hosted demo runs on Render’s free plan, which can put the server to sleep when it is inactive. The warm-up screen stays visible while it starts. Keep the page open and allow a minute or two; the app continues automatically when the server is ready.",
+  },
+  {
+    question: "Where can I find developer documentation?",
+    answer:
+      "Choose Developers at the top of this page or Build with our API in the footer. The developer guide includes API documentation, integration examples, and setup instructions.",
   },
 ];
 
@@ -237,11 +281,40 @@ export function Landing({
           </motion.div>
         ))}
       </motion.section>
+      <motion.section
+        id="faq"
+        className="landing-faq"
+        aria-labelledby="faq-title"
+        variants={itemMotion}
+        initial={reduce ? false : "hidden"}
+        whileInView="show"
+        viewport={{ once: true, amount: 0.1 }}
+      >
+        <div className="landing-faq-heading">
+          <span className="landing-eyebrow">A few helpful answers</span>
+          <h2 id="faq-title">Questions? Start here.</h2>
+          <p>Everything you need to get settled in.</p>
+        </div>
+        <div className="landing-faq-list">
+          {faqs.map(({ question, answer }) => (
+            <details key={question}>
+              <summary>
+                {question}
+                <Plus size={18} aria-hidden="true" />
+              </summary>
+              <p>{answer}</p>
+            </details>
+          ))}
+        </div>
+      </motion.section>
       <footer>
         <span>Wildcatter · Demo environment, no real-money payouts.</span>
-        <a href="/developers">
-          Build with our API <ArrowRight size={14} />
-        </a>
+        <nav aria-label="Footer">
+          <a href="#faq">FAQ</a>
+          <a href="/developers">
+            Build with our API <ArrowRight size={14} />
+          </a>
+        </nav>
       </footer>
     </div>
   );
