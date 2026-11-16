@@ -1,3 +1,11 @@
+.wake-document {
+  scrollbar-width: none;
+}
+.wake-document::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
 .wake-page {
   margin: 0;
   background: #f7f8fa;
@@ -106,6 +114,30 @@
   color: var(--muted, #64676d);
   font-size: 11px;
   margin-top: 48px;
+}
+.backend-connection-notice {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 20px 12px;
+  padding: 15px 18px;
+  border: 1px solid var(--border, #e7e8eb);
+  border-radius: 12px;
+  background: var(--surface, #fff);
+  color: var(--ink, #202124);
+}
+.backend-connection-notice .startup-progress {
+  flex-shrink: 0;
+  width: 40px;
+  margin: 0;
+}
+.backend-connection-notice p {
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0;
+}
+.backend-connection-notice p > span {
+  color: var(--muted, #64676d);
 }
 .startup-screen [hidden] {
   display: none;

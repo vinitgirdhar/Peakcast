@@ -8,7 +8,7 @@ const exclusions = [
   /^\/(src|server|shared|tests|scripts|docs|tmp|data|public|output|test-results|playwright-report|release)(\/|$)/,
   /\.pdf$/i,
   /^\/\.env($|\.)/,
-  /^\/\.git(\/|$)/,
+  /^\/\.(git|claude)(\/|$)/,
 ];
 for (const path of [
   "/data/wildcatter.sqlite",
@@ -16,6 +16,7 @@ for (const path of [
   "/.env.example",
   "/AI_Prediction_Market_Platform_RFP.pdf",
   "/release/old.exe",
+  "/.claude/launch.json",
 ])
   assert.ok(
     exclusions.some((pattern) => pattern.test(path)),

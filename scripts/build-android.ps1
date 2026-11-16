@@ -10,7 +10,10 @@ $downloadRoot = Join-Path $projectRoot 'release/downloads'
 New-Item -ItemType Directory -Force -Path "$buildRoot/res/drawable", "$buildRoot/classes", "$buildRoot/dex", "$buildRoot/source", $downloadRoot, "$projectRoot/data" | Out-Null
 $appOrigin = [uri]$Origin
 if (!$appOrigin.IsAbsoluteUri -or $appOrigin.Scheme -ne 'https' -or $appOrigin.AbsolutePath -ne '/' -or $appOrigin.UserInfo -or $appOrigin.Query -or $appOrigin.Fragment) { throw 'An HTTPS application origin without credentials, path, query or fragment is required.' }
-$source = (Get-Content "$projectRoot/android/MainActivity.java" -Raw).Replace('__ORIGIN__', $appOrigin.GetLeftPart([System.UriPartial]::Authority))
+$backendOrigin = $appOrigin.GetLeftPart([System.UriPartial]::Authority)
+# The shared public launcher targets production; custom API builds retain direct entry.
+$startOrigin = if ($backendOrigin -eq 'https://wildcatter-p3yy.onrender.com') { 'https://wildcatter-welcome.onrender.com' } else { '' }
+$source = (Get-Content "$projectRoot/android/MainActivity.java" -Raw).Replace('__ORIGIN__', $backendOrigin).Replace('__START_ORIGIN__', $startOrigin)
 [IO.File]::WriteAllText("$buildRoot/source/MainActivity.java",$source)
 Copy-Item "$projectRoot/public/icon-192.png" "$buildRoot/res/drawable/ic_launcher.png"
 & "$buildTools/aapt2.exe" compile --dir "$buildRoot/res" -o "$buildRoot/resources.zip"

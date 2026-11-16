@@ -1,4 +1,4 @@
-const CACHE = 'wildcatter-shell-v5';
+const CACHE = 'wildcatter-shell-v6';
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE);
@@ -17,7 +17,7 @@ self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api')) return;
   if (event.request.mode === 'navigate') {
     event.respondWith(fetch(event.request).catch(() => caches.match('/index.html')));
-  } else if (url.pathname.startsWith('/assets/')) {
+  } else if (url.pathname.startsWith('/assets/') || ['/wake/wake.css', '/theme-bootstrap.js'].includes(url.pathname)) {
     event.respondWith(caches.match(event.request).then(cached => cached || fetch(event.request).then(response => {
       if (response.ok) { const copy = response.clone(); event.waitUntil(caches.open(CACHE).then(cache => cache.put(event.request, copy))); }
       return response;

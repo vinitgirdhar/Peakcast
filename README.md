@@ -2,7 +2,7 @@
 
 **An AI-native prediction market platform.** Anyone can draft a market with AI help, launch it with their own staked liquidity, trade it, and see it resolved through a transparent propose, dispute and rule process, on the web, as an installable mobile app, and as a Windows desktop app, all on one backend and one public API.
 
-**Live demo:** https://wildcatter-p3yy.onrender.com · **API reference:** https://wildcatter-p3yy.onrender.com/api-docs/ · **Windows app:** [latest release](https://github.com/vinitgirdhar/wildcatter/releases/latest)
+**Live demo:** https://wildcatter-welcome.onrender.com · **API reference:** https://wildcatter-p3yy.onrender.com/api-docs/ · **Windows and Android apps:** [latest release](https://github.com/vinitgirdhar/wildcatter/releases/latest)
 
 ![Wildcatter market explorer](docs/assets/markets-desktop.png)
 
@@ -135,7 +135,7 @@ Optional settings go in `.env` (copy `.env.example`): AI provider keys, `AI_ACCE
 
 The desktop app is self-contained: it starts its own local server and needs no internet connection except for optional AI providers. Build it yourself with `npm run desktop:package`. The preview executable is unsigned, so Windows SmartScreen may ask for confirmation.
 
-The landing page also offers an Android APK when its download is available. Build the Android shell with `powershell -File scripts/build-android.ps1` (Android SDK 35 and JDK 17 required). It defaults to the hosted demo; use `-Origin https://your-host.example` for a different host. The APK loads the shared frontend from that origin, so local UI changes require deployment there before they appear in the installed app.
+The landing page also offers an Android APK when its download is available. Build the Android shell with `powershell -File scripts/build-android.ps1` (Android SDK 35 and JDK 17 required). The production build opens the always-available warm-up entry before navigating to the hosted market workspace. Use `-Origin https://your-host.example` for a different host; custom hosts retain direct entry. The APK loads the shared frontend from its configured origin, so local UI changes require deployment there before they appear in the installed app.
 
 ![Wildcatter mobile markets](docs/assets/markets-mobile.png)
 
@@ -168,10 +168,12 @@ Tested behaviours include fee arithmetic, conservation of credits through resolu
 
 ## Deployment
 
+The official demo entry is a small Render static site at https://wildcatter-welcome.onrender.com. It serves the branded animation immediately and checks an uncached application image until the backend is ready, then opens the app automatically. Delayed startup and refresh requests also have an in-app warm-up state. Checks stop after three minutes and offer a retry; they are not a permanent keep-alive job. Use this entry URL for the first visit: opening a sleeping backend's address directly can still show Render's own loading page before application code arrives.
+
 The repository includes a Render blueprint ([render.yaml](render.yaml)). The hosted demo runs on Render's free plan, which means:
 
 - the service sleeps when idle, so the first request can take up to a minute;
-- the database is on an ephemeral disk, so accounts and trades reset on each deploy. Sample markets are recreated at start.
+- the database is on an ephemeral disk, so accounts and trades reset on deploy, restart or idle spin-down. Sample markets are recreated at start. Expired demo sessions recover automatically with a visible notice.
 
 The server only answers on its own public origin and rejects cross-origin browser requests.
 

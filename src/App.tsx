@@ -55,6 +55,7 @@ export function App() {
   const [ready, setReady] = useState(false);
   const [warming, setWarming] = useState(false);
   const [startupAttempt, setStartupAttempt] = useState(0);
+  const connected = ready && portfolio !== null;
   const [notice, setNotice] = useState("");
   const [menu, setMenu] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -130,7 +131,10 @@ export function App() {
         if (active) setError(errorMessage(e));
       } finally {
         clearTimeout(warmingTimer);
-        if (active) setReady(true);
+        if (active) {
+          setWarming(false);
+          setReady(true);
+        }
       }
     })();
     return () => {
@@ -142,13 +146,42 @@ export function App() {
     };
   }, [startupAttempt]);
   useEffect(() => {
-    if (!token) return;
+    if (!token || !connected) return;
+    let active = true,
+      pending = false;
+    let slow: ReturnType<typeof setTimeout> | undefined;
+    const controller = new AbortController();
     const timer = setInterval(() => {
-      if (document.visibilityState === "visible")
-        void refresh(token).catch((e) => setError(errorMessage(e)));
+      if (document.visibilityState !== "visible" || pending) return;
+      pending = true;
+      slow = setTimeout(() => {
+        if (active) setWarming(true);
+      }, 3000);
+      void (async () => {
+        try {
+          await waitForBackend(controller.signal);
+          if (active) await refresh(token);
+        } catch (e) {
+          if (!active) return;
+          if (e instanceof ApiError && e.status === 401) {
+            setPortfolio(null);
+            setReady(false);
+            setStartupAttempt((attempt) => attempt + 1);
+          } else setError(errorMessage(e));
+        } finally {
+          clearTimeout(slow);
+          pending = false;
+          if (active) setWarming(false);
+        }
+      })();
     }, 15000);
-    return () => clearInterval(timer);
-  }, [token]);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      clearTimeout(slow);
+      controller.abort();
+    };
+  }, [token, connected]);
   useEffect(() => {
     if (!notice) return;
     const timer = setTimeout(() => setNotice(""), 6500);
@@ -431,6 +464,17 @@ export function App() {
           </div>
         </header>
         <main id="main" tabIndex={-1}>
+          {ready && warming && (
+            <div className="backend-connection-notice" role="status">
+              <span className="startup-progress" aria-hidden="true">
+                <span />
+              </span>
+              <p>
+                The server is warming up.{" "}
+                <span>(Please allow a minute or two.)</span>
+              </p>
+            </div>
+          )}
           {error && (
             <div className="error-banner" role="alert">
               <span>{error}</span>

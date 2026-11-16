@@ -3,6 +3,67 @@ import AxeBuilder from "@axe-core/playwright";
 
 const backend = "https://wildcatter-p3yy.onrender.com";
 
+test("a backend wake during refresh keeps the current screen available", async ({
+  page,
+}) => {
+  await page.clock.install();
+  let hold = false;
+  let release: (() => void) | undefined;
+  await page.route("**/api/v1/capabilities", async (route) => {
+    if (hold)
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+    await route.continue();
+  });
+  await page.goto("/markets");
+  await expect(page.locator(".market-card")).toHaveCount(6);
+  hold = true;
+  await page.clock.runFor(15_500);
+  await expect.poll(() => !!release).toBe(true);
+  await page.clock.runFor(3500);
+  await expect(page.locator(".backend-connection-notice")).toContainText(
+    "server is warming up",
+  );
+  await expect(page.locator(".market-card")).toHaveCount(6);
+  hold = false;
+  release!();
+  await expect(page.locator(".backend-connection-notice")).toHaveCount(0);
+});
+
+test("refresh recovers a demo session that disappeared while the server slept", async ({
+  page,
+}) => {
+  await page.clock.install();
+  let expired = "";
+  await page.route("**/api/v1/portfolio", async (route) => {
+    if (
+      expired &&
+      route.request().headers().authorization === `Bearer ${expired}`
+    )
+      await route.fulfill({
+        status: 401,
+        json: { message: "Session expired." },
+      });
+    else await route.continue();
+  });
+  await page.goto("/markets");
+  await expect(page.locator(".market-card")).toHaveCount(6);
+  expired = await page.evaluate(
+    () => localStorage.getItem("wildcatter.demo.token.v1") ?? "",
+  );
+  await page.clock.runFor(15_500);
+  await expect
+    .poll(() =>
+      page.evaluate(() => localStorage.getItem("wildcatter.demo.token.v1")),
+    )
+    .not.toBe(expired);
+  await expect(page.locator(".market-card")).toHaveCount(6);
+  await expect(page.getByRole("status")).toContainText(
+    "previous demo session expired",
+  );
+});
+
 // Model the separate static CDN document, which does not carry the API server's same-origin-only CSP.
 test.beforeEach(async ({ page }) => {
   await page.route("**/wake/index.html*", (route) =>
@@ -158,6 +219,7 @@ test("warm-up screen respects reduced motion and stays readable on a narrow disp
     "animation-name",
     "none",
   );
+  await expect(page.locator("html")).toHaveCSS("scrollbar-width", "none");
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

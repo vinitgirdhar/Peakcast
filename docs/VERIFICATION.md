@@ -1,5 +1,13 @@
 # Verification record
 
+## Frontend server warm-up and app release 1.1.1 — November 16, 2026
+
+- The independent Render static entry at `https://wildcatter-welcome.onrender.com` displays the branded animation immediately, explains a slow backend after three seconds, and redirects only after an uncached app image decodes. Platform HTML is never displayed as the entry document. Three-minute timeout, explicit Retry, offline copy and reduced-motion behavior are covered by browser tests.
+- The cached React shell uses the same warm-up styling. Background reconnection preserves the current screen, and a missing demo session is recreated with a notice. Only readiness reads are retried; trades and account creation are not replayed. No backend code, keep-alive worker or paid service was added.
+- The complete verification gate passed: 57 unit/integration tests, eight compiled API groups, 112 browser journeys and two intentionally skipped duplicate lifecycle runs, TypeScript/build, formatting, documentation links and a dependency audit with zero reported vulnerabilities. All 48 route/theme/viewport audits passed without detected accessibility violations, page errors or document overflow. The new warm-up tests run in all three browser projects.
+- Android version code 3 / version name 1.1.1 compiles and verifies with the existing certificate. Production builds enter through the static warm-up page; custom-host builds keep direct entry. The Windows package bundles the local API and shared frontend, so its normal launch does not depend on Render.
+- Cold responses are simulated in browser tests. Physical Android installation, real idle-to-awake timing and paid AI inference remain unverified. Direct backend links can still show Render's platform loader; share the independent entry URL.
+
 ## Hero, market pulse and app release 1.1.0 — November 16, 2026
 
 - The landing hero offers web entry, Windows desktop download and Android download together. The overview now contains a compact charcoal market pulse with actual open-question, trade and volume totals, plus clickable upcoming deadlines. Closed and expired markets are excluded from the deadline list.
