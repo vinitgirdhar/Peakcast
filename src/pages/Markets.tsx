@@ -8,6 +8,7 @@ import {
   LayoutGrid,
   Plus,
   Search,
+  Clock3,
 } from "lucide-react";
 import type { Market } from "../../shared/types.js";
 import {
@@ -17,6 +18,7 @@ import {
   percent,
   EmptyState,
   statusLabel,
+  formatCredits,
 } from "../ui.js";
 const categories = [
   "All markets",
@@ -28,7 +30,6 @@ const categories = [
   "World",
 ];
 import { motion } from "motion/react";
-import { useLiquidGlass } from "../useLiquidGlass.js";
 import { ease, itemMotion, listMotion } from "../motion.js";
 
 export function MarketExplorer({
@@ -44,8 +45,6 @@ export function MarketExplorer({
   const [category, setCategory] = useState("All markets");
   const [sort, setSort] = useState("featured");
   const [page, setPage] = useState(1);
-  const categoryGlass = useLiquidGlass<HTMLDivElement>();
-  const createGlass = useLiquidGlass<HTMLButtonElement>();
   const filtered = markets.filter(
     (market) =>
       (category === "All markets" || market.category === category) &&
@@ -65,6 +64,18 @@ export function MarketExplorer({
             : 0,
   );
   const featured = markets[0];
+  const openMarkets = markets.filter(
+    (market) =>
+      market.status === "open" && Date.parse(market.closesAt) > Date.now(),
+  );
+  const closingNext = [...openMarkets]
+    .sort((a, b) => Date.parse(a.closesAt) - Date.parse(b.closesAt))
+    .slice(0, 3);
+  const volume = markets.reduce(
+    (total, market) => total + market.volumeMicros,
+    0,
+  );
+  const trades = markets.reduce((total, market) => total + market.trades, 0);
   const pages = Math.max(1, Math.ceil(ordered.length / 6));
   const currentPage = Math.min(page, pages);
   return (
@@ -72,13 +83,9 @@ export function MarketExplorer({
       <div className="page-heading">
         <div>
           <h1>Markets</h1>
-          <p>What happens next? Explore a forecast.</p>
+          <p>Explore what happens next.</p>
         </div>
-        <button
-          ref={createGlass}
-          className="secondary-button liquid-material"
-          onClick={onStudio}
-        >
+        <button className="primary-button" onClick={onStudio}>
           <Plus size={17} /> Draft a market
         </button>
       </div>
@@ -100,16 +107,53 @@ export function MarketExplorer({
               </div>
             </div>
             <div className="feature-art" aria-hidden="true">
-              <div className="orbital orbit-one" />
-              <div className="orbital orbit-two" />
-              <div className="orbital orbit-three" />
               <div className="feature-probability">
                 {percent(featured.probability)}
                 <small>chance of YES</small>
               </div>
             </div>
+            <div className="market-pulse" aria-label="Market activity">
+              <span>
+                <strong>{openMarkets.length}</strong>
+                <small>Open questions</small>
+              </span>
+              <span>
+                <strong>{trades.toLocaleString("en-US")}</strong>
+                <small>Demo trades</small>
+              </span>
+              <span>
+                <strong>{formatCredits(volume, 0)}</strong>
+                <small>Volume in credits</small>
+              </span>
+            </div>
           </button>
         )}
+        <section className="market-radar" aria-label="Closing next">
+          <div className="radar-heading">
+            <h2>Closing next</h2>
+            <Clock3 size={17} />
+          </div>
+          {closingNext.length ? (
+            closingNext.map((market) => (
+              <button key={market.id} onClick={() => onOpen(market)}>
+                <span className="radar-question">{market.title}</span>
+                <span className="radar-meta">
+                  <time dateTime={market.closesAt}>
+                    {date(market.closesAt)}
+                  </time>
+                  <strong>
+                    {percent(market.probability)} <small>YES</small>
+                  </strong>
+                </span>
+              </button>
+            ))
+          ) : (
+            <p>
+              No upcoming deadlines. Explore settled markets or draft a new
+              question.
+            </p>
+          )}
+        </section>
       </div>
 
       <div className="market-toolbar">
@@ -151,8 +195,7 @@ export function MarketExplorer({
         </div>
       </div>
       <div
-        ref={categoryGlass}
-        className="category-tabs liquid-material"
+        className="category-tabs"
         role="group"
         aria-label="Market categories"
       >
@@ -170,6 +213,13 @@ export function MarketExplorer({
               });
             }}
           >
+            {category === item && (
+              <motion.span
+                className="tab-selection"
+                layoutId="market-category"
+                transition={{ duration: 0.24, ease }}
+              />
+            )}
             {item === "All markets" && <LayoutGrid size={14} />}
             {item}
           </button>
@@ -249,7 +299,7 @@ function MarketCard({
     <motion.button
       layout="position"
       variants={itemMotion}
-      whileHover={{ y: -3 }}
+      whileHover={{ y: -2 }}
       whileTap={{ scale: 0.98 }}
       transition={{ duration: 0.18, ease }}
       className="market-card"

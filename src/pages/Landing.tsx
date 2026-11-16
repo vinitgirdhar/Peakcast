@@ -9,9 +9,15 @@ import {
   Smartphone,
   Sparkles,
   Sun,
+  ArrowUpRight,
+  LayoutGrid,
+  Wallet,
+  Trophy,
 } from "lucide-react";
 import { BrandMark } from "../ui.js";
 import { useTheme } from "../theme.js";
+import { motion, useReducedMotion } from "motion/react";
+import { ease, itemMotion, listMotion } from "../motion.js";
 
 const features = [
   {
@@ -46,6 +52,7 @@ export function Landing({
   canInstall: boolean;
 }) {
   const { setTheme } = useTheme();
+  const reduce = useReducedMotion();
   const dark = document.documentElement.dataset.theme === "dark";
   return (
     <div className="landing">
@@ -66,95 +73,234 @@ export function Landing({
         </div>
       </header>
       <main>
-        <div className="landing-copy">
-          <span className="landing-eyebrow">
-            <span className="status-dot" />
-            Demo credits only · No real money
-          </span>
-          <h1>
+        <motion.div
+          className="landing-copy"
+          variants={listMotion}
+          initial={reduce ? false : "hidden"}
+          animate="show"
+        >
+          <motion.span className="landing-eyebrow" variants={itemMotion}>
+            <span className="status-dot" />A workspace for the curious
+          </motion.span>
+          <motion.h1 variants={itemMotion}>
             Turn your view
             <br />
             into a forecast.
-          </h1>
-          <p>
-            Explore prediction markets, trade YES or NO with 10,000 practice
-            credits, and draft sharper questions with AI. One workspace on web,
-            desktop and mobile.
-          </p>
-          <div className="landing-actions">
+          </motion.h1>
+          <motion.p variants={itemMotion}>
+            Big questions. Clear possibilities. Explore prediction markets,
+            sharpen your instincts, and put your perspective into practice.
+          </motion.p>
+          <motion.div
+            className="landing-actions"
+            variants={itemMotion}
+            role="region"
+            aria-label="Get Wildcatter"
+          >
             <button className="primary-button" onClick={onContinue}>
               Continue on the web
               <ArrowRight size={18} />
             </button>
-            <button className="text-button" onClick={() => void onInstall()}>
-              {canInstall ? "Install browser app" : "Prefer the browser app?"}
-            </button>
-          </div>
-          <div className="landing-downloads">
             <a
               href="/downloads/Wildcatter-Windows.zip"
               className="secondary-button"
             >
               <Monitor size={17} />
-              Download for Windows
+              Download desktop app
               <Download size={15} />
             </a>
             <a
-              className="secondary-button"
               href="/downloads/Wildcatter-Android.apk"
+              className="secondary-button"
             >
               <Smartphone size={17} />
               Download for Android
               <Download size={15} />
             </a>
-          </div>
-        </div>
-        <div className="landing-preview" aria-label="Illustrative market">
-          <div className="landing-preview-top">
-            <span className="small-pill">Science</span>
-            <span>Illustrative market</span>
-          </div>
-          <h2>Will the next breakthrough happen this year?</h2>
-          <div className="landing-preview-number">
-            68%<small>chance of YES</small>
-          </div>
-          <svg
-            viewBox="0 0 400 120"
-            preserveAspectRatio="none"
-            aria-hidden="true"
-          >
-            <path
-              d="M0 105C50 100 70 78 110 82S170 50 210 56S280 30 320 28S380 14 400 12V120H0Z"
-              fill="#315cf5"
-              fillOpacity="0.1"
-            />
-            <path
-              d="M0 105C50 100 70 78 110 82S170 50 210 56S280 30 320 28S380 14 400 12"
-              fill="none"
-              stroke="#4f6ef7"
-              strokeWidth="2.5"
-              vectorEffect="non-scaling-stroke"
-            />
-          </svg>
-          <div className="landing-preview-outcomes">
-            <span className="yes">
-              Yes <strong>68.0¢</strong>
+          </motion.div>
+          <motion.p className="landing-disclaimer" variants={itemMotion}>
+            10,000 practice credits to begin. No real money.
+          </motion.p>
+          <motion.div variants={itemMotion} className="landing-install">
+            <button className="text-button" onClick={() => void onInstall()}>
+              {canInstall ? "Install browser app" : "Install as a browser app"}
+            </button>
+            <span>Desktop download for Windows 64-bit.</span>
+          </motion.div>
+        </motion.div>
+        <motion.div
+          className="product-preview"
+          aria-label="Illustrative forecasting workspace"
+          initial={reduce ? false : { opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.12 }}
+          transition={{ duration: reduce ? 0 : 0.65, ease }}
+        >
+          <aside className="preview-navigation" aria-hidden="true">
+            <span className="preview-wordmark">wildcatter.</span>
+            <span className="preview-nav-active">
+              <LayoutGrid size={16} />
+              Markets
             </span>
-            <span className="no">
-              No <strong>32.0¢</strong>
+            <span>
+              <Wallet size={16} />
+              Portfolio
             </span>
+            <span>
+              <Trophy size={16} />
+              Leaderboard
+            </span>
+            <span>
+              <Sparkles size={16} />
+              Draft studio
+            </span>
+            <small>
+              <span className="status-dot" />
+              Demo workspace
+            </small>
+          </aside>
+          <div className="preview-workspace">
+            <div className="preview-topline">
+              <span>Markets</span>
+              <span>
+                10,000 <small>credits</small>
+              </span>
+            </div>
+            <div className="preview-heading">
+              <h2>A world of possibilities.</h2>
+              <span>Illustrative preview</span>
+            </div>
+            <div className="preview-dashboard">
+              <div className="landing-preview" aria-label="Illustrative market">
+                <div className="landing-preview-top">
+                  <span className="small-pill">Science</span>
+                  <ArrowUpRight size={17} />
+                </div>
+                <h3>Will the next breakthrough happen this year?</h3>
+                <div className="landing-preview-number">
+                  68%<small>chance of YES</small>
+                </div>
+                <svg
+                  viewBox="0 0 500 130"
+                  preserveAspectRatio="none"
+                  aria-hidden="true"
+                >
+                  <defs>
+                    <linearGradient
+                      id="preview-fill"
+                      x1="0"
+                      x2="0"
+                      y1="0"
+                      y2="1"
+                    >
+                      <stop stopColor="currentColor" stopOpacity=".08" />
+                      <stop
+                        offset="1"
+                        stopColor="currentColor"
+                        stopOpacity="0"
+                      />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    d="M0 105 25 90 50 98 75 70 100 80 125 55 150 68 175 60 200 78 225 52 250 58 275 35 300 42 325 20 350 32 375 18 400 38 425 14 450 20 475 6 500 14V130H0Z"
+                    fill="url(#preview-fill)"
+                  />
+                  <motion.path
+                    d="M0 105 25 90 50 98 75 70 100 80 125 55 150 68 175 60 200 78 225 52 250 58 275 35 300 42 325 20 350 32 375 18 400 38 425 14 450 20 475 6 500 14"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinejoin="round"
+                    vectorEffect="non-scaling-stroke"
+                    initial={reduce ? false : { pathLength: 0 }}
+                    animate={reduce ? { pathLength: 1 } : undefined}
+                    whileInView={{ pathLength: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: reduce ? 0 : 1.2, ease }}
+                  />
+                </svg>
+                <div className="preview-chart-axis">
+                  <span>9:00</span>
+                  <span>12:00</span>
+                  <span>15:00</span>
+                  <span>18:00</span>
+                </div>
+              </div>
+              <div className="preview-ticket">
+                <Wallet size={20} />
+                <span>Your practice balance</span>
+                <strong>
+                  10,000<small>credits</small>
+                </strong>
+                <div className="preview-ticket-rule" />
+                <span>Choose a possibility.</span>
+                <div className="landing-preview-outcomes">
+                  <span className="yes">
+                    Yes <strong>68.0¢</strong>
+                  </span>
+                  <span className="no">
+                    No <strong>32.0¢</strong>
+                  </span>
+                </div>
+                <span className="preview-trade-button">
+                  Your perspective matters.
+                </span>
+              </div>
+            </div>
+            <div className="preview-market-list">
+              {[
+                {
+                  symbol: "₿",
+                  category: "Crypto",
+                  title: "The next chapter for Bitcoin",
+                  chance: "72%",
+                },
+                {
+                  symbol: "↗",
+                  category: "Economy",
+                  title: "Where do rates go from here?",
+                  chance: "64%",
+                },
+                {
+                  symbol: "✳",
+                  category: "Technology",
+                  title: "What will AI make possible?",
+                  chance: "81%",
+                },
+              ].map((item) => (
+                <div key={item.category}>
+                  <span
+                    className={`preview-market-symbol ${item.category.toLowerCase()}`}
+                  >
+                    {item.symbol}
+                  </span>
+                  <div>
+                    <small>{item.category}</small>
+                    <strong>{item.title}</strong>
+                  </div>
+                  <span>{item.chance}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        </motion.div>
       </main>
-      <section className="landing-features" aria-label="What you can do">
+      <motion.section
+        className="landing-features"
+        aria-label="What you can do"
+        variants={listMotion}
+        initial={reduce ? false : "hidden"}
+        whileInView="show"
+        viewport={{ once: true, amount: 0.15 }}
+      >
         {features.map(({ icon: Icon, title, text }) => (
-          <div key={title}>
+          <motion.div key={title} variants={itemMotion}>
             <Icon size={20} />
             <h3>{title}</h3>
             <p>{text}</p>
-          </div>
+          </motion.div>
         ))}
-      </section>
+      </motion.section>
       <footer>
         <span>Wildcatter · Demo environment, no real-money payouts.</span>
         <a href="/developers">

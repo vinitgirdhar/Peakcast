@@ -1,29 +1,33 @@
-# Wildcatter material and motion system
+# Wildcatter interface
 
-Revised to the user's Apple-inspired reference on 2026-11-11. The supplied image directs the pastel palette, soft rectangular geometry, tinted icon tiles and airy composition. This is a shared web interface in browser/PWA/Electron, not a claim to use Apple's native SwiftUI materials on Windows.
+Revised on November 16, 2026 around the supplied monochrome financial-workspace reference. The shared React interface serves the web, installable PWA, Windows Electron app, and Android WebView. White surfaces, slim navigation, generous spacing, black selected states and restrained outcome colors carry through every screen.
 
-## Materials and typography
+## Visual system
 
-Pale pearl foundation, blue/lavender/pink light, dark ink, blue selected states and green/rose outcomes. The system font leads on Apple devices, with bundled Inter Variable on other platforms; no Apple font is redistributed. Mobile uses only the safe-area-aware bottom dock. Desktop uses a modal hamburger drawer with contained focus, Escape, backdrop dismissal and focus restoration. Content uses quieter translucent material for reading prices and rules.
+`src/styles.css` contains component structure and responsive behavior. `src/design.css` defines shared visual tokens and presentation. Canvas `#f7f8fa`, white surfaces, ink `#202124`, secondary text `#64676d`, and borders `#e7e8eb` establish the light appearance. Dark mode uses a black canvas and neutral elevated surfaces. Green and rose retain their meaning for YES, NO, gains and losses.
 
-Use real glass refraction for compact navigation/control surfaces, standard frosted material for text-heavy content. This follows [Apple's materials guidance](https://developer.apple.com/design/human-interface-guidelines/materials.md). Text must remain readable over every backdrop. Focus, disabled, error, pending and selected states communicate meaning without relying on motion.
+Typography uses the system font on Apple devices and locally bundled Inter Variable elsewhere. No external font request or redistributed Apple font is required. Headings use close spacing and moderate weights; prices use tabular numerals. Content panels have 14–16px corners; controls use smaller 8–10px corners. Shadows are limited to gentle elevation and floating menus.
 
-## Mobile hierarchy
+Opaque surfaces replace the previous SVG refraction effects. The third-party glass runtime is no longer loaded. Readable prices and lower rendering overhead take priority over decorative material effects.
 
-Compact market rows prioritize the question and probability. Six results per page reduce scrolling; search and sorting apply to the entire market list. The featured question is a short preview. Detail views separate the forecast/trade form from resolution rules; ambiguous-evidence policy is disclosed on demand. New drafts, saved drafts, API reference and setup have focused routes. Keep the demo status visible, and keep internal roadmap/configuration copy out of forecasting flows. Inputs use readable text sizes and touch controls generally target 44px or more. Short viewports can scroll the full page above the dock.
+## Navigation and responsive layout
 
-## Reused glass implementation
+- Wide desktop screens (1100px and above) show a persistent sidebar with the current destination selected.
+- Intermediate screens use a modal drawer with focus containment, Escape dismissal and focus restoration.
+- Mobile and touch tablets up to 1024px use a safe-area-aware bottom tab bar with all six destinations. Short landscape viewports can scroll above it.
+- Markets include a compact charcoal feature with live demo activity totals and an upcoming-deadlines list on larger screens. Totals come from actual market data; closed or expired markets are excluded from upcoming deadlines. The available balance stays in the header. Search and filtering cover the full list, with six results per page. Mobile cards retain outcome prices and deadlines.
+- Forecasts, rules, portfolios, leaderboards, studio, saved drafts, developer tools and settings share the same surfaces and controls. An unfinished trade survives switching between forecast and rules.
+- The landing hero offers web entry, Windows desktop download and Android download together. The page introduces the product through a clearly labeled illustrative workspace. Its example chart and probabilities are presentation content, not live market data.
+- Scrollbars are visually hidden across browser, PWA and native app content, while wheel, touch, keyboard and programmatic scrolling remain enabled.
 
-Vendored `public/vendor/liquid-glass.js` from [deepika-builds/liquid-glass](https://github.com/deepika-builds/liquid-glass) at commit `98ed97bd99def529493fd37177228810f6422f6d`, MIT, Copyright 2026 Deepika Rao. The upstream source is unchanged and the license ships beside it. `useLiquidGlass` supplies only React mount/unmount lifecycle and bounded usage. SVG displacement, channel-separated refraction, map generation and resize handling remain upstream code.
+## Motion and accessibility
 
-Chromium gets SVG refraction; Safari/Firefox get the library's frosted fallback. Large panels use CSS frost to bound map costs. Reduced-transparency and forced-color preferences use opaque surfaces. The visual material is decorative and carries no trading information.
-
-The mobile dock uses a clear gradient tint, reflective inset rim and translucent selected-tab pill. Its blur/refraction still comes from the pinned glass library; reduced-transparency mode keeps an opaque dock and selection. The dock follow-up passed navigation and live-preview accessibility checks in mobile Chromium and WebKit.
-
-## Motion
-
-Short page transitions, spring response on interactive cards, animated navigation selection and tactile press/focus states. Motion uses transform/opacity and springs from Motion. Respect OS reduced-motion preferences; avoid continuously moving backgrounds or delaying financial actions behind animations. [Apple motion guidance](https://developer.apple.com/design/human-interface-guidelines/motion.md) informs these choices.
+Motion is part of the shared interface: staggered landing copy, viewport reveals, an introductory chart trace, sliding sidebar and tab selections, market-card entrances, probability-bar fills, chart updates, animated values, notification badges and inbox rows, expandable panels, dropdown entrances, provider-editor reveals, and button and icon feedback. Timing stays between 180–450ms for interactions; the illustrative chart takes 1.2 seconds. Only loading indicators repeat. Avoid ambient animation and refraction. Motion's user preference support and CSS reduced-motion rules suppress nonessential movement; reduced-motion users see landing sections immediately. Keep keyboard focus visible, selected states explicit, error messages actionable, and form controls readable. Forced-color users receive explicit selected-control borders.
 
 ## Verification
 
-Run existing trading/API/browser checks after redesign. Inspect Chromium desktop/mobile and mobile WebKit screens, keyboard focus, narrow-screen overflow, glass filter creation/cleanup and reduced-motion behavior. Exercise Safari/Firefox fallback when engines are available. Hardware-specific smoothness and physical iPhone installation require device testing; no universal frame-rate claim.
+`npm run review:ui` captures every app route and the landing page at desktop and mobile widths in light and dark mode, checking WCAG A/AA rules, console errors and horizontal overflow. Browser journeys exercise search, trading, drafts, resolution, themes, mobile navigation and the tablet drawer. `npm run test:desktop` checks the packaged Windows app and session persistence. Screenshots and browser emulation do not establish physical Android or iPhone behavior; installed-device checks remain separate.
+
+## Native distribution
+
+The Windows package bundles the current compiled frontend and local API. Rebuild it after frontend changes. The Android app displays its configured HTTPS origin, so frontend changes appear when that origin is updated. Build with `powershell -File scripts/build-android.ps1`; pass `-Origin https://your-host.example` to use another host. The default is the documented hosted demo, rather than an expiring preview tunnel. Rebuilding an APK alone does not publish the frontend to that host.

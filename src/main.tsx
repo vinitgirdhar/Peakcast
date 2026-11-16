@@ -2,8 +2,10 @@ import { createRoot } from "react-dom/client";
 import { applyTheme } from "./theme.js";
 import { App } from "./App.js";
 import { MotionConfig } from "motion/react";
+import { ease } from "./motion.js";
 import "@fontsource-variable/inter";
 import "./styles.css";
+import "./design.css";
 
 applyTheme();
 matchMedia("(prefers-color-scheme: dark)").addEventListener(
@@ -11,7 +13,7 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener(
   applyTheme,
 );
 createRoot(document.getElementById("root")!).render(
-  <MotionConfig reducedMotion="user">
+  <MotionConfig reducedMotion="user" transition={{ duration: 0.24, ease }}>
     <App />
   </MotionConfig>,
 );

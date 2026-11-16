@@ -31,6 +31,7 @@ try {
         "/markets/fed-rate",
         "/markets/fed-rate/rules",
         "/portfolio",
+        "/leaderboard",
         "/settings",
         "/studio",
         "/studio/drafts",
@@ -41,11 +42,18 @@ try {
         await page.goto(`${origin}${route}`);
         await page.locator("h1").waitFor();
         await page.evaluate(() => document.fonts.ready);
+        await page.waitForFunction(() =>
+          [...document.querySelectorAll(".route-surface, .landing-copy")].every(
+            (element) => getComputedStyle(element).opacity === "1",
+          ),
+        );
+        if (route === "/markets/fed-rate")
+          await page.locator(".execute-button:not(:disabled)").waitFor();
         const name =
-          route === "/" ? "markets" : route.replaceAll("/", "-").slice(1);
+          route === "/" ? "landing" : route.replaceAll("/", "-").slice(1);
         await page.screenshot({
           path: `output/screenshots/${theme}-${viewport.width}-${name}.png`,
-          fullPage: false,
+          fullPage: route === "/",
         });
         const audit = await new AxeBuilder({ page })
           .withTags(["wcag2a", "wcag2aa", "wcag21aa"])

@@ -1,5 +1,24 @@
 # Verification record
 
+## Hero, market pulse and app release 1.1.0 — November 16, 2026
+
+- The landing hero offers web entry, Windows desktop download and Android download together. The overview now contains a compact charcoal market pulse with actual open-question, trade and volume totals, plus clickable upcoming deadlines. Closed and expired markets are excluded from the deadline list.
+- Scrollbars are visually hidden without disabling scrolling. Studio and Buy/Sell selections use the shared sliding indicator; reduced-motion content remains immediately available. No new dependency was added.
+- The complete `npm run verify` gate passed: 57 unit/integration tests, eight compiled API groups, 91 browser journeys, two intentionally skipped duplicate lifecycle runs, TypeScript/build, formatting, documentation links and dependency audit. Backend/shared coverage: 97.94% lines, 94.50% branches and 90.78% functions. All 48 route/theme/viewport audits passed without detected accessibility violations, page errors or document overflow.
+- The Windows 1.1.0 bundle contains the tested frontend and excludes private workspace data. Android version code 2 / version name 1.1.0 compiles and verifies with the same signing certificate as the previous release. The Android shell uses the documented hosted demo origin.
+- Render inspection confirmed Wildcatter is linked to `vinitgirdhar/wildcatter`, branch `main`, with automatic deployment on commit enabled. App binaries are distributed as GitHub Release assets rather than committed to the source repository. The current free demo's SQLite reset on deployment remains documented in the README.
+- Physical Android/iPhone installation, paid AI inference, exchange certification and production performance were not verified by these checks.
+
+## Monochrome workspace and motion — November 16, 2026
+
+- Redesigned the landing page and shared web/PWA/Electron/Android interface around the supplied reference. Added persistent desktop navigation, mobile tabs, neutral surfaces, bundled typography, coordinated motion, and explicit reduced-motion behavior. Removed the loaded refraction runtime.
+- All 57 unit/integration tests passed. Coverage across the executed server/shared modules: 97.94% lines, 94.52% branches, 90.78% functions. Compiled HTTP API checks passed all eight groups.
+- All 85 applicable browser journeys passed across desktop Chromium, Android-sized Chromium and mobile WebKit. Two duplicate lifecycle runs are intentionally skipped; the full lifecycle runs in the final WebKit project. The reload journey waits for both post-trade chart and quote responses so WebKit does not report an interrupted request as a page error.
+- All 48 screen audits passed: 12 routes, two themes, desktop and mobile widths. No detected WCAG A/AA violations, document overflow, or page errors. Extra checks cover 320–1440px featured probabilities, tablet drawer resizing, theme persistence, and reduced-motion content availability. Automated checks do not replace a full accessibility audit.
+- The final Windows bundle matches the current frontend build. Packaged launch, sidebar navigation, local API, renderer isolation and session persistence across two launches passed. The downloadable ZIP was refreshed.
+- Android APK compilation and signature verification passed. Four invalid build origins were rejected. The Android build now defaults to the documented hosted demo instead of an expiring preview tunnel. No Android device was attached for installation or hardware checks.
+- Production build, TypeScript, formatting, documentation links, dependency audit and diff whitespace checks passed. No new dependencies were added. No deployment, commit or push was performed; the Android frontend changes appear when its configured host is updated.
+
 2026-11-11, Windows local development environment. This verifies the demo milestone and Apple-inspired redesign, not the RFP's institutional performance or real-money requirements.
 
 ## Settings, pure-black appearance and app downloads — November 12, 2026

@@ -61,8 +61,6 @@ test("all discovery filters, sorts and navigation controls work", async ({
     .getByRole("button", { name: "Draft a market", exact: true })
     .click();
   await expect(page.locator(".page h1")).toHaveText("Draft studio");
-  if (!isMobile)
-    await page.getByRole("button", { name: "Open navigation" }).click();
   await page.getByRole("button", { name: "Wildcatter home" }).click();
   await expect(page.locator(".page h1")).toHaveText("Markets");
   await page.locator(".balance-button").click();
@@ -106,7 +104,6 @@ test("all discovery filters, sorts and navigation controls work", async ({
     await page
       .getByRole("button", { name: "Read platform documentation" })
       .click();
-    await page.getByRole("button", { name: "Open navigation" }).click();
     await page
       .getByRole("button", { name: "App & integrations", exact: true })
       .click();
@@ -183,11 +180,9 @@ test("NO outcome, quick share amounts, input guards and trade activity work", as
   await expect(page.getByRole("status")).toContainText("Bought 10 NO shares");
   await page.getByRole("button", { name: "Dismiss notification" }).click();
   await expect(page.getByRole("status")).toHaveCount(0);
-  if (!isMobile)
-    await page.getByRole("button", { name: "Open navigation" }).click();
   const navigation = isMobile
     ? page.getByRole("navigation", { name: "Quick navigation" })
-    : page.locator(".sidebar nav");
+    : page.locator(".desktop-sidebar nav");
   await navigation
     .getByRole("button", { name: "Portfolio", exact: true })
     .click();

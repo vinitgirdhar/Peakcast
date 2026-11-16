@@ -2,7 +2,6 @@ import { test, expect } from "@playwright/test";
 
 test("explore, filter, buy, reload, inspect the portfolio and sell", async ({
   page,
-  isMobile,
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -34,24 +33,28 @@ test("explore, filter, buy, reload, inspect the portfolio and sell", async ({
   await expect(
     page.getByRole("button", { name: "Buy YES shares" }),
   ).toBeEnabled();
-  // Let the post-trade chart refresh finish; WebKit reports a request cut off by reload as a page error.
+  // WebKit reports requests cut off by reload as page errors; finish both post-trade refreshes.
   const tradeStarted = Date.now();
   const chartRefresh = page.waitForResponse(
     (response) =>
       response.url().endsWith("/history") &&
       response.request().timing().startTime > tradeStarted,
   );
+  const quoteRefresh = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/quotes") &&
+      response.request().timing().startTime > tradeStarted,
+  );
   await page.getByRole("button", { name: "Buy YES shares" }).click();
   await expect(page.getByRole("status")).toContainText("Bought 10 YES shares");
   await chartRefresh;
+  await (await quoteRefresh).finished();
   await page.reload();
   await expect(
     page.getByRole("heading", {
       name: "Will the Fed cut interest rates before 2027?",
     }),
   ).toBeVisible();
-  if (!isMobile)
-    await page.getByRole("button", { name: "Open navigation" }).click();
   await page.getByRole("button", { name: "Portfolio", exact: true }).click();
   await expect(page.locator(".position-row")).toHaveCount(1);
   await expect(page.locator(".position-row")).toContainText("10 shares");

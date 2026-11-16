@@ -17,7 +17,7 @@ import type {
   Market,
 } from "../../shared/types.js";
 import { errorMessage } from "../ui.js";
-import { useLiquidGlass } from "../useLiquidGlass.js";
+import { motion } from "motion/react";
 
 const categories: Category[] = [
   "Economy",
@@ -59,7 +59,6 @@ export function DraftStudio({
   view: "create" | "drafts";
   onView: (view: "create" | "drafts") => void;
 }) {
-  const saveGlass = useLiquidGlass<HTMLButtonElement>();
   const [input, setInput] = useState<DraftInput>(blankDraft);
   const [closingLocal, setClosingLocal] = useState("");
   const [drafts, setDrafts] = useState<Draft[]>([]);
@@ -189,12 +188,18 @@ export function DraftStudio({
           aria-current={view === "create" ? "page" : undefined}
           onClick={() => onView("create")}
         >
+          {view === "create" && (
+            <motion.span className="tab-selection" layoutId="studio-view" />
+          )}
           New draft
         </button>
         <button
           aria-current={view === "drafts" ? "page" : undefined}
           onClick={() => onView("drafts")}
         >
+          {view === "drafts" && (
+            <motion.span className="tab-selection" layoutId="studio-view" />
+          )}
           Saved drafts <span className="count-pill">{drafts.length}</span>
         </button>
       </nav>
@@ -375,7 +380,6 @@ export function DraftStudio({
                 </p>
               )}
               <button
-                ref={saveGlass}
                 className="primary-button liquid-material"
                 type="submit"
                 disabled={busy}

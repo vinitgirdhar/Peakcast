@@ -44,7 +44,7 @@ for (let launch = 0; launch < 2; launch++) {
       contextIsolation: true,
     });
     assert.equal(await page.evaluate(() => typeof window.require), "undefined");
-    assert.ok(await page.locator('[data-glass-renderer="refraction"]').count());
+    assert.ok(await page.locator(".desktop-sidebar").isVisible());
     const api = await page.evaluate(async () =>
       (await fetch("/api/v1/capabilities")).json(),
     );
@@ -55,9 +55,8 @@ for (let launch = 0; launch < 2; launch++) {
       [/^Developers$/, "Developer tools"],
       [/^Markets$/, "Markets"],
     ]) {
-      await page.getByRole("button", { name: "Open navigation" }).click();
       await page
-        .locator(".sidebar nav")
+        .locator(".desktop-sidebar nav")
         .getByRole("button", { name: label })
         .click();
       await page.getByRole("heading", { name: heading, exact: true }).waitFor();
@@ -69,5 +68,5 @@ for (let launch = 0; launch < 2; launch++) {
   }
 }
 console.log(
-  "Windows desktop passed: packaged launch, page navigation, local API, refraction, renderer isolation and session persistence across restart.",
+  "Windows desktop passed: packaged launch, sidebar navigation, local API, renderer isolation and session persistence across restart.",
 );

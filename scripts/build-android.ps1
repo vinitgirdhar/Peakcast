@@ -1,3 +1,4 @@
+param([string]$Origin = 'https://wildcatter-p3yy.onrender.com')
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $androidSdk = Join-Path $env:LOCALAPPDATA 'Android/Sdk'
@@ -7,10 +8,9 @@ $androidJar = Join-Path $androidSdk 'platforms/android-35/android.jar'
 $buildRoot = Join-Path $projectRoot 'tmp/android-build'
 $downloadRoot = Join-Path $projectRoot 'release/downloads'
 New-Item -ItemType Directory -Force -Path "$buildRoot/res/drawable", "$buildRoot/classes", "$buildRoot/dex", "$buildRoot/source", $downloadRoot, "$projectRoot/data" | Out-Null
-$preview = Get-Content "$projectRoot/output/remote-preview.json" | ConvertFrom-Json
-$origin = [uri]$preview.url
-if ($origin.Scheme -ne 'https' -or $origin.AbsolutePath -ne '/') { throw 'An HTTPS preview origin is required.' }
-$source = (Get-Content "$projectRoot/android/MainActivity.java" -Raw).Replace('__ORIGIN__', $origin.GetLeftPart([System.UriPartial]::Authority))
+$appOrigin = [uri]$Origin
+if (!$appOrigin.IsAbsoluteUri -or $appOrigin.Scheme -ne 'https' -or $appOrigin.AbsolutePath -ne '/' -or $appOrigin.UserInfo -or $appOrigin.Query -or $appOrigin.Fragment) { throw 'An HTTPS application origin without credentials, path, query or fragment is required.' }
+$source = (Get-Content "$projectRoot/android/MainActivity.java" -Raw).Replace('__ORIGIN__', $appOrigin.GetLeftPart([System.UriPartial]::Authority))
 [IO.File]::WriteAllText("$buildRoot/source/MainActivity.java",$source)
 Copy-Item "$projectRoot/public/icon-192.png" "$buildRoot/res/drawable/ic_launcher.png"
 & "$buildTools/aapt2.exe" compile --dir "$buildRoot/res" -o "$buildRoot/resources.zip"
@@ -37,4 +37,4 @@ if (!(Test-Path $keyStore)) {
 if ($LASTEXITCODE) { throw 'APK signing failed' }
 & "$javaRoot/java.exe" -jar "$buildTools/lib/apksigner.jar" verify "$downloadRoot/Wildcatter-Android.apk"
 if ($LASTEXITCODE) { throw 'APK verification failed' }
-Write-Output 'Android demo APK built and signature verified. This build connects to the temporary HTTPS preview.'
+Write-Output "Android demo APK built and signature verified. This build connects to $($appOrigin.GetLeftPart([System.UriPartial]::Authority))."

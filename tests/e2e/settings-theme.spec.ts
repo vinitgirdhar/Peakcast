@@ -2,8 +2,6 @@ import { test, expect } from "@playwright/test";
 import { choose } from "./select.js";
 test("appearance persists between Settings, the app and short landing page", async ({
   page,
-  isMobile,
-  browserName,
 }) => {
   await page.goto("/settings");
   await expect(
@@ -23,13 +21,8 @@ test("appearance persists between Settings, the app and short landing page", asy
   ).toHaveAttribute("href", "/downloads/Wildcatter-Android.apk");
   await page.getByRole("button", { name: "Continue on the web" }).click();
   await expect(page).toHaveURL(/\/markets$/);
-  await expect(page.locator(".mobile-dock")).toHaveAttribute(
-    "data-glass-renderer",
-    browserName === "webkit" ? "frosted" : "refraction",
-  );
+  await expect(page.locator('filter[id^="lg-filter-"]')).toHaveCount(0);
   await expect(page.locator(".market-card")).toHaveCount(6);
-  if (!isMobile)
-    await page.getByRole("button", { name: "Open navigation" }).click();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("button", { name: "Light", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");

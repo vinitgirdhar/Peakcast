@@ -20,7 +20,7 @@ async function openWindow() {
     height: 960,
     minWidth: 375,
     minHeight: 640,
-    backgroundColor: "#eef0fa",
+    backgroundColor: "#f7f8fa",
     autoHideMenuBar: true,
     icon: join(root, "dist/icon-512.png"),
     webPreferences: {

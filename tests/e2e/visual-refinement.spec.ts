@@ -1,6 +1,100 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
+test("landing reveals and animated selections keep content available with reduced motion", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: /Turn your view/ }),
+  ).toBeVisible();
+  const platforms = page.getByRole("region", { name: "Get Wildcatter" });
+  await platforms.scrollIntoViewIfNeeded();
+  await expect(platforms).toHaveCSS("opacity", "1");
+  await expect(
+    page.getByRole("link", { name: "Download desktop app" }),
+  ).toHaveAttribute("href", "/downloads/Wildcatter-Windows.zip");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.reload();
+  await expect(platforms).toHaveCSS("opacity", "1");
+  await page.getByRole("button", { name: "Continue on the web" }).click();
+  await page.getByRole("button", { name: "Technology", exact: true }).click();
+  await expect(
+    page.locator(".category-tabs .selected .tab-selection"),
+  ).toHaveCount(1);
+  await expect(page.locator(".market-card .category-label")).toHaveText([
+    "Technology",
+  ]);
+  await expect(page.locator(".probability-track > span").first()).toHaveCSS(
+    "animation-name",
+    "none",
+  );
+});
+
+test("market pulse totals actual activity and upcoming deadlines exclude closed or expired markets", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.route("**/api/v1/markets?**", async (route) => {
+    const response = await route.fetch();
+    const body = await response.json();
+    body.items = body.items
+      .slice(0, 4)
+      .map((market: object, index: number) => ({
+        ...market,
+        status: index === 1 ? "closed" : "open",
+        closesAt: new Date(
+          Date.now() + (index === 3 ? -1 : index === 2 ? 1 : 2) * 86_400_000,
+        ).toISOString(),
+        trades: index + 1,
+        volumeMicros: (index + 1) * 1_000_000,
+      }));
+    await route.fulfill({ json: body });
+  });
+  await page.goto("/markets");
+  await expect(page.locator(".market-pulse strong")).toHaveText([
+    "2",
+    "10",
+    "10",
+  ]);
+  const deadlines = page
+    .getByRole("region", { name: "Closing next" })
+    .getByRole("button");
+  await expect(deadlines).toHaveCount(2);
+  await expect(deadlines.first()).toContainText(
+    "Will a crewed mission land on the Moon in 2027?",
+  );
+  await deadlines.first().click();
+  await expect(page).toHaveURL(/\/markets\/moon-landing$/);
+});
+
+test("hero downloads are visible immediately and hidden scrollbars preserve page scrolling", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const hero = page.getByRole("region", { name: "Get Wildcatter" });
+  for (const name of ["Download desktop app", "Download for Android"]) {
+    const link = hero.getByRole("link", { name });
+    await expect(link).toBeInViewport();
+  }
+  await expect(
+    hero.getByRole("button", { name: "Continue on the web" }),
+  ).toBeInViewport();
+  await expect(page.locator("html")).toHaveCSS("scrollbar-width", "none");
+  await page.evaluate(() => window.scrollBy(0, 400));
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY))
+    .toBeGreaterThan(0);
+  await page.goto("/studio");
+  await expect(
+    page.locator('[aria-current="page"] .tab-selection'),
+  ).toHaveCount(1);
+  await page.getByRole("button", { name: /^Saved drafts/ }).click();
+  await expect(
+    page.locator('[aria-current="page"] .tab-selection'),
+  ).toHaveCount(1);
+});
+
 test("featured probability stays inside its card across narrow and intermediate widths", async ({
   page,
 }) => {
@@ -43,21 +137,17 @@ test("featured probability stays inside its card across narrow and intermediate 
   }
 });
 
-test("dark appearance keeps the black foundation, glow, readable drawer and no extra tick", async ({
+test("dark appearance keeps a quiet black foundation and accessible tablet drawer", async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.setViewportSize({ width: 1050, height: 1000 });
   await page.goto("/settings");
   await page.getByRole("button", { name: "Dark", exact: true }).click();
   await expect(page.locator(".appearance-options button > svg")).toHaveCount(3);
   expect(
     await page.evaluate(() => getComputedStyle(document.body).backgroundColor),
   ).toBe("rgb(0, 0, 0)");
-  expect(
-    await page
-      .locator(".ambient-light")
-      .evaluate((el) => getComputedStyle(el).backgroundImage),
-  ).toContain("radial-gradient");
+  await expect(page.locator(".ambient-light")).toHaveCount(0);
   await page.getByRole("button", { name: "Open navigation" }).click();
   await expect(
     page.getByRole("dialog", { name: "Workspace menu" }),

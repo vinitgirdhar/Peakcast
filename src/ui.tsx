@@ -63,10 +63,10 @@ export function BrandMark() {
       fill="none"
       aria-hidden="true"
     >
-      <rect width="32" height="32" rx="9" fill="#315cf5" />
+      <rect width="32" height="32" rx="9" fill="currentColor" />
       <path
         d="m6 11 4.5 12L16 9l5.5 14L26 11"
-        stroke="white"
+        stroke="var(--on-selected, white)"
         strokeWidth="2.6"
         strokeLinejoin="round"
         strokeLinecap="round"

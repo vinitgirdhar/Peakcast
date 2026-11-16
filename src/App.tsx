@@ -23,7 +23,6 @@ import type {
 } from "../shared/types.js";
 import { NotificationBell } from "./Notifications.js";
 import { BrandMark, EmptyState, errorMessage, formatCredits } from "./ui.js";
-import { useLiquidGlass } from "./useLiquidGlass.js";
 import { AnimatedNumber, ease } from "./motion.js";
 import { MarketExplorer } from "./pages/Markets.js";
 import { MarketDetail } from "./pages/MarketDetail.js";
@@ -61,8 +60,6 @@ export function App() {
     (Event & { prompt: () => Promise<void> }) | null
   >(null);
   const client = new WildcatterClient("", token);
-  const accountGlass = useLiquidGlass<HTMLDivElement>();
-  const dockGlass = useLiquidGlass<HTMLElement>();
   function navigate(next: string) {
     history.pushState({}, "", next);
     setPath(next);
@@ -151,13 +148,16 @@ export function App() {
     const mobile = matchMedia(
       "(max-width:760px), (pointer:coarse) and (max-width:1024px)",
     );
+    const desktop = matchMedia("(min-width:1100px)");
     const close = () => {
-      if (mobile.matches) setMenu(false);
+      if (mobile.matches || desktop.matches) setMenu(false);
     };
     mobile.addEventListener("change", close);
+    desktop.addEventListener("change", close);
     return () => {
       document.body.style.overflow = previous;
       mobile.removeEventListener("change", close);
+      desktop.removeEventListener("change", close);
     };
   }, [menu]);
   async function installApp() {
@@ -192,17 +192,9 @@ export function App() {
       : developers
         ? "Developers"
         : (navItems.find((n) => n.path === path)?.label ?? "Page not found");
-  const ambient = (
-    <div className="ambient-light" aria-hidden="true">
-      <div />
-      <div />
-      <div />
-    </div>
-  );
   if (landing)
     return (
       <>
-        {ambient}
         <Landing
           onContinue={() => navigate("/markets")}
           onInstall={installApp}
@@ -213,10 +205,56 @@ export function App() {
     );
   return (
     <div className="app-shell">
-      {ambient}
       <a className="skip-link" href="#main">
         Skip to content
       </a>
+      <aside className="desktop-sidebar" aria-label="Workspace">
+        <button
+          className="brand"
+          aria-label="Wildcatter home"
+          onClick={() => navigate("/markets")}
+        >
+          <BrandMark />
+          <span>wildcatter.</span>
+        </button>
+        <span className="workspace-label">Your workspace</span>
+        <nav aria-label="Main navigation">
+          {navItems.map(({ path: p, label, icon: Icon }) => (
+            <button
+              key={p}
+              className={`nav-item ${section === label ? "active" : ""}`}
+              aria-current={section === label ? "page" : undefined}
+              onClick={() => navigate(p)}
+            >
+              {section === label && (
+                <motion.span
+                  className="nav-active-bg"
+                  layoutId="desktop-selection"
+                  transition={{ duration: 0.28, ease }}
+                />
+              )}
+              <Icon size={18} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </nav>
+        <div className="sidebar-bottom">
+          <button
+            className="nav-item"
+            onClick={() => navigate("/developers/setup")}
+          >
+            <CircleHelp size={18} />
+            App & integrations
+          </button>
+          <div className="profile">
+            <span className="status-dot" />
+            <div>
+              <strong>Practice. Learn. Forecast.</strong>
+              <span>Demo credits. Real curiosity.</span>
+            </div>
+          </div>
+        </div>
+      </aside>
       <dialog
         ref={dialog}
         className="navigation-drawer"
@@ -332,7 +370,7 @@ export function App() {
             </button>
             <strong>{section}</strong>
           </div>
-          <div className="top-actions liquid-material" ref={accountGlass}>
+          <div className="top-actions">
             <span className="environment">
               <span className="status-dot" />
               Demo environment
@@ -538,11 +576,7 @@ export function App() {
           </footer>
         </main>
       </div>
-      <nav
-        className="mobile-dock liquid-material"
-        aria-label="Quick navigation"
-        ref={dockGlass}
-      >
+      <nav className="mobile-dock" aria-label="Quick navigation">
         {navItems.map(({ path: p, label, icon: Icon }) => (
           <button
             key={p}

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("navigation uses one surface, with an accessible desktop drawer", async ({
+test("navigation uses a desktop sidebar, tablet drawer and mobile tab bar", async ({
   page,
   isMobile,
 }) => {
@@ -33,6 +33,15 @@ test("navigation uses one surface, with an accessible desktop drawer", async ({
     }
   } else {
     await expect(dock).toBeHidden();
+    await expect(menu).toBeHidden();
+    await expect(page.locator(".desktop-sidebar")).toBeVisible();
+    await page
+      .locator(".desktop-sidebar")
+      .getByRole("button", { name: "Portfolio", exact: true })
+      .click();
+    await expect(page).toHaveURL(/\/portfolio$/);
+    await page.setViewportSize({ width: 1000, height: 900 });
+    await expect(page.locator(".desktop-sidebar")).toBeHidden();
     await menu.click();
     const drawer = page.getByRole("dialog", { name: "Workspace menu" });
     await expect(drawer).toBeVisible();
@@ -56,6 +65,10 @@ test("navigation uses one surface, with an accessible desktop drawer", async ({
     expect(await page.evaluate(() => document.body.style.overflow)).not.toBe(
       "hidden",
     );
+    await menu.click();
+    await page.setViewportSize({ width: 1200, height: 900 });
+    await expect(drawer).toBeHidden();
+    await expect(page.locator(".desktop-sidebar")).toBeVisible();
   }
 });
 

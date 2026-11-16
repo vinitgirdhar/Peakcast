@@ -30,7 +30,6 @@ import {
   errorMessage,
   statusLabel,
 } from "../ui.js";
-import { useLiquidGlass } from "../useLiquidGlass.js";
 import { AnimatedNumber, itemMotion, listMotion } from "../motion.js";
 import { DailyBonusCard, PerformanceStats } from "./PortfolioExtras.js";
 
@@ -55,7 +54,6 @@ export function PortfolioView({
   onOpen: (id: string) => void;
   onBrowse: () => void;
 }) {
-  const tabsGlass = useLiquidGlass<HTMLDivElement>();
   const [tab, setTab] = useState("positions");
   const [orderError, setOrderError] = useState("");
   const openOrders = (portfolio?.orders ?? []).filter(
@@ -178,7 +176,6 @@ export function PortfolioView({
       </details>
       <PerformanceStats stats={portfolio?.stats} />
       <div
-        ref={tabsGlass}
         className="category-tabs liquid-material"
         role="group"
         aria-label="Portfolio sections"
@@ -197,6 +194,9 @@ export function PortfolioView({
               });
             }}
           >
+            {tab === item.id && (
+              <motion.span className="tab-selection" layoutId="portfolio-tab" />
+            )}
             {item.label}
             {item.count !== undefined && (
               <>

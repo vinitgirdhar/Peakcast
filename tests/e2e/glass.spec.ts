@@ -1,44 +1,29 @@
 import { test, expect } from "@playwright/test";
 
-test("glass engine, navigation lifecycle and reduced motion keep controls usable", async ({
+test("opaque surfaces, navigation lifecycle and reduced motion keep controls usable", async ({
   page,
   isMobile,
-  browserName,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/markets");
   await expect(page.locator(".page h1")).toBeVisible();
-  await expect(page.locator(".category-tabs")).toHaveAttribute(
-    "data-glass-renderer",
-    browserName === "webkit" ? "frosted" : "refraction",
-  );
-  const initialFilters = await page.locator('filter[id^="lg-filter-"]').count();
-  expect(initialFilters).toBeLessThanOrEqual(6);
+  await expect(page.locator('filter[id^="lg-filter-"]')).toHaveCount(0);
   for (let i = 0; i < 3; i++) {
     const navigation = isMobile
       ? page.getByRole("navigation", { name: "Quick navigation" })
-      : page.locator(".sidebar nav");
-    if (!isMobile)
-      await page.getByRole("button", { name: "Open navigation" }).click();
+      : page.locator(".desktop-sidebar nav");
     await navigation
       .getByRole("button", { name: "Portfolio", exact: true })
       .click();
     await expect(
       page.getByRole("heading", { name: "Your portfolio" }),
     ).toBeVisible();
-    if (!isMobile)
-      await page.getByRole("button", { name: "Open navigation" }).click();
     await navigation
       .getByRole("button", { name: "Markets", exact: true })
       .click();
-    await expect(page.locator(".category-tabs")).toHaveAttribute(
-      "data-glass-renderer",
-      browserName === "webkit" ? "frosted" : "refraction",
-    );
+    await expect(page.locator(".market-card")).toHaveCount(6);
   }
-  await expect(page.locator('filter[id^="lg-filter-"]')).toHaveCount(
-    initialFilters,
-  );
+  await expect(page.locator('filter[id^="lg-filter-"]')).toHaveCount(0);
   expect(
     await page
       .locator(".market-card")

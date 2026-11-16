@@ -32,8 +32,8 @@ import {
   TradeFeed,
   WatchButton,
 } from "./MarketExtras.js";
-import { useLiquidGlass } from "../useLiquidGlass.js";
 import { AnimatedNumber } from "../motion.js";
+import { motion } from "motion/react";
 
 const cents = (price: number) => `${(price * 100).toFixed(1)}¢`;
 
@@ -56,7 +56,6 @@ export function MarketDetail({
   view: "forecast" | "rules";
   onView: (view: "forecast" | "rules") => void;
 }) {
-  const tradeGlass = useLiquidGlass<HTMLDivElement>();
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [historyError, setHistoryError] = useState("");
   // null until the first response, so the feed can show a loading state.
@@ -273,12 +272,24 @@ export function MarketDetail({
               aria-current={view === "forecast" ? "page" : undefined}
               onClick={() => onView("forecast")}
             >
+              {view === "forecast" && (
+                <motion.span
+                  className="tab-selection"
+                  layoutId={`market-view-${market.id}`}
+                />
+              )}
               Forecast
             </button>
             <button
               aria-current={view === "rules" ? "page" : undefined}
               onClick={() => onView("rules")}
             >
+              {view === "rules" && (
+                <motion.span
+                  className="tab-selection"
+                  layoutId={`market-view-${market.id}`}
+                />
+              )}
               Rules & source
             </button>
           </nav>
@@ -333,8 +344,10 @@ export function MarketDetail({
                         fill="#315cf5"
                         fillOpacity="0.12"
                       />
-                      <polyline
-                        points={line}
+                      <motion.polyline
+                        initial={false}
+                        animate={{ points: line }}
+                        transition={{ duration: 0.45 }}
                         fill="none"
                         stroke="#315cf5"
                         strokeWidth="3"
@@ -436,7 +449,6 @@ export function MarketDetail({
             </div>
             <form onSubmit={(event) => void submit(event)}>
               <div
-                ref={tradeGlass}
                 className="action-tabs liquid-material"
                 role="group"
                 aria-label="Trade action"
@@ -453,6 +465,12 @@ export function MarketDetail({
                       setTradeError("");
                     }}
                   >
+                    {action === item && (
+                      <motion.span
+                        className="tab-selection"
+                        layoutId={`trade-action-${market.id}`}
+                      />
+                    )}
                     {item === "buy" ? "Buy shares" : "Sell shares"}
                   </button>
                 ))}

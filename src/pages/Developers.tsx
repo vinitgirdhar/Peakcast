@@ -12,7 +12,6 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import { useLiquidGlass } from "../useLiquidGlass.js";
 
 export function Developers({
   token,
@@ -27,7 +26,6 @@ export function Developers({
   view: "overview" | "api" | "setup";
   onView: (view: "overview" | "api" | "setup") => void;
 }) {
-  const tokenGlass = useLiquidGlass<HTMLButtonElement>();
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState("");
   const origin = window.location.origin;
@@ -174,7 +172,6 @@ export function Developers({
                 after 30 days. Treat it as a password.
               </p>
               <button
-                ref={tokenGlass}
                 className="secondary-button liquid-material"
                 onClick={() => void copyToken()}
                 disabled={!token}

@@ -6,6 +6,8 @@
 
 ![Wildcatter market explorer](docs/assets/markets-desktop.png)
 
+A quiet forecasting workspace: crisp typography, a persistent desktop sidebar, and a touch-friendly mobile tab bar. A compact market pulse shows open questions, actual demo activity and upcoming deadlines. The hero offers the web app, Windows desktop download and Android download together. Light and dark appearances, hidden scrollbars that preserve scrolling, section reveals, sliding selections, animated charts and values, expanding panels, and tactile controls work across the shared frontend, with reduced-motion support.
+
 > Wildcatter runs on demo credits. Every account starts with 10,000 credits; nothing here is real money, a wallet, or an on-chain asset. See [Scope and honesty](#scope-and-honesty).
 
 ## Contents
@@ -132,6 +134,12 @@ Optional settings go in `.env` (copy `.env.example`): AI provider keys, `AI_ACCE
 | Windows desktop          | Download the ZIP from the [latest release](https://github.com/vinitgirdhar/wildcatter/releases/latest), extract the whole folder and run `Wildcatter.exe` | Its own bundled local API and database under `%APPDATA%/wildcatter` |
 
 The desktop app is self-contained: it starts its own local server and needs no internet connection except for optional AI providers. Build it yourself with `npm run desktop:package`. The preview executable is unsigned, so Windows SmartScreen may ask for confirmation.
+
+The landing page also offers an Android APK when its download is available. Build the Android shell with `powershell -File scripts/build-android.ps1` (Android SDK 35 and JDK 17 required). It defaults to the hosted demo; use `-Origin https://your-host.example` for a different host. The APK loads the shared frontend from that origin, so local UI changes require deployment there before they appear in the installed app.
+
+![Wildcatter mobile markets](docs/assets/markets-mobile.png)
+
+The [interface guide](docs/DESIGN.md) covers typography, spacing, navigation, motion and platform behavior. See the [landing page preview](docs/assets/landing-desktop.png). Run `npm run review:ui` to capture light and dark screenshots and check accessibility across all app routes.
 
 ## Developer API
 

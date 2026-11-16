@@ -4,6 +4,7 @@ import { Select } from "../Select.js";
 import { useTheme } from "../theme.js";
 import type { AIProvider, AIProviderInfo } from "../../shared/types.js";
 import { errorMessage } from "../ui.js";
+import { motion } from "motion/react";
 export function Settings({
   managed = false,
   token,
@@ -105,6 +106,12 @@ export function Settings({
               aria-pressed={theme === item.id}
               onClick={() => setTheme(item.id)}
             >
+              {theme === item.id && (
+                <motion.span
+                  className="appearance-selection"
+                  layoutId="appearance-selection"
+                />
+              )}
               <item.icon size={22} />
               {item.label}
             </button>

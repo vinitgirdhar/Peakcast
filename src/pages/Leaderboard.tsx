@@ -8,7 +8,6 @@ import {
   errorMessage,
   formatCredits,
 } from "../ui.js";
-import { useLiquidGlass } from "../useLiquidGlass.js";
 import { itemMotion, listMotion } from "../motion.js";
 
 const tabs = [
@@ -21,7 +20,6 @@ export function LeaderboardView({ client }: { client: WildcatterClient }) {
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
   const [tab, setTab] = useState<"traders" | "creators">("traders");
-  const tabsGlass = useLiquidGlass<HTMLDivElement>();
 
   useEffect(() => {
     let active = true;
@@ -64,7 +62,6 @@ export function LeaderboardView({ client }: { client: WildcatterClient }) {
         </div>
       </div>
       <div
-        ref={tabsGlass}
         className="category-tabs liquid-material"
         role="group"
         aria-label="Leaderboard type"
@@ -76,6 +73,12 @@ export function LeaderboardView({ client }: { client: WildcatterClient }) {
             aria-pressed={tab === item.id}
             onClick={() => setTab(item.id)}
           >
+            {tab === item.id && (
+              <motion.span
+                className="tab-selection"
+                layoutId="leaderboard-tab"
+              />
+            )}
             {item.label}
           </button>
         ))}
