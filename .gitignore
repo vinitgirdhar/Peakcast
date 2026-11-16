@@ -1,0 +1,18 @@
+node_modules/
+dist/
+dist-server/
+release/
+data/
+tmp/
+test-results/
+playwright-report/
+.env
+.env.*
+!.env.example
+*.log
+output/
+coverage/
+
+# Assignment brief belongs to its authors; local editor tooling
+AI_Prediction_Market_Platform_RFP.pdf
+.claude/

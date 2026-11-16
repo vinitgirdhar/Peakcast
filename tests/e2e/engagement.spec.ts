@@ -1,0 +1,177 @@
+import { randomUUID } from "node:crypto";
+import { test, expect, type Page } from "@playwright/test";
+import { choose } from "./select.js";
+
+// These journeys never create markets. The one real trade below moves a seeded
+// market's price and volume; the specs that check order read the API at runtime.
+
+/** The page's own demo session; call once the app has rendered loaded data. */
+const demoAuth = async (page: Page) => ({
+  Authorization: `Bearer ${await page.evaluate(() =>
+    localStorage.getItem("wildcatter.demo.token.v1"),
+  )}`,
+});
+
+test("the daily bonus credits 50 once and stays claimed", async ({ page }) => {
+  await page.goto("/portfolio");
+  const card = page.getByRole("region", { name: "Daily bonus" });
+  const balance = page.locator(".balance-button");
+  await expect(balance).toContainText("10,000.00");
+  await card.getByRole("button", { name: "Claim 50 credits" }).click();
+  await expect(page.getByRole("status")).toContainText(
+    "Daily bonus: +50 credits",
+  );
+  await expect(balance).toContainText("10,050.00");
+  await expect(card).toContainText("Come back tomorrow for 60 credits");
+  await expect(card).toContainText("1-day streak");
+  await expect(card.getByRole("button")).toHaveCount(0);
+  await page.reload();
+  await expect(card).toContainText("Come back tomorrow for 60 credits");
+  await expect(balance).toContainText("10,050.00");
+});
+
+test("a bonus already claimed elsewhere shows the claimed state, not an error", async ({
+  page,
+}) => {
+  await page.goto("/portfolio");
+  const card = page.getByRole("region", { name: "Daily bonus" });
+  const claim = card.getByRole("button", { name: "Claim 50 credits" });
+  await expect(claim).toBeVisible();
+  const elsewhere = await page.request.post("/api/v1/bonus/claim", {
+    headers: await demoAuth(page),
+  });
+  expect(elsewhere.ok()).toBeTruthy();
+  await claim.click();
+  await expect(card).toContainText("Come back tomorrow for 60 credits");
+  await expect(card.getByRole("alert")).toHaveCount(0);
+  await expect(page.locator(".balance-button")).toContainText("10,050.00");
+});
+
+test("the trading record counts the account's trades", async ({ page }) => {
+  await page.goto("/portfolio");
+  const record = page.getByRole("region", { name: "Trading record" });
+  await expect(record.locator(".stat-trades strong")).toHaveText("0");
+  await expect(record.locator(".stat-win-rate strong")).toHaveText("—");
+  const order = {
+    marketId: "fed-rate",
+    outcome: "YES",
+    action: "buy",
+    shares: 10,
+  };
+  const quote = await (
+    await page.request.post("/api/v1/quotes", { data: order })
+  ).json();
+  const fill = await page.request.post("/api/v1/trades", {
+    headers: { ...(await demoAuth(page)), "Idempotency-Key": randomUUID() },
+    data: { ...order, limitMicros: quote.amountMicros },
+  });
+  expect(fill.status()).toBe(201);
+  await page.reload();
+  await expect(record.locator(".stat-trades strong")).toHaveText("1");
+  await expect(record.locator(".stat-volume strong")).not.toHaveText("0.00");
+  await expect(record.locator(".stat-win-rate")).toContainText(
+    "No resolved markets yet",
+  );
+});
+
+test("the inbox starts empty and Escape returns focus to the bell", async ({
+  page,
+}) => {
+  await page.goto("/markets");
+  await expect(page.locator(".market-card").first()).toBeVisible();
+  const bell = page.getByRole("button", { name: "Notifications", exact: true });
+  await bell.click();
+  const panel = page.getByRole("dialog", { name: "Notifications" });
+  await expect(
+    panel.getByRole("heading", { name: "You're all caught up." }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+  await expect(bell).toBeFocused();
+});
+
+test("a server-cancelled order raises the badge, is listed and opens its market", async ({
+  page,
+}) => {
+  await page.goto("/markets");
+  await expect(page.locator(".market-card").first()).toBeVisible();
+  // Selling shares the account does not hold is cancelled at once.
+  const order = await page.request.post("/api/v1/orders", {
+    headers: await demoAuth(page),
+    data: {
+      marketId: "fed-rate",
+      outcome: "YES",
+      action: "sell",
+      shares: 5,
+      limitPrice: 0.01,
+    },
+  });
+  expect((await order.json()).status).toBe("cancelled");
+  await page.reload();
+  const bell = page.getByRole("button", { name: "Notifications, 1 unread" });
+  await expect(bell).toBeVisible();
+  await expect(page.locator(".notification-badge")).toHaveText("1");
+  await bell.click();
+  const panel = page.getByRole("dialog", { name: "Notifications" });
+  const item = panel.getByRole("button", { name: /was cancelled/ });
+  await expect(item).toBeVisible();
+  await expect(panel).toContainText("1 new");
+  // Opening marks everything read.
+  await expect(page.locator(".notification-badge")).toHaveCount(0);
+  await item.click();
+  await expect(page).toHaveURL(/\/markets\/fed-rate$/);
+  await expect(panel).toBeHidden();
+  await page.reload();
+  await expect(page.locator(".forecast-header")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Notifications", exact: true }),
+  ).toBeVisible();
+});
+
+test("biggest movers sorts by absolute 24h change and labels each move", async ({
+  page,
+}) => {
+  // Fixed moves keep this independent of trades made by other specs.
+  const moves: Record<number, number> = {
+    1: -0.03,
+    4: 0.12,
+    7: -0.2,
+    9: 0.004,
+  };
+  let served: { title: string; change24h: number }[] = [];
+  await page.route("**/api/v1/markets?**", async (route) => {
+    const body = await (await route.fetch()).json();
+    body.items = body.items.map(
+      (market: { change24h: number }, index: number) => ({
+        ...market,
+        change24h: moves[index] ?? 0,
+      }),
+    );
+    served = body.items;
+    await route.fulfill({ json: body });
+  });
+  await page.goto("/markets");
+  await expect(page.locator(".market-card")).toHaveCount(6);
+  await choose(page, "Sort markets", "movers");
+  await expect(page.locator(".market-card h3")).toHaveText(
+    [...served]
+      .sort((a, b) => Math.abs(b.change24h) - Math.abs(a.change24h))
+      .slice(0, 6)
+      .map((market) => market.title),
+  );
+  // Under half a point (and flat) shows no chip.
+  await expect(page.locator(".market-grid .change-chip")).toHaveCount(3);
+  const cards = page.locator(".market-card");
+  await expect(cards.nth(0).locator(".change-chip")).toHaveClass(/down/);
+  await expect(cards.nth(0)).toHaveAccessibleName(
+    /, down 20 points in 24 hours$/,
+  );
+  await expect(cards.nth(1).locator(".change-chip")).toHaveClass(/up/);
+  await expect(cards.nth(1)).toHaveAccessibleName(
+    /, up 12 points in 24 hours$/,
+  );
+  await cards.nth(1).click();
+  await expect(page.locator(".forecast-header .change-chip")).toContainText(
+    "Up 12 points in 24 hours",
+  );
+});

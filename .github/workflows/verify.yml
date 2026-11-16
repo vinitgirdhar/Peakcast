@@ -1,0 +1,39 @@
+name: Verify Wildcatter
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run verify
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: verification-evidence
+          path: |
+            output/verification.json
+            output/api-verification.json
+            output/openapi.json
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: warn
