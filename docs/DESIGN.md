@@ -28,6 +28,8 @@ Motion is part of the shared interface: staggered landing copy, viewport reveals
 
 The official demo starts at `https://wildcatter-welcome.onrender.com`, a separate Render static site that does not depend on the sleeping API process. It displays the branded halo and indeterminate progress animation, checks a fresh application image, and opens the existing app when the image decodes. A platform HTML loading page cannot pass that check and is never embedded in the entry screen. The backend address itself is still subject to Render's initial loading page, so share the official entry URL.
 
+Only the public readiness icon permits cross-origin image embedding. API origin restrictions and other resources retain their existing security headers.
+
 After three seconds the screen explains: “The server is warming up. (Please allow a minute or two.)” Checks stop after three minutes and offer a retry. Offline failures have a separate message. Reduced-motion users see a static indicator. No arbitrary progress percentages, background cron or permanent keep-alive traffic are used.
 
 The React app also gates startup on a read-only readiness check. Slow background refreshes retain the current screen and show a compact warm-up notice. If the free service has lost an ephemeral demo account, startup creates a fresh session with a visible notice. Startup retry does not reload the document or automatically replay trades. The Android production entry uses the same static screen; custom backend builds retain direct entry.

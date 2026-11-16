@@ -1016,7 +1016,15 @@ export async function buildApp(options: AppOptions = {}) {
   );
   const staticRoot = options.staticRoot ?? resolve("dist");
   if (existsSync(staticRoot)) {
-    await app.register(fastifyStatic, { root: staticRoot, wildcard: false });
+    await app.register(fastifyStatic, {
+      root: staticRoot,
+      wildcard: false,
+      setHeaders(reply, path) {
+        // The separate static launcher checks this public image without API access.
+        if (path === resolve(staticRoot, "icon-192.png"))
+          reply.header("Cross-Origin-Resource-Policy", "cross-origin");
+      },
+    });
     app.setNotFoundHandler((request, reply) => {
       if (
         request.method === "GET" &&

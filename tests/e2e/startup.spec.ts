@@ -109,18 +109,22 @@ test("cached app shell explains a slow backend and automatically resumes", async
 
 test("static entry hides the platform HTML and opens only after an app image decodes", async ({
   page,
+  baseURL,
 }) => {
   await page.clock.install();
   let ready = false;
   let probes = 0;
   await page.route(backend + "/icon-192.png?**", async (route) => {
     probes++;
-    if (ready)
-      await route.fulfill({
-        path: "public/icon-192.png",
-        contentType: "image/png",
-      });
-    else
+    if (ready) {
+      const response = await page.request.get(
+        `${baseURL}/icon-192.png?__wake=test`,
+      );
+      expect(response.headers()["cross-origin-resource-policy"]).toBe(
+        "cross-origin",
+      );
+      await route.fulfill({ response });
+    } else
       await route.fulfill({
         status: 503,
         contentType: "text/html",

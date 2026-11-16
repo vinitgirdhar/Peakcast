@@ -1,6 +1,40 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildApp } from "../server/app.js";
+import { resolve } from "node:path";
+
+test("only the public readiness icon permits cross-origin embedding", async () => {
+  const app = await buildApp({
+    databasePath: ":memory:",
+    rateLimiting: false,
+    staticRoot: resolve("public"),
+  });
+  try {
+    const icon = await app.inject("/icon-192.png?__wake=uncached");
+    assert.equal(icon.statusCode, 200);
+    assert.equal(icon.headers["cross-origin-resource-policy"], "cross-origin");
+    assert.equal(icon.headers["access-control-allow-origin"], undefined);
+    for (const url of [
+      "/icon-512.png",
+      "/wake/index.html",
+      "/api/v1/capabilities",
+    ]) {
+      const response = await app.inject(url);
+      assert.equal(response.statusCode, 200);
+      assert.equal(
+        response.headers["cross-origin-resource-policy"],
+        "same-origin",
+      );
+    }
+    const foreign = await app.inject({
+      url: "/api/v1/capabilities",
+      headers: { origin: "https://wildcatter-welcome.onrender.com" },
+    });
+    assert.equal(foreign.statusCode, 403);
+  } finally {
+    await app.close();
+  }
+});
 
 test("HTTPS preview accepts only its configured host and matching origin", async () => {
   const publicOrigin = "https://preview.example";
