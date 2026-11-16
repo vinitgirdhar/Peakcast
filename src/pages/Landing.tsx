@@ -9,17 +9,13 @@ import {
   Smartphone,
   Sparkles,
   Sun,
-  ArrowUpRight,
-  LayoutGrid,
-  Wallet,
-  Trophy,
   Play,
 } from "lucide-react";
 import { useRef, useState } from "react";
 import { BrandMark } from "../ui.js";
 import { useTheme } from "../theme.js";
 import { motion, useReducedMotion } from "motion/react";
-import { ease, itemMotion, listMotion } from "../motion.js";
+import { itemMotion, listMotion } from "../motion.js";
 
 const features = [
   {
@@ -139,162 +135,6 @@ export function Landing({
             </button>
             <span>Desktop download for Windows 64-bit.</span>
           </motion.div>
-        </motion.div>
-        <motion.div
-          className="product-preview"
-          aria-label="Illustrative forecasting workspace"
-          initial={reduce ? false : { opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.12 }}
-          transition={{ duration: reduce ? 0 : 0.65, ease }}
-        >
-          <aside className="preview-navigation" aria-hidden="true">
-            <span className="preview-wordmark">wildcatter.</span>
-            <span className="preview-nav-active">
-              <LayoutGrid size={16} />
-              Markets
-            </span>
-            <span>
-              <Wallet size={16} />
-              Portfolio
-            </span>
-            <span>
-              <Trophy size={16} />
-              Leaderboard
-            </span>
-            <span>
-              <Sparkles size={16} />
-              Draft studio
-            </span>
-            <small>
-              <span className="status-dot" />
-              Demo workspace
-            </small>
-          </aside>
-          <div className="preview-workspace">
-            <div className="preview-topline">
-              <span>Markets</span>
-              <span>
-                10,000 <small>credits</small>
-              </span>
-            </div>
-            <div className="preview-heading">
-              <h2>A world of possibilities.</h2>
-              <span>Illustrative preview</span>
-            </div>
-            <div className="preview-dashboard">
-              <div className="landing-preview" aria-label="Illustrative market">
-                <div className="landing-preview-top">
-                  <span className="small-pill">Science</span>
-                  <ArrowUpRight size={17} />
-                </div>
-                <h3>Will the next breakthrough happen this year?</h3>
-                <div className="landing-preview-number">
-                  68%<small>chance of YES</small>
-                </div>
-                <svg
-                  viewBox="0 0 500 130"
-                  preserveAspectRatio="none"
-                  aria-hidden="true"
-                >
-                  <defs>
-                    <linearGradient
-                      id="preview-fill"
-                      x1="0"
-                      x2="0"
-                      y1="0"
-                      y2="1"
-                    >
-                      <stop stopColor="currentColor" stopOpacity=".08" />
-                      <stop
-                        offset="1"
-                        stopColor="currentColor"
-                        stopOpacity="0"
-                      />
-                    </linearGradient>
-                  </defs>
-                  <path
-                    d="M0 105 25 90 50 98 75 70 100 80 125 55 150 68 175 60 200 78 225 52 250 58 275 35 300 42 325 20 350 32 375 18 400 38 425 14 450 20 475 6 500 14V130H0Z"
-                    fill="url(#preview-fill)"
-                  />
-                  <motion.path
-                    d="M0 105 25 90 50 98 75 70 100 80 125 55 150 68 175 60 200 78 225 52 250 58 275 35 300 42 325 20 350 32 375 18 400 38 425 14 450 20 475 6 500 14"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinejoin="round"
-                    vectorEffect="non-scaling-stroke"
-                    initial={reduce ? false : { pathLength: 0 }}
-                    animate={reduce ? { pathLength: 1 } : undefined}
-                    whileInView={{ pathLength: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: reduce ? 0 : 1.2, ease }}
-                  />
-                </svg>
-                <div className="preview-chart-axis">
-                  <span>9:00</span>
-                  <span>12:00</span>
-                  <span>15:00</span>
-                  <span>18:00</span>
-                </div>
-              </div>
-              <div className="preview-ticket">
-                <Wallet size={20} />
-                <span>Your practice balance</span>
-                <strong>
-                  10,000<small>credits</small>
-                </strong>
-                <div className="preview-ticket-rule" />
-                <span>Choose a possibility.</span>
-                <div className="landing-preview-outcomes">
-                  <span className="yes">
-                    Yes <strong>68.0¢</strong>
-                  </span>
-                  <span className="no">
-                    No <strong>32.0¢</strong>
-                  </span>
-                </div>
-                <span className="preview-trade-button">
-                  Your perspective matters.
-                </span>
-              </div>
-            </div>
-            <div className="preview-market-list">
-              {[
-                {
-                  symbol: "₿",
-                  category: "Crypto",
-                  title: "The next chapter for Bitcoin",
-                  chance: "72%",
-                },
-                {
-                  symbol: "↗",
-                  category: "Economy",
-                  title: "Where do rates go from here?",
-                  chance: "64%",
-                },
-                {
-                  symbol: "✳",
-                  category: "Technology",
-                  title: "What will AI make possible?",
-                  chance: "81%",
-                },
-              ].map((item) => (
-                <div key={item.category}>
-                  <span
-                    className={`preview-market-symbol ${item.category.toLowerCase()}`}
-                  >
-                    {item.symbol}
-                  </span>
-                  <div>
-                    <small>{item.category}</small>
-                    <strong>{item.title}</strong>
-                  </div>
-                  <span>{item.chance}</span>
-                </div>
-              ))}
-            </div>
-          </div>
         </motion.div>
       </main>
       <section
