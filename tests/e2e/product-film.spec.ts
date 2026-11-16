@@ -15,7 +15,11 @@ test("product film keeps loading lightweight and supplies captions and credits",
   await expect(section).toBeVisible();
   const video = section.locator("video");
   await expect(video).toHaveAttribute("preload", "none");
-  await expect(video).toHaveAttribute("controls", "");
+  await expect(video).not.toHaveAttribute("controls");
+  await expect(video).not.toHaveAttribute("src");
+  await expect(
+    section.getByRole("button", { name: "Play the Wildcatter product film" }),
+  ).toBeVisible();
   await expect(video).toHaveAttribute("playsinline", "");
   await expect(video).not.toHaveAttribute("autoplay");
   await expect(video.locator("track")).toHaveAttribute("kind", "captions");
@@ -54,10 +58,13 @@ test("product film serves seekable media and decodes in Chromium", async ({
   const video = page.locator("#product-film video");
   // The local Chromium decoder verifies playback; WebKit still checks serving and markup.
   if (browserName === "chromium") {
-    await video.evaluate(async (element: HTMLVideoElement) => {
+    await video.evaluate((element: HTMLVideoElement) => {
       element.muted = true;
-      await element.play();
     });
+    await page
+      .getByRole("button", { name: "Play the Wildcatter product film" })
+      .click();
+    await expect(video).toHaveAttribute("controls", "");
     await expect
       .poll(() =>
         video.evaluate((element: HTMLVideoElement) => element.currentTime),

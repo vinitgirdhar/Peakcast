@@ -13,7 +13,9 @@ import {
   LayoutGrid,
   Wallet,
   Trophy,
+  Play,
 } from "lucide-react";
+import { useRef, useState } from "react";
 import { BrandMark } from "../ui.js";
 import { useTheme } from "../theme.js";
 import { motion, useReducedMotion } from "motion/react";
@@ -52,6 +54,16 @@ export function Landing({
   canInstall: boolean;
 }) {
   const { setTheme } = useTheme();
+  const film = useRef<HTMLVideoElement>(null);
+  const [filmStarted, setFilmStarted] = useState(false);
+  function playFilm() {
+    const video = film.current;
+    if (!video) return;
+    setFilmStarted(true);
+    video.src = "/media/wildcatter-product-introduction.mp4";
+    // Keep the request inside the click gesture; native controls remain available if playback is blocked.
+    void video.play().catch(() => {});
+  }
   const reduce = useReducedMotion();
   const dark = document.documentElement.dataset.theme === "dark";
   return (
@@ -304,7 +316,8 @@ export function Landing({
         </div>
         <div className="product-film-frame">
           <video
-            controls
+            ref={film}
+            controls={filmStarted}
             playsInline
             preload="none"
             poster="/media/wildcatter-product-introduction.jpg"
@@ -312,13 +325,13 @@ export function Landing({
             height="1080"
             aria-label="Introducing Wildcatter — narrated product film"
           >
-            <source
-              src="/media/wildcatter-product-introduction.mp4"
-              type="video/mp4"
-            />
             <track
               kind="captions"
-              src="/media/wildcatter-product-introduction.en.vtt"
+              src={
+                filmStarted
+                  ? "/media/wildcatter-product-introduction.en.vtt"
+                  : undefined
+              }
               srcLang="en"
               label="English"
               default
@@ -330,6 +343,19 @@ export function Landing({
               .
             </p>
           </video>
+          {!filmStarted && (
+            <button
+              type="button"
+              className="product-film-start"
+              aria-label="Play the Wildcatter product film"
+              onClick={playFilm}
+            >
+              <span>
+                <Play size={20} fill="currentColor" aria-hidden="true" />
+                Watch the film
+              </span>
+            </button>
+          )}
         </div>
         <details className="product-film-details">
           <summary>About the film & credits</summary>
