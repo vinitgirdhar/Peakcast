@@ -1,5 +1,12 @@
 # Verification record
 
+## Packaged Windows feature audit — November 16, 2026
+
+- Exercised 31 shared journeys and eight additional native feature journeys in the packaged Electron app, using isolated temporary profiles. Checks cover discovery, YES/NO trading, quotes and recovery, portfolio, orders, watchlist, CSV ledger export, drafts and market launch, discussion, bonuses, notifications, disputed and undisputed resolution, leaderboards, managed provider settings, clipboard, restart persistence and single-instance behavior.
+- Found and fixed two desktop defects: creator source/evidence links were blocked by the seed-domain allowlist, and late background requests could access a destroyed window during shutdown. The external-link policy now accepts only exact HTTPS links recorded on current markets. Unlisted URLs, credentials, HTTP and file URLs stay blocked. A permanent isolated desktop smoke test covers those rules and closing with requests in flight.
+- Post-fix native journeys passed with no captured main-process exceptions. The full shared verification passed 58 unit/integration tests, eight compiled API groups and 112 browser journeys, with two intentionally skipped duplicate lifecycle runs. All 48 browser screen audits and eight additional native screen/theme audits passed without detected accessibility violations or document overflow. Formatting and dependency audit passed.
+- The rebuilt local executable and ZIP contain the fixes; this audit did not republish the GitHub release. AI responses and quota errors were simulated, while the local Ollama control checked availability only. External-browser handoff was intercepted for verification. The user's normal desktop profile and clipboard were preserved. Signed installers, live paid inference, source availability and institutional performance were not certified.
+
 ## Frontend server warm-up and app release 1.1.1 — November 16, 2026
 
 - The independent Render static entry at `https://wildcatter-welcome.onrender.com` displays the branded animation immediately, explains a slow backend after three seconds, and redirects only after an uncached app image decodes. Platform HTML is never displayed as the entry document. Three-minute timeout, explicit Retry, offline copy and reduced-motion behavior are covered by browser tests.

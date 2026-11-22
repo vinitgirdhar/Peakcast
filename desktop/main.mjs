@@ -3,15 +3,11 @@ import { app, BrowserWindow, dialog, session, shell } from "electron";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildApp } from "../dist-server/server/app.js";
-import { seedMarkets } from "../dist-server/server/fixtures.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 let api;
 let origin;
 let window;
-const sourceHosts = new Set(
-  seedMarkets.map((market) => new URL(market.sourceUrl).hostname),
-);
 
 async function openWindow() {
   window = new BrowserWindow({
@@ -30,14 +26,32 @@ async function openWindow() {
     },
   });
   window.webContents.setWindowOpenHandler(({ url }) => {
-    const target = new URL(url);
-    if (
-      target.protocol === "https:" &&
-      sourceHosts.has(target.hostname) &&
-      !target.username &&
-      !target.password
-    )
-      void shell.openExternal(url);
+    if (URL.canParse(url)) {
+      const target = new URL(url);
+      if (target.protocol === "https:" && !target.username && !target.password)
+        void api
+          .inject({ method: "GET", url: "/api/v1/markets" })
+          .then(async (response) => {
+            // Include creator sources and resolution evidence, not just seed domains.
+            if (
+              response.statusCode === 200 &&
+              response
+                .json()
+                .items.some((market) =>
+                  [market.sourceUrl, market.resolution?.evidenceUrl].some(
+                    (link) => link && new URL(link).href === target.href,
+                  ),
+                )
+            )
+              await shell.openExternal(target.href);
+          })
+          .catch(() =>
+            dialog.showErrorBox(
+              "Link could not open",
+              "Please try opening this market's source or evidence in your browser.",
+            ),
+          );
+    }
     return { action: "deny" };
   });
   window.webContents.on("will-navigate", (event, url) => {
@@ -86,7 +100,10 @@ else {
         (details, callback) => {
           const url = new URL(details.url);
           if (
-            details.webContentsId === window?.webContents.id &&
+            window &&
+            !window.isDestroyed() &&
+            !window.webContents.isDestroyed() &&
+            details.webContentsId === window.webContents.id &&
             url.origin === origin &&
             (url.pathname.startsWith("/api/v1/settings/") ||
               url.pathname === "/api/v1/drafts/generate")
