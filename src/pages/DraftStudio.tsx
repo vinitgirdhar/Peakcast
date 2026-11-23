@@ -1,8 +1,9 @@
 import { Select } from "../Select.js";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   ArrowRight,
   ChevronDown,
+  Pencil,
   Rocket,
   Sparkles,
   Trash2,
@@ -13,11 +14,21 @@ import type {
   AIProviderInfo,
   Category,
   Draft,
+  DraftCritique,
   DraftInput,
   Market,
+  Workspace,
 } from "../../shared/types.js";
+import { lintDraft, type LintField } from "../../shared/lint.js";
 import { errorMessage } from "../ui.js";
 import { motion } from "motion/react";
+import {
+  CritiqueResult,
+  LaunchReview,
+  launchReady,
+  RuleBadge,
+  RuleCheckPanel,
+} from "./RuleCheck.js";
 
 const categories: Category[] = [
   "Economy",
@@ -36,6 +47,20 @@ const blankDraft: DraftInput = {
   noRule: "",
   invalidRule: "",
 };
+const FIELD_IDS: Record<LintField, string> = {
+  question: "draft-question",
+  sourceName: "source-name",
+  sourceUrl: "source-url",
+  closesAt: "close-date",
+  yesRule: "yesRule",
+  noRule: "noRule",
+  invalidRule: "invalidRule",
+};
+/** Launch-target value for the public market list. */
+const PUBLIC = "public";
+/** The datetime-local value as an ISO time, or "" until it is complete. */
+const isoClosing = (local: string) =>
+  Number.isNaN(Date.parse(local)) ? "" : new Date(local).toISOString();
 export function DraftStudio({
   managed = false,
   client,
@@ -47,7 +72,13 @@ export function DraftStudio({
   onLaunched,
   view,
   onView,
+  teams = false,
+  launchTo = PUBLIC,
 }: {
+  /** Workspaces are available here, so a draft can launch privately. */
+  teams?: boolean;
+  /** Preselected launch target: a workspace id, or PUBLIC. */
+  launchTo?: string;
   managed?: boolean;
   client: WildcatterClient;
   configured: boolean;
@@ -70,30 +101,75 @@ export function DraftStudio({
   const [provider, setProvider] = useState<AIProvider>(
     defaultProvider ?? "groq",
   );
+  // Acknowledged launch checks, keyed "<draft id>:reviewed" / ":opened".
+  const [checked, setChecked] = useState<Set<string>>(new Set());
+  const [critique, setCritique] = useState<DraftCritique | null>(null);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [target, setTarget] = useState(launchTo);
+  const targetName = workspaces.find((item) => item.id === target)?.name;
+  const reports = useMemo(
+    () => new Map(drafts.map((draft) => [draft.id, lintDraft(draft)])),
+    [drafts],
+  );
   useEffect(() => {
     void client
       .drafts()
       .then((data) => setDrafts(data.items))
       .catch((error) => setError(errorMessage(error)));
+    if (teams)
+      void client
+        .workspaces()
+        .then((data) => setWorkspaces(data.items))
+        .catch((error) => setError(errorMessage(error)));
   }, []);
 
-  function fillExample() {
-    if (!example) return;
-    const closing = new Date(example.closesAt);
+  function load(source: DraftInput) {
+    const closing = new Date(source.closesAt);
     setClosingLocal(
       new Date(closing.getTime() - closing.getTimezoneOffset() * 60000)
         .toISOString()
         .slice(0, 16),
     );
     setInput({
-      question: example.title,
-      sourceName: example.sourceName,
-      sourceUrl: example.sourceUrl,
-      closesAt: example.closesAt,
-      yesRule: example.yesRule,
-      noRule: example.noRule,
-      invalidRule: example.invalidRule,
+      question: source.question,
+      sourceName: source.sourceName,
+      sourceUrl: source.sourceUrl,
+      closesAt: source.closesAt,
+      yesRule: source.yesRule,
+      noRule: source.noRule,
+      invalidRule: source.invalidRule,
     });
+    setCritique(null);
+  }
+
+  function fillExample() {
+    if (example) load({ ...example, question: example.title });
+  }
+
+  function toggle(key: string) {
+    setChecked((previous) => {
+      const next = new Set(previous);
+      if (!next.delete(key)) next.add(key);
+      return next;
+    });
+  }
+
+  async function askCritique() {
+    setBusy(true);
+    setError("");
+    try {
+      setCritique(
+        await client.critiqueDraft(
+          { ...input, closesAt: isoClosing(closingLocal) },
+          accessToken,
+          provider,
+        ),
+      );
+    } catch (error) {
+      setError(errorMessage(error));
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -123,7 +199,13 @@ export function DraftStudio({
     setError("");
     setBusy(true);
     try {
-      onLaunched(await client.launchDraft(id, category));
+      onLaunched(
+        await client.launchDraft(
+          id,
+          category,
+          target === PUBLIC ? undefined : target,
+        ),
+      );
     } catch (error) {
       setError(errorMessage(error));
     } finally {
@@ -288,6 +370,14 @@ export function DraftStudio({
                         Only the selected provider receives this draft; usage
                         may incur charges.
                       </p>
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        disabled={busy || (!managed && accessToken.length < 16)}
+                        onClick={() => void askCritique()}
+                      >
+                        <Sparkles size={14} /> Ask AI for a critique
+                      </button>
                     </>
                   )}
                 </div>
@@ -374,6 +464,13 @@ export function DraftStudio({
                   />
                 </div>
               ))}
+              <RuleCheckPanel
+                draft={{ ...input, closesAt: isoClosing(closingLocal) }}
+                onSelect={(field) =>
+                  document.getElementById(FIELD_IDS[field])?.focus()
+                }
+              />
+              {critique && <CritiqueResult critique={critique} />}
               {error && (
                 <p role="alert" className="form-error">
                   {error}
@@ -408,6 +505,7 @@ export function DraftStudio({
                   <details key={draft.id}>
                     <summary>
                       <span>{draft.question}</span>
+                      <RuleBadge report={reports.get(draft.id)!} />
                       <ChevronDown size={16} />
                     </summary>
                     <span className="small-pill">
@@ -437,7 +535,30 @@ export function DraftStudio({
                         {note}
                       </p>
                     ))}
+                    <LaunchReview
+                      id={draft.id}
+                      report={reports.get(draft.id)!}
+                      sourceUrl={draft.sourceUrl}
+                      managed={managed}
+                      checked={checked}
+                      onToggle={toggle}
+                      onNotice={onNotice}
+                    />
                     <div className="draft-launch">
+                      {workspaces.length > 0 && (
+                        <Select
+                          label="Launch to"
+                          value={target}
+                          onChange={setTarget}
+                          options={[
+                            { value: PUBLIC, label: "Public markets" },
+                            ...workspaces.map((item) => ({
+                              value: item.id,
+                              label: `Private: ${item.name}`,
+                            })),
+                          ]}
+                        />
+                      )}
                       <Select
                         label="Market category"
                         value={category}
@@ -449,16 +570,34 @@ export function DraftStudio({
                       />
                       <button
                         className="primary-button"
-                        disabled={busy}
+                        disabled={
+                          busy ||
+                          !launchReady(
+                            draft.id,
+                            reports.get(draft.id)!,
+                            checked,
+                          )
+                        }
                         onClick={() => void launch(draft.id)}
                       >
                         <Rocket size={15} /> Launch market
                       </button>
                     </div>
                     <p className="fine-print">
-                      Launching stakes 500 demo credits as liquidity and opens
-                      trading at 50%. You earn 1% of every trade.
+                      {target === PUBLIC
+                        ? "Launching stakes 500 demo credits as liquidity and opens trading at 50%."
+                        : `Launching stakes 500 workspace credits from your ${targetName ?? "workspace"} wallet and opens trading at 50%. Only its members can see or trade it.`}{" "}
+                      You earn 1% of every trade.
                     </p>
+                    <button
+                      className="text-button"
+                      onClick={() => {
+                        load(draft);
+                        onView("create");
+                      }}
+                    >
+                      <Pencil size={14} /> Edit as new draft
+                    </button>{" "}
                     <button
                       className="text-button"
                       onClick={() => void remove(draft.id)}

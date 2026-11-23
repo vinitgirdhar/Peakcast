@@ -1,0 +1,66 @@
+/* Market share panel. Unlayered like design.css, so it is not outranked by the components layer. */
+.detail-buttons {
+  display: flex;
+  gap: 8px;
+}
+.share-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 480px);
+  gap: 20px 28px;
+  align-items: start;
+  margin-bottom: 20px;
+}
+.share-fields,
+.share-preview {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.share-panel .form-label {
+  margin: 6px 0 0;
+}
+.copy-row {
+  display: flex;
+  gap: 8px;
+}
+.copy-row .text-input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  font:
+    12px/1.5 ui-monospace,
+    SFMono-Regular,
+    Consolas,
+    monospace;
+  resize: none;
+}
+.copy-row .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.share-panel p.share-status {
+  min-height: 1.6em;
+  font-size: 12px;
+  color: var(--muted);
+}
+.share-preview iframe {
+  width: 100%;
+  max-width: 480px;
+  height: 200px;
+  border: 0;
+  border-radius: 12px;
+}
+@media (max-width: 1100px) {
+  .share-panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 760px), (pointer: coarse) and (max-width: 1024px) {
+  .copy-row {
+    flex-direction: column;
+  }
+}

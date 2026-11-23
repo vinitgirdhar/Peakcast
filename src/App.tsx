@@ -11,6 +11,7 @@ import {
   Settings as SettingsIcon,
   Sparkles,
   Trophy,
+  Users,
   Wallet,
   X,
 } from "lucide-react";
@@ -33,6 +34,9 @@ import { LeaderboardView } from "./pages/Leaderboard.js";
 import { Settings } from "./pages/Settings.js";
 import { Landing } from "./pages/Landing.js";
 import { BackendStartup, waitForBackend } from "./BackendStartup.js";
+import { Teams } from "./pages/Teams.js";
+import { WorkspaceView, type WorkspaceTab } from "./pages/Workspace.js";
+import { JoinWorkspace } from "./pages/JoinWorkspace.js";
 const navItems = [
   { path: "/markets", label: "Markets", icon: LayoutGrid },
   { path: "/portfolio", label: "Portfolio", icon: Wallet },
@@ -41,6 +45,18 @@ const navItems = [
   { path: "/developers", label: "Developers", icon: Code2 },
   { path: "/settings", label: "Settings", icon: SettingsIcon },
 ];
+// Shown only where the server offers workspaces (not in the Windows app).
+const teamsNavItems = [
+  ...navItems.slice(0, 4),
+  { path: "/teams", label: "Teams", icon: Users },
+  ...navItems.slice(4),
+];
+// The phone dock holds six destinations: Teams takes the Developers slot there.
+const teamsDockItems = teamsNavItems.filter(
+  (item) => item.path !== "/developers",
+);
+const workspaceRoute =
+  /^\/teams\/([0-9a-f-]{36})(?:\/(leaderboard|members)|\/markets\/([^/]+)(\/rules)?)?$/;
 const storageKey = "wildcatter.demo.token.v1";
 export function App() {
   const [path, setPath] = useState(location.pathname);
@@ -58,16 +74,19 @@ export function App() {
   const connected = ready && portfolio !== null;
   const [notice, setNotice] = useState("");
   const [menu, setMenu] = useState(false);
+  // Workspace that Draft studio should launch to when opened from that workspace.
+  const [launchTo, setLaunchTo] = useState<string | undefined>();
   const dialog = useRef<HTMLDialogElement>(null);
   const menuTrigger = useRef<HTMLButtonElement>(null);
   const [install, setInstall] = useState<
     (Event & { prompt: () => Promise<void> }) | null
   >(null);
   const client = new WildcatterClient("", token);
-  function navigate(next: string) {
+  function navigate(next: string, launchWorkspace?: string) {
     history.pushState({}, "", next);
     setPath(next);
     setMenu(false);
+    setLaunchTo(launchWorkspace);
     scrollTo(0, 0);
   }
   async function refresh(current = token) {
@@ -233,13 +252,20 @@ export function App() {
     "/developers/setup",
   ].includes(path);
   const landing = path === "/" || path === "/welcome";
+  const teams = capabilities?.teams ?? false;
+  const nav = teams ? teamsNavItems : navItems;
+  const team = teams ? workspaceRoute.exec(path) : null;
+  const joining = teams && path === "/join";
+  const teamsPage = teams && (path === "/teams" || joining || !!team);
   const section = marketId
     ? "Markets"
     : studio
       ? "Draft studio"
       : developers
         ? "Developers"
-        : (navItems.find((n) => n.path === path)?.label ?? "Page not found");
+        : teamsPage
+          ? "Teams"
+          : (nav.find((n) => n.path === path)?.label ?? "Page not found");
   if (landing)
     return (
       <>
@@ -267,7 +293,7 @@ export function App() {
         </button>
         <span className="workspace-label">Your workspace</span>
         <nav aria-label="Main navigation">
-          {navItems.map(({ path: p, label, icon: Icon }) => (
+          {nav.map(({ path: p, label, icon: Icon }) => (
             <button
               key={p}
               className={`nav-item ${section === label ? "active" : ""}`}
@@ -355,7 +381,7 @@ export function App() {
           <div className="workspace-label">Workspace</div>
           <div className="navigation-material">
             <nav>
-              {navItems.map(({ path: p, label, icon: Icon }, index) => (
+              {nav.map(({ path: p, label, icon: Icon }, index) => (
                 <button
                   key={p}
                   className={`nav-item ${section === label ? "active" : ""}`}
@@ -452,7 +478,13 @@ export function App() {
               client={client}
               inbox={inbox}
               onInbox={setInbox}
-              onOpenMarket={(id) => navigate(`/markets/${id}`)}
+              onOpenMarket={(id, workspaceId) =>
+                navigate(
+                  workspaceId
+                    ? `/teams/${workspaceId}/markets/${id}`
+                    : `/markets/${id}`,
+                )
+              }
             />
             <button
               className="icon-button help-button"
@@ -501,7 +533,13 @@ export function App() {
               <motion.div
                 className="route-surface"
                 key={
-                  marketId ? `/markets/${marketId}` : studio ? "/studio" : path
+                  team
+                    ? `/teams/${team[1]}`
+                    : marketId
+                      ? `/markets/${marketId}`
+                      : studio
+                        ? "/studio"
+                        : path
                 }
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -531,6 +569,8 @@ export function App() {
                       onBack={() => navigate("/markets")}
                       onTrade={() => refresh()}
                       onNotice={setNotice}
+                      shareOrigin={capabilities?.shareOrigin ?? null}
+                      capabilities={capabilities}
                     />
                   ) : (
                     <EmptyState
@@ -576,16 +616,63 @@ export function App() {
                     example={markets[0]}
                     onNotice={setNotice}
                     onLaunched={(market) => {
-                      setNotice("Market launched. You earn 1% of every trade.");
-                      navigate(`/markets/${market.id}`);
+                      setNotice(
+                        market.workspaceId
+                          ? "Private market launched. Only workspace members can see it."
+                          : "Market launched. You earn 1% of every trade.",
+                      );
+                      navigate(
+                        market.workspaceId
+                          ? `/teams/${market.workspaceId}/markets/${market.id}`
+                          : `/markets/${market.id}`,
+                      );
                       void refresh().catch((e) => setError(errorMessage(e)));
                     }}
                     view={path.endsWith("/drafts") ? "drafts" : "create"}
                     onView={(view) =>
-                      navigate(view === "drafts" ? "/studio/drafts" : "/studio")
+                      navigate(
+                        view === "drafts" ? "/studio/drafts" : "/studio",
+                        launchTo,
+                      )
                     }
+                    teams={teams}
+                    launchTo={launchTo}
                   />
                 )}{" "}
+                {teams && path === "/teams" && (
+                  <Teams
+                    client={client}
+                    onOpen={(id) => navigate(`/teams/${id}`)}
+                    onNotice={setNotice}
+                  />
+                )}
+                {joining && (
+                  <JoinWorkspace
+                    client={client}
+                    onJoined={(workspace) => {
+                      setNotice(`You joined ${workspace.name}.`);
+                      navigate(`/teams/${workspace.id}`);
+                    }}
+                    onTeams={() => navigate("/teams")}
+                  />
+                )}
+                {team && (
+                  <WorkspaceView
+                    client={client}
+                    workspaceId={team[1]}
+                    tab={(team[2] as WorkspaceTab | undefined) ?? "markets"}
+                    marketId={team[3]}
+                    marketView={team[4] ? "rules" : "forecast"}
+                    navigate={navigate}
+                    onNotice={setNotice}
+                    onDraft={() => navigate("/studio", team[1])}
+                    onLeft={() => {
+                      setNotice("You left the workspace.");
+                      navigate("/teams");
+                    }}
+                    shareOrigin={capabilities?.shareOrigin ?? null}
+                  />
+                )}
                 {developers && (
                   <Developers
                     token={token}
@@ -608,7 +695,8 @@ export function App() {
                 {!marketId &&
                   !studio &&
                   !developers &&
-                  !navItems.some((n) => n.path === path) && (
+                  !teamsPage &&
+                  !nav.some((n) => n.path === path) && (
                     <EmptyState
                       title="Page not found"
                       text="Return to the market explorer to keep forecasting."
@@ -638,24 +726,26 @@ export function App() {
         </main>
       </div>
       <nav className="mobile-dock" aria-label="Quick navigation">
-        {navItems.map(({ path: p, label, icon: Icon }) => (
-          <button
-            key={p}
-            onClick={() => navigate(p)}
-            aria-current={section === label ? "page" : undefined}
-            className={section === label ? "selected" : ""}
-          >
-            {section === label && (
-              <motion.span
-                className="dock-selection"
-                layoutId="dock-selection"
-                transition={{ duration: 0.22, ease }}
-              />
-            )}
-            <Icon size={21} />
-            <span>{label === "Draft studio" ? "Studio" : label}</span>
-          </button>
-        ))}
+        {(teams ? teamsDockItems : navItems).map(
+          ({ path: p, label, icon: Icon }) => (
+            <button
+              key={p}
+              onClick={() => navigate(p)}
+              aria-current={section === label ? "page" : undefined}
+              className={section === label ? "selected" : ""}
+            >
+              {section === label && (
+                <motion.span
+                  className="dock-selection"
+                  layoutId="dock-selection"
+                  transition={{ duration: 0.22, ease }}
+                />
+              )}
+              <Icon size={21} />
+              <span>{label === "Draft studio" ? "Studio" : label}</span>
+            </button>
+          ),
+        )}
       </nav>
       <Toast notice={notice} onDismiss={() => setNotice("")} />
     </div>

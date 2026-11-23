@@ -35,6 +35,14 @@ export interface MarketDefinition {
   noRule: string;
   invalidRule: string;
   initialProbability: number;
+  /** Rule-linter summary stored at launch; absent on seed and older markets. */
+  ruleCheck?: RuleCheck;
+}
+export interface RuleCheck {
+  /** 0 to 100; see lintDraft in shared/lint.ts. */
+  risk: number;
+  /** Distinct ids of the warnings the creator launched with. */
+  warnings: string[];
 }
 export interface Market extends MarketDefinition {
   probability: number;
@@ -49,6 +57,8 @@ export interface Market extends MarketDefinition {
   resolution?: MarketResolution;
   /** Creator fee in basis points; 0 on house markets. */
   feeBps: number;
+  /** Set only on a private market: the workspace it belongs to. */
+  workspaceId?: string;
 }
 export interface HistoryPoint {
   at: string;
@@ -105,10 +115,48 @@ export interface CreatorRank {
   volumeMicros: number;
   feesMicros: number;
 }
+export interface ForecasterRank {
+  rank: number;
+  trader: string;
+  you: boolean;
+  /** Markets resolved YES or NO that this forecaster traded; at least 3. */
+  resolvedMarkets: number;
+  /** Mean Brier score over those markets: 0 is perfect, lower ranks first. */
+  brier: number;
+}
 export interface Leaderboard {
   /** Top 20 by profit, plus the viewer's own row when outside the top 20. */
   traders: TraderRank[];
   creators: CreatorRank[];
+  /** Top 20 by lowest Brier score among accounts with 3+ resolved markets. */
+  forecasters: ForecasterRank[];
+}
+/** Forecasts from `from` (inclusive) to `to`; the last bucket includes 1. */
+export interface CalibrationBucket {
+  from: number;
+  to: number;
+  /** Resolved markets whose forecast falls in this bucket. */
+  count: number;
+  /** Mean forecast of those markets; null when the bucket is empty. */
+  meanForecast: number | null;
+  /** Share of those markets that resolved YES; null when empty. */
+  observedRate: number | null;
+}
+/**
+ * Accuracy over markets resolved YES or NO. A market's forecast is the
+ * size-weighted mean YES probability the account's trades left behind.
+ */
+export interface Calibration {
+  resolvedMarkets: number;
+  /** Mean of (forecast − outcome)² per market; null before any resolves. */
+  brier: number | null;
+  /**
+   * Crowd baseline Brier (prices just before each trade) minus `brier`;
+   * positive means the account improved on the market. Absent when `brier` is null.
+   */
+  skill?: number;
+  /** Ten buckets of width 0.1 for a reliability diagram. */
+  buckets: CalibrationBucket[];
 }
 export interface TradeInput {
   marketId: string;
@@ -231,6 +279,8 @@ export interface InboxNotification {
   text: string;
   createdAt: string;
   read: boolean;
+  /** Set when the notification is about a private market of this workspace. */
+  workspaceId?: string;
 }
 export interface Inbox {
   /** Last 50 notifications, newest first. */
@@ -247,6 +297,38 @@ export interface DraftInput {
   noRule: string;
   invalidRule: string;
 }
+/** Advisory AI review of a draft; never saved and never blocks a launch. */
+export interface DraftCritique {
+  provider: AIProvider;
+  summary: string;
+  findings: {
+    field: keyof DraftInput;
+    severity: "warn" | "info";
+    message: string;
+    suggestion: string;
+    /** Verbatim (case-insensitive) text from `field`. */
+    quote: string;
+  }[];
+}
+/**
+ * AI-written explainer of one market, from its own text and numbers only.
+ * Advisory and not financial advice; plain text, never HTML.
+ */
+export interface MarketExplanation {
+  provider: AIProvider;
+  generatedAt: string;
+  /** YES probability when generated; a move over 5 points regenerates it. */
+  probability: number;
+  summary: string;
+  /** At most 5. */
+  drivers: string[];
+  /** At most 3 each. */
+  wouldMoveUp: string[];
+  wouldMoveDown: string[];
+  /** May be empty. */
+  baseRateNote: string;
+  caveats: string[];
+}
 export interface Draft extends DraftInput {
   id: string;
   createdAt: string;
@@ -262,4 +344,72 @@ export interface Capabilities {
   defaultAIProvider: AIProvider | null;
   marketCount: number;
   version: string;
+  /**
+   * Origin for shareable market links and embeds. Null when this server is
+   * reachable only from this device (the Windows desktop app).
+   */
+  shareOrigin?: string | null;
+  /** False where workspaces are unavailable (the Windows app): hide Teams. */
+  teams: boolean;
+}
+/** oEmbed 1.0 "rich" response for a market link; `html` is a ready-to-paste iframe. */
+export interface OEmbed {
+  version: "1.0";
+  type: "rich";
+  provider_name: "Wildcatter";
+  provider_url: string;
+  title: string;
+  html: string;
+  width: number;
+  height: number;
+}
+export type WorkspaceRole = "owner" | "admin" | "resolver" | "member";
+/** Invites never grant owner or admin; the owner promotes afterwards. */
+export type InviteRole = "member" | "resolver";
+/** A workspace as one of its members sees it. */
+export interface Workspace {
+  id: string;
+  name: string;
+  /** The viewer's own role. */
+  role: WorkspaceRole;
+  /** Active members; removed members are not counted. */
+  memberCount: number;
+  createdAt: string;
+}
+export interface WorkspaceMember {
+  /** Opaque member id for role changes and removal; never an account id. */
+  id: string;
+  displayName: string;
+  role: WorkspaceRole;
+  joinedAt: string;
+  /** True for the viewer's own membership. */
+  you: boolean;
+}
+export interface WorkspaceDetail extends Workspace {
+  /** Active members in join order. */
+  members: WorkspaceMember[];
+}
+export interface WorkspaceInvite {
+  id: string;
+  role: InviteRole;
+  expiresAt: string;
+  maxUses: number;
+  uses: number;
+  revoked: boolean;
+}
+/** Returned once, at creation. The invite link is `${origin}/join#${token}`. */
+export interface CreatedInvite extends WorkspaceInvite {
+  token: string;
+}
+export interface InviteInput {
+  role: InviteRole;
+  /** 1–720; default 168 (7 days). */
+  expiresInHours?: number;
+  /** 1–500; default 25. */
+  maxUses?: number;
+}
+export interface InvitePreview {
+  workspaceName: string;
+  role: InviteRole;
+  expiresAt: string;
 }

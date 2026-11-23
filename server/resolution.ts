@@ -18,6 +18,9 @@ import type { Market, ResolutionOutcome } from "../shared/types.js";
 // dispute it during the challenge window by posting a bond, undisputed
 // proposals settle permissionlessly and disputed ones wait for the operator.
 export const DISPUTE_BOND_MICROS = 100 * MICRO;
+/** Private markets are ruled by a workspace resolver, never the operator. */
+const isPrivate = (store: Store, marketId: string) =>
+  Boolean(store.row(marketId).workspace_id);
 
 export function propose(
   store: Store,
@@ -94,7 +97,7 @@ export function dispute(
       row.creator_id!,
       "dispute_filed",
       marketId,
-      `Your proposed outcome on "${marketTitle(store, marketId)}" was disputed. An operator will rule.`,
+      `Your proposed outcome on "${marketTitle(store, marketId)}" was disputed. ${isPrivate(store, marketId) ? "A workspace resolver" : "An operator"} will rule.`,
     );
     return store.market(marketId);
   });
@@ -105,7 +108,7 @@ export function settle(store: Store, marketId: string): Market {
     const resolution = store.resolution(marketId);
     if (resolution?.status === "disputed")
       throw new DomainError(
-        "This outcome is disputed and waits for an operator ruling.",
+        `This outcome is disputed and waits for ${isPrivate(store, marketId) ? "a workspace resolver's ruling" : "an operator ruling"}.`,
         409,
       );
     if (resolution?.status !== "proposed")

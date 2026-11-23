@@ -43,11 +43,13 @@ Video production files, source captures, narration sources and intermediate rend
 - Search, filter and sort markets; each shows its YES probability, 24-hour change, volume and deadline.
 - Buy and sell YES/NO shares against an LMSR automated market maker with live quotes, a price-impact breakdown and a slippage limit.
 - **Limit orders**: name a price and the order fills by itself when the market reaches it.
+- **Explain this market**: every market page says what its number means in plain words ("The crowd puts this at about 1 in 3"), with the 24-hour move, activity, time left, how it resolves and the launch rule check, computed without AI. Where AI is configured, an optional explainer adds drivers, what would move the price up or down, a base-rate note and caveats, labelled as AI-generated and not advice.
 - Portfolio with positions, profit and loss, trade activity, open orders, watchlist, performance stats and a downloadable CSV statement.
 
 ### Create
 
 - **Draft studio**: write a market by hand or let an AI provider (Gemini, Groq, OpenAI or local Ollama) tighten the question and the YES / NO / invalid rules. The source and deadline you set are protected from the model.
+- **Rule linter**: a live "Rule check" flags ambiguous rules as you type (a comparison with no number, a creator-as-judge rule, a URL shortener, a missing time zone or deadline). Blocking problems stop the launch; warnings need an acknowledgement and are shown on the launched market. An optional AI critique adds advisory suggestions.
 - **Creator markets**: launch a draft as a live market by staking 500 credits of liquidity. The creator earns a 1% fee on every trade and gets unused liquidity back at resolution. The stake fully covers the market maker's worst-case loss, so every payout is funded.
 
 ### Resolve
@@ -57,7 +59,7 @@ An optimistic-oracle lifecycle, the part most demo markets skip:
 1. **Propose.** The creator posts an outcome (YES, NO or INVALID) with an evidence link. Trading halts.
 2. **Challenge window.** Anyone else may dispute by posting a 100-credit bond.
 3. **Settle.** Undisputed proposals pay out automatically when the window ends.
-4. **Rule.** Disputed markets wait for an operator ruling. An overturned creator pays the disputer; an upheld one keeps the bond.
+4. **Rule.** Disputed markets wait for an operator ruling (in a workspace, a resolver's). An overturned creator pays the disputer; an upheld one keeps the bond.
 
 Winning shares redeem for 1 credit, INVALID pays 0.5 on both sides, and every credit movement is written to a per-account ledger.
 
@@ -65,8 +67,28 @@ Winning shares redeem for 1 credit, INVALID pays 0.5 on both sides, and every cr
 
 - Public trade feed and discussion on every market; comments show which side the commenter holds.
 - Leaderboards for top traders (by profit) and top creators (by fees). Traders appear under an alias, never an account id.
+- **Accuracy scoring**: a Brier score ranks forecasters by being right, not by being rich. The Portfolio's Accuracy card shows your score, your skill against the market price and a reliability diagram; the "Most accurate" leaderboard ranks accounts with at least 3 markets resolved YES or NO.
 - Notifications inbox for fills, payouts, proposals, disputes and comments.
 - Daily bonus with a streak. Bonus credits are excluded from profit rankings.
+
+### Share and embed
+
+- **Share** on any market copies its link or a one-line `<iframe>` embed snippet, with a live preview of the widget.
+- **Embeddable widget** at `/embed/markets/{id}`: a small read-only card with the question, YES probability, 24-hour change, sparkline, deadline and status, plus a link back to the market. Light, dark or automatic theme; no JavaScript; any site may frame it.
+- **oEmbed** at `/api/v1/oembed`, and market pages carry Open Graph tags, so pasted links unfurl in blogs, chat apps and CMSs.
+- The Windows app runs only on this computer, so it shows the preview and points to the hosted app for links and embeds.
+
+### Teams (preview)
+
+Private forecasting for a club, class or team, under **Teams** in the navigation.
+
+- **Workspaces**: create one and you become its owner. Every member gets a separate wallet with 10,000 workspace credits; their own balance is untouched, and workspace credits cannot be moved, bought or redeemed.
+- **Invite links**: owners and admins create links that join as a member or resolver, with an expiry (1, 7 or 30 days) and a use limit. A link is shown once; its token sits in the URL fragment (`/join#…`), so it never reaches server logs, and the join page clears it from the address bar. Links can be revoked.
+- **Private markets**: in Draft studio, **Launch to** a workspace instead of the public list. The launch stakes 500 wallet credits, and only members can see, trade, discuss or dispute the market; anyone else gets "not found". Private markets have no share link or embed.
+- **Roles**: owners manage everything, including ownership transfer; admins manage invites and move people between member and resolver; owners, admins and resolvers rule disputed private markets, unless they created, disputed or hold shares in them. The platform operator never rules a private market.
+- **Workspace leaderboard** ranks members by display name on profit, creator fees and accuracy, counting only that workspace's markets.
+
+Teams is labeled a preview: the hosted demo database can reset, and membership belongs to the browser's demo session. The Windows app runs only on one computer, so it hides Teams.
 
 ## Design principles
 
@@ -176,7 +198,7 @@ npm run verify
 
 It checks formatting and documentation links, runs the unit and integration suite with an 80% coverage gate (currently about 97% of lines), builds the project, smoke-tests the live HTTP API, runs the Playwright journeys on desktop Chromium, mobile Chromium and mobile WebKit, and audits dependencies. The same pipeline runs in GitHub Actions on every push.
 
-Tested behaviours include fee arithmetic, conservation of credits through resolution, idempotent retries, dispute outcomes, limit-order matching, privacy of account ids, and a full browser journey from launching a market to an operator ruling.
+Tested behaviours include fee arithmetic, conservation of credits through resolution, idempotent retries, dispute outcomes, limit-order matching, privacy of account ids, a full browser journey from launching a market to an operator ruling, and a Teams journey in which a colleague joins by invite link and trades a private market that an outsider cannot find.
 
 ## Deployment
 

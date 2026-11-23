@@ -43,7 +43,8 @@ interface BellProps {
   /** Null until the first refresh returns. */
   inbox: Inbox | null;
   onInbox: (inbox: Inbox) => void;
-  onOpenMarket: (marketId: string) => void;
+  /** workspaceId is set for a private market, which opens inside its workspace. */
+  onOpenMarket: (marketId: string, workspaceId?: string) => void;
 }
 
 /** Top-bar bell with an unread badge; opening it marks everything read. */
@@ -225,7 +226,7 @@ export function NotificationBell({
                               className="notification-row"
                               onClick={() => {
                                 close(true);
-                                onOpenMarket(item.marketId!);
+                                onOpenMarket(item.marketId!, item.workspaceId);
                               }}
                             >
                               {body}

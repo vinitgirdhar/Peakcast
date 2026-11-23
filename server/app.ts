@@ -7,10 +7,13 @@ import swaggerUi from "@fastify/swagger-ui";
 import fastifyStatic from "@fastify/static";
 import { Type } from "@sinclair/typebox";
 import { timingSafeEqual } from "node:crypto";
-import { existsSync, createReadStream } from "node:fs";
+import { existsSync, createReadStream, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Store, DomainError } from "./database.js";
+import { marketShell, registerEmbeds } from "./embed.js";
+import { marketExplainer } from "./explain.js";
 import {
+  critiqueDraft,
   generateDraft,
   validateDraft,
   getAIProviders,
@@ -37,8 +40,15 @@ import {
   NoBodySchema,
   InboxSchema,
   BonusClaimSchema,
+  CalibrationSchema,
+  CritiqueSchema,
+  LeaderboardSchema,
+  MarketExplanationSchema,
 } from "./schemas.js";
+import { launchTarget, marketActor, orderActor } from "./workspaces.js";
+import { registerWorkspaces } from "./workspace-routes.js";
 import { inbox, markAllRead } from "./notifications.js";
+import { accountCalibration, forecasterBoard } from "./calibration.js";
 import { accountStats, bonusStatus, claimBonus } from "./engagement.js";
 import type {
   AIProvider,
@@ -62,11 +72,15 @@ interface AppOptions {
   logger?: boolean;
   rateLimiting?: boolean;
   publicOrigin?: string;
+  /** Reachable only from this device (the desktop app): no shareable links or embeds. */
+  localOnly?: boolean;
   managedAI?: boolean;
   /** How long a proposed outcome can be disputed before anyone may settle it. */
   disputeWindowMs?: number;
   /** How often undisputed proposals past their window are paid out; 0 disables. */
   autoSettleMs?: number;
+  /** Workspaces (Teams); the loopback-only desktop app turns them off. Default true. */
+  teams?: boolean;
   draftGenerator?: (
     input: DraftInput,
     provider: AIProvider,
@@ -136,7 +150,7 @@ export async function buildApp(options: AppOptions = {}) {
     await app.register(rateLimit, {
       max: 300,
       timeWindow: "1 minute",
-      allowList: (request) => !request.url.startsWith("/api/"),
+      allowList: (request) => !/^\/(api|embed)\//.test(request.url),
     });
   app.addHook("onRoute", (route) => {
     if (!route.url.startsWith("/api/v1/") || route.schema?.hide) return;
@@ -146,11 +160,14 @@ export async function buildApp(options: AppOptions = {}) {
       /\/markets\/|\/quotes$|\/trades$|\/orders|\/watchlist\//.test(route.url)
     )
       codes.push(404, 409);
-    if (route.url.endsWith("/drafts/:id")) codes.push(404);
+    if (route.url.endsWith("/drafts/:id") || route.url.endsWith("/oembed"))
+      codes.push(404);
     if (route.url.endsWith("/launch")) codes.push(404, 409);
     if (route.url.endsWith("/bonus/claim")) codes.push(409);
-    if (route.url.endsWith("/ruling")) codes.push(503);
-    if (route.url.endsWith("/drafts/generate")) codes.push(502, 503);
+    if (route.url.startsWith("/api/v1/workspaces")) codes.push(404, 409);
+    if (route.url === "/api/v1/markets/:id/ruling") codes.push(503);
+    if (/\/drafts\/(generate|critique)$|\/explain$/.test(route.url))
+      codes.push(502, 503);
     const responses = route.schema?.response;
     route.schema = {
       ...route.schema,
@@ -198,6 +215,7 @@ export async function buildApp(options: AppOptions = {}) {
         { name: "Trading" },
         { name: "Accounts" },
         { name: "Drafts" },
+        { name: "Workspaces" },
       ],
     },
   });
@@ -206,17 +224,26 @@ export async function buildApp(options: AppOptions = {}) {
     uiConfig: { persistAuthorization: false },
   });
 
+  const isPublicHost = (request: FastifyRequest) =>
+    Boolean(publicUrl && request.headers.host === publicUrl.host);
+  /** This server's origin as the requester sees it; the host was vetted on request. */
+  const ownOrigin = (request: FastifyRequest) =>
+    isPublicHost(request)
+      ? publicUrl!.origin
+      : (URL.parse(`http://${request.headers.host ?? "localhost"}`)?.origin ??
+        "http://localhost");
+
   app.addHook("onRequest", async (request, reply) => {
     // shortcut: one opt-in HTTPS preview origin; review deployment controls before production hosting.
     const host = request.headers.host?.split(":")[0];
-    const publicHost = publicUrl && request.headers.host === publicUrl.host;
+    const publicHost = isPublicHost(request);
     if (host && !["127.0.0.1", "localhost"].includes(host) && !publicHost)
       throw new DomainError("This host is not enabled for the demo.", 403);
     const origin = request.headers.origin;
     if (
       origin &&
       (publicHost
-        ? origin !== publicUrl.origin
+        ? origin !== publicUrl?.origin
         : origin !== `http://${request.headers.host}` &&
           origin !== `https://${request.headers.host}`)
     )
@@ -364,11 +391,19 @@ export async function buildApp(options: AppOptions = {}) {
             defaultAIProvider: Type.Union([AIProviderSchema, Type.Null()]),
             marketCount: Type.Integer(),
             version: Type.String(),
+            shareOrigin: Type.Union([Type.String(), Type.Null()], {
+              description:
+                "Origin for shareable market links and embeds; null when the server is reachable only from this device.",
+            }),
+            teams: Type.Boolean({
+              description:
+                "Whether /workspaces routes exist; false in the Windows app.",
+            }),
           }),
         },
       },
     },
-    async () => ({
+    async (request) => ({
       mode: "demo" as const,
       aiAccessManaged: options.managedAI ?? false,
       aiConfigured: Boolean(hasAIAccess() && getDefaultAIProvider()),
@@ -376,6 +411,8 @@ export async function buildApp(options: AppOptions = {}) {
       defaultAIProvider: getDefaultAIProvider() ?? null,
       marketCount: store.markets().length,
       version: "0.1.0",
+      shareOrigin: options.localOnly ? null : ownOrigin(request),
+      teams: options.teams ?? true,
     }),
   );
 
@@ -426,7 +463,10 @@ export async function buildApp(options: AppOptions = {}) {
         response: { 200: MarketSchema },
       },
     },
-    async (request) => store.market(request.params.id),
+    async (request) => {
+      marketActor(store, viewerId(request), request.params.id);
+      return store.market(request.params.id);
+    },
   );
 
   app.get<{ Params: { id: string } }>(
@@ -445,7 +485,10 @@ export async function buildApp(options: AppOptions = {}) {
         },
       },
     },
-    async (request) => ({ items: store.history(request.params.id) }),
+    async (request) => {
+      marketActor(store, viewerId(request), request.params.id);
+      return { items: store.history(request.params.id) };
+    },
   );
 
   app.post<{
@@ -472,7 +515,7 @@ export async function buildApp(options: AppOptions = {}) {
         .send(
           propose(
             store,
-            accountId(request),
+            marketActor(store, accountId(request), request.params.id),
             request.params.id,
             request.body.outcome,
             request.body.evidenceUrl,
@@ -498,7 +541,13 @@ export async function buildApp(options: AppOptions = {}) {
     async (request, reply) =>
       reply
         .code(201)
-        .send(dispute(store, accountId(request), request.params.id)),
+        .send(
+          dispute(
+            store,
+            marketActor(store, accountId(request), request.params.id),
+            request.params.id,
+          ),
+        ),
   );
 
   app.post<{ Params: { id: string } }>(
@@ -516,7 +565,7 @@ export async function buildApp(options: AppOptions = {}) {
       },
     },
     async (request) => {
-      accountId(request);
+      marketActor(store, accountId(request), request.params.id);
       return settle(store, request.params.id);
     },
   );
@@ -551,6 +600,8 @@ export async function buildApp(options: AppOptions = {}) {
         !timingSafeEqual(supplied, configured)
       )
         throw new DomainError("Operator token is invalid.", 403);
+      // Private disputes stay inside their workspace; the operator never sees them.
+      marketActor(store, undefined, request.params.id);
       return rule(store, request.params.id, request.body.outcome);
     },
   );
@@ -582,7 +633,10 @@ export async function buildApp(options: AppOptions = {}) {
         },
       },
     },
-    async (request) => ({ items: store.marketTrades(request.params.id) }),
+    async (request) => {
+      marketActor(store, viewerId(request), request.params.id);
+      return { items: store.marketTrades(request.params.id) };
+    },
   );
 
   app.get(
@@ -590,35 +644,20 @@ export async function buildApp(options: AppOptions = {}) {
     {
       schema: {
         tags: ["Accounts"],
-        summary: "Top traders by profit and top creators by fees earned",
+        summary:
+          "Top traders by profit, creators by fees and forecasters by accuracy",
         description:
-          "Public. With a valid bearer token the viewer's own rows are flagged and always included.",
-        response: {
-          200: Type.Object({
-            traders: Type.Array(
-              Type.Object({
-                rank: Type.Integer(),
-                trader: Type.String(),
-                you: Type.Boolean(),
-                pnlMicros: Type.Integer(),
-                trades: Type.Integer(),
-              }),
-            ),
-            creators: Type.Array(
-              Type.Object({
-                rank: Type.Integer(),
-                trader: Type.String(),
-                you: Type.Boolean(),
-                markets: Type.Integer(),
-                volumeMicros: Type.Integer(),
-                feesMicros: Type.Integer(),
-              }),
-            ),
-          }),
-        },
+          "Public. forecasters ranks accounts with at least 3 markets resolved YES or NO by lowest Brier score. With a valid bearer token the viewer's own rows are flagged and always included.",
+        response: { 200: LeaderboardSchema },
       },
     },
-    async (request) => store.leaderboard(viewerId(request)),
+    async (request) => {
+      const viewer = viewerId(request);
+      return {
+        ...store.leaderboard(viewer),
+        forecasters: forecasterBoard(store, viewer),
+      };
+    },
   );
 
   app.post<{ Body: TradeInput }>(
@@ -631,7 +670,10 @@ export async function buildApp(options: AppOptions = {}) {
         response: { 200: QuoteSchema },
       },
     },
-    async (request) => store.quote(request.body),
+    async (request) => {
+      marketActor(store, viewerId(request), request.body.marketId);
+      return store.quote(request.body);
+    },
   );
 
   app.post<{ Body: TradeInput & { limitMicros: number } }>(
@@ -656,7 +698,7 @@ export async function buildApp(options: AppOptions = {}) {
     },
     async (request, reply) => {
       const fill = store.trade(
-        accountId(request),
+        marketActor(store, accountId(request), request.body.marketId),
         request.body,
         request.headers["idempotency-key"] as string,
       );
@@ -685,7 +727,15 @@ export async function buildApp(options: AppOptions = {}) {
       },
     },
     async (request, reply) =>
-      reply.code(201).send(placeOrder(store, accountId(request), request.body)),
+      reply
+        .code(201)
+        .send(
+          placeOrder(
+            store,
+            marketActor(store, accountId(request), request.body.marketId),
+            request.body,
+          ),
+        ),
   );
 
   app.delete<{ Params: { id: string } }>(
@@ -700,7 +750,11 @@ export async function buildApp(options: AppOptions = {}) {
       },
     },
     async (request) => {
-      cancelOrder(store, accountId(request), request.params.id);
+      cancelOrder(
+        store,
+        orderActor(store, accountId(request), request.params.id),
+        request.params.id,
+      );
       return { cancelled: true as const };
     },
   );
@@ -718,7 +772,11 @@ export async function buildApp(options: AppOptions = {}) {
       },
     },
     async (request) => ({
-      items: listComments(store, request.params.id, viewerId(request)),
+      items: listComments(
+        store,
+        request.params.id,
+        marketActor(store, viewerId(request), request.params.id),
+      ),
     }),
   );
 
@@ -743,7 +801,7 @@ export async function buildApp(options: AppOptions = {}) {
         .send(
           addComment(
             store,
-            accountId(request),
+            marketActor(store, accountId(request), request.params.id),
             request.params.id,
             request.body.body,
           ),
@@ -766,7 +824,12 @@ export async function buildApp(options: AppOptions = {}) {
       },
       handler: async (request) => {
         const watching = method === "PUT";
-        setWatching(store, accountId(request), request.params.id, watching);
+        setWatching(
+          store,
+          marketActor(store, accountId(request), request.params.id),
+          request.params.id,
+          watching,
+        );
         return { watching };
       },
     });
@@ -793,6 +856,21 @@ export async function buildApp(options: AppOptions = {}) {
         stats: accountStats(store, id),
       };
     },
+  );
+
+  app.get(
+    "/api/v1/portfolio/calibration",
+    {
+      schema: {
+        tags: ["Accounts"],
+        summary: "Own forecast accuracy: Brier score, skill and calibration",
+        description:
+          "Counts own trades in markets resolved YES or NO. Per market, the forecast is the size-weighted mean YES probability the trades left; brier is the mean of (forecast − outcome)² over markets, null until one resolves. skill is the same score for the prices just before those trades minus brier; positive means the account improved on the market. buckets holds ten 0.1-wide forecast buckets for a reliability diagram.",
+        security,
+        response: { 200: CalibrationSchema },
+      },
+    },
+    async (request) => accountCalibration(store, accountId(request)),
   );
 
   app.get(
@@ -878,7 +956,10 @@ export async function buildApp(options: AppOptions = {}) {
     },
   );
 
-  app.post<{ Params: { id: string }; Body: { category: Category } }>(
+  app.post<{
+    Params: { id: string };
+    Body: { category: Category; workspaceId?: string };
+  }>(
     "/api/v1/drafts/:id/launch",
     {
       config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
@@ -893,16 +974,20 @@ export async function buildApp(options: AppOptions = {}) {
         response: { 201: MarketSchema },
       },
     },
-    async (request, reply) =>
-      reply
+    async (request, reply) => {
+      const id = accountId(request);
+      const { workspaceId } = request.body;
+      return reply
         .code(201)
         .send(
           store.launchDraft(
-            accountId(request),
+            id,
             request.params.id,
             request.body.category,
+            workspaceId ? launchTarget(store, id, workspaceId) : undefined,
           ),
-        ),
+        );
+    },
   );
 
   app.delete<{ Params: { id: string } }>(
@@ -919,6 +1004,70 @@ export async function buildApp(options: AppOptions = {}) {
     async (request) => {
       store.deleteDraft(accountId(request), request.params.id);
       return { deleted: true as const };
+    },
+  );
+
+  /** AI routes need an account, a configured provider and X-AI-Access-Token. */
+  const authorizeAI = (
+    request: FastifyRequest<{ Querystring: { provider?: AIProvider } }>,
+    injectedGenerator: boolean,
+    unconfigured = "AI is not configured. Save a manual draft instead.",
+  ) => {
+    const id = accountId(request);
+    const configured = process.env.AI_ACCESS_TOKEN;
+    const provider =
+      request.query.provider ?? getDefaultAIProvider() ?? "openai";
+    if (
+      !hasAIAccess() ||
+      !configured ||
+      (!injectedGenerator &&
+        !getAIProviders().some(
+          (item) => item.id === provider && item.configured,
+        ))
+    )
+      throw new DomainError(unconfigured, 503);
+    const supplied = Buffer.from(
+      request.headers["x-ai-access-token"] as string,
+    );
+    const expected = Buffer.from(configured);
+    if (
+      supplied.length !== expected.length ||
+      !timingSafeEqual(supplied, expected)
+    )
+      throw new DomainError("AI access token is invalid.", 403);
+    return { id, provider };
+  };
+
+  app.post<{ Body: DraftInput; Querystring: { provider?: AIProvider } }>(
+    "/api/v1/drafts/critique",
+    {
+      config: { rateLimit: { max: 3, timeWindow: "1 minute" } },
+      schema: {
+        tags: ["Drafts"],
+        summary: "Advisory AI critique of a draft's rules; nothing is saved",
+        description:
+          "Same provider selection, X-AI-Access-Token and limits as /drafts/generate. Returns at most 8 warn or info findings, each quoting text from the field it names; findings whose quote is not in that field are dropped. It cannot block, launch or edit a draft, and the source is not fetched.",
+        querystring: Type.Object(
+          { provider: Type.Optional(AIProviderSchema) },
+          { additionalProperties: false },
+        ),
+        security: [{ bearerAuth: [], aiAccessToken: [] }],
+        headers: Type.Object({
+          "x-ai-access-token": Type.String({ minLength: 16, maxLength: 256 }),
+        }),
+        body: DraftSchema,
+        response: {
+          200: Type.Object({
+            provider: AIProviderSchema,
+            ...CritiqueSchema.properties,
+          }),
+        },
+      },
+    },
+    async (request) => {
+      const { provider } = authorizeAI(request, false);
+      validateDraft(request.body);
+      return critiqueDraft(request.body, provider);
     },
   );
 
@@ -944,31 +1093,10 @@ export async function buildApp(options: AppOptions = {}) {
       },
     },
     async (request, reply) => {
-      const id = accountId(request);
-      const configured = process.env.AI_ACCESS_TOKEN;
-      const provider =
-        request.query.provider ?? getDefaultAIProvider() ?? "openai";
-      if (
-        !hasAIAccess() ||
-        !configured ||
-        (!options.draftGenerator &&
-          !getAIProviders().some(
-            (item) => item.id === provider && item.configured,
-          ))
-      )
-        throw new DomainError(
-          "AI is not configured. Save a manual draft instead.",
-          503,
-        );
-      const supplied = Buffer.from(
-        request.headers["x-ai-access-token"] as string,
+      const { id, provider } = authorizeAI(
+        request,
+        Boolean(options.draftGenerator),
       );
-      const expected = Buffer.from(configured);
-      if (
-        supplied.length !== expected.length ||
-        !timingSafeEqual(supplied, expected)
-      )
-        throw new DomainError("AI access token is invalid.", 403);
       validateDraft(request.body);
       const generated = await (options.draftGenerator ?? generateDraft)(
         request.body,
@@ -983,6 +1111,42 @@ export async function buildApp(options: AppOptions = {}) {
             "Human review required before publication. No settlement authority.",
           ]),
         );
+    },
+  );
+
+  const explain = marketExplainer();
+  app.post<{ Params: { id: string }; Querystring: { provider?: AIProvider } }>(
+    "/api/v1/markets/:id/explain",
+    {
+      config: { rateLimit: { max: 5, timeWindow: "1 minute" } },
+      schema: {
+        tags: ["Markets"],
+        summary: "AI explainer of a market's price; advisory, not advice",
+        description:
+          "Same bearer, X-AI-Access-Token and provider selection as /drafts/critique. The model gets only the market's own fields and current numbers as quoted data; no URL is fetched. Answers are cached per market, provider and status for 30 minutes, or until YES moves more than 5 points. 404 unknown market, 502 provider failure or invalid output, 503 AI not configured.",
+        querystring: Type.Object(
+          { provider: Type.Optional(AIProviderSchema) },
+          { additionalProperties: false },
+        ),
+        security: [{ bearerAuth: [], aiAccessToken: [] }],
+        headers: Type.Object({
+          "x-ai-access-token": Type.String({ minLength: 16, maxLength: 256 }),
+        }),
+        params: idParams,
+        body: NoBodySchema,
+        response: { 200: MarketExplanationSchema },
+      },
+    },
+    async (request) => {
+      // Gate first: a non-member gets the unknown-market 404 before any AI work,
+      // so private market text never reaches a provider for them.
+      marketActor(store, accountId(request), request.params.id);
+      const { provider } = authorizeAI(
+        request,
+        false,
+        "AI is not configured on this server.",
+      );
+      return explain(store.market(request.params.id), provider);
     },
   );
 
@@ -1011,11 +1175,17 @@ export async function buildApp(options: AppOptions = {}) {
       return reply.send(createReadStream(path));
     },
   );
+  if (options.teams !== false) registerWorkspaces(app, store, accountId);
+  registerEmbeds(app, store, ownOrigin);
   app.get("/api/v1/openapi.json", { schema: { hide: true } }, async () =>
     app.swagger(),
   );
   const staticRoot = options.staticRoot ?? resolve("dist");
   if (existsSync(staticRoot)) {
+    const shellPath = resolve(staticRoot, "index.html");
+    const shell = existsSync(shellPath)
+      ? readFileSync(shellPath, "utf8")
+      : undefined;
     await app.register(fastifyStatic, {
       root: staticRoot,
       wildcard: false,
@@ -1030,8 +1200,20 @@ export async function buildApp(options: AppOptions = {}) {
         request.method === "GET" &&
         !request.url.startsWith("/api") &&
         !request.url.split("?")[0].split("/").at(-1)?.includes(".")
-      )
-        return reply.sendFile("index.html");
+      ) {
+        // Market pages carry link-preview tags so shared links unfurl.
+        const page =
+          shell &&
+          marketShell(
+            shell,
+            store,
+            request.url.split("?")[0],
+            ownOrigin(request),
+          );
+        return page
+          ? reply.type("text/html; charset=utf-8").send(page)
+          : reply.sendFile("index.html");
+      }
       return reply.code(404).send({ message: "Route not found." });
     });
   }

@@ -11,20 +11,77 @@ import {
 import { itemMotion, listMotion } from "../motion.js";
 
 const tabs = [
-  { id: "traders", label: "Top traders" },
-  { id: "creators", label: "Top creators" },
+  {
+    id: "traders",
+    label: "Top traders",
+    empty: "No traders yet",
+    hint: "Make a trade to appear on the board.",
+  },
+  {
+    id: "creators",
+    label: "Top creators",
+    empty: "No creators yet",
+    hint: "Launch a market from Draft studio to appear here.",
+  },
+  {
+    id: "forecasters",
+    label: "Most accurate",
+    empty: "No forecasters yet",
+    hint: "Trade in at least 3 markets that resolve YES or NO to be ranked by accuracy.",
+  },
 ] as const;
+type Tab = (typeof tabs)[number]["id"];
+interface Row {
+  rank: number;
+  trader: string;
+  you: boolean;
+  detail: string;
+  value: string;
+  tone: "" | "positive" | "negative";
+}
 
-export function LeaderboardView({ client }: { client: WildcatterClient }) {
+const plural = (count: number, word: string) =>
+  `${count} ${count === 1 ? word : `${word}s`}`;
+
+function boardRows(board: Leaderboard | null, tab: Tab): Row[] {
+  if (tab === "traders")
+    return (board?.traders ?? []).map((row) => ({
+      ...row,
+      detail: plural(row.trades, "trade"),
+      value: `${row.pnlMicros > 0 ? "+" : ""}${formatCredits(row.pnlMicros)} credits`,
+      tone: row.pnlMicros >= 0 ? "positive" : "negative",
+    }));
+  if (tab === "creators")
+    return (board?.creators ?? []).map((row) => ({
+      ...row,
+      detail: `${plural(row.markets, "market")} · ${formatCredits(row.volumeMicros)} credits volume`,
+      value: `${formatCredits(row.feesMicros)} credits`,
+      tone: "",
+    }));
+  return (board?.forecasters ?? []).map((row) => ({
+    ...row,
+    detail: plural(row.resolvedMarkets, "resolved market"),
+    value: `Brier ${row.brier.toFixed(3)}`,
+    tone: "",
+  }));
+}
+
+export function LeaderboardView({
+  client,
+  load,
+}: {
+  client: WildcatterClient;
+  /** A workspace board: loaded from here, shown inside the workspace page, members named. */
+  load?: () => Promise<Leaderboard>;
+}) {
   const [board, setBoard] = useState<Leaderboard | null>(null);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
-  const [tab, setTab] = useState<"traders" | "creators">("traders");
+  const [tab, setTab] = useState<Tab>("traders");
 
   useEffect(() => {
     let active = true;
-    void client
-      .leaderboard()
+    void (load ? load() : client.leaderboard())
       .then((data) => {
         if (active) {
           setBoard(data);
@@ -39,28 +96,18 @@ export function LeaderboardView({ client }: { client: WildcatterClient }) {
     };
   }, [client, attempt]);
 
-  const rows =
-    tab === "traders"
-      ? (board?.traders ?? []).map((row) => ({
-          ...row,
-          detail: `${row.trades} ${row.trades === 1 ? "trade" : "trades"}`,
-          amount: row.pnlMicros,
-          signed: true,
-        }))
-      : (board?.creators ?? []).map((row) => ({
-          ...row,
-          detail: `${row.markets} ${row.markets === 1 ? "market" : "markets"} · ${formatCredits(row.volumeMicros)} credits volume`,
-          amount: row.feesMicros,
-          signed: false,
-        }));
+  const rows = boardRows(board, tab);
+  const current = tabs.find((item) => item.id === tab)!;
   return (
-    <div className="page leaderboard">
-      <div className="page-heading">
-        <div>
-          <h1>Leaderboard</h1>
-          <p>Who reads the future best? Ranked on demo credits.</p>
+    <div className={load ? "leaderboard" : "page leaderboard"}>
+      {!load && (
+        <div className="page-heading">
+          <div>
+            <h1>Leaderboard</h1>
+            <p>Who reads the future best? Ranked on demo credits.</p>
+          </div>
         </div>
-      </div>
+      )}
       <div
         className="category-tabs liquid-material"
         role="group"
@@ -121,31 +168,22 @@ export function LeaderboardView({ client }: { client: WildcatterClient }) {
                 </strong>
                 <span>{row.detail}</span>
               </div>
-              <strong
-                className={
-                  row.signed ? (row.amount >= 0 ? "positive" : "negative") : ""
-                }
-              >
-                {row.signed && row.amount > 0 ? "+" : ""}
-                {formatCredits(row.amount)} credits
-              </strong>
+              <strong className={row.tone}>{row.value}</strong>
             </motion.li>
           ))}
         </motion.ol>
       ) : (
-        <EmptyState
-          title={tab === "traders" ? "No traders yet" : "No creators yet"}
-          text={
-            tab === "traders"
-              ? "Make a trade to appear on the board."
-              : "Launch a market from Draft studio to appear here."
-          }
-        />
+        <EmptyState title={current.empty} text={current.hint} />
       )}
       <p className="fine-print">
         Profit is balance plus open positions at the current price, minus the
         10,000 starting credits and any daily bonuses. Creator ranking uses fees
-        earned. Traders appear under an alias.
+        earned. Accuracy ranks forecasters with at least 3 markets resolved YES
+        or NO by Brier score: 0 is perfect, always saying 50% scores 0.25, and
+        lower ranks higher.{" "}
+        {load
+          ? "Only this workspace's markets and credits count; members appear by display name."
+          : "Traders appear under an alias."}
       </p>
     </div>
   );

@@ -31,7 +31,11 @@ import {
   statusLabel,
 } from "../ui.js";
 import { AnimatedNumber, itemMotion, listMotion } from "../motion.js";
-import { DailyBonusCard, PerformanceStats } from "./PortfolioExtras.js";
+import {
+  AccuracyCard,
+  DailyBonusCard,
+  PerformanceStats,
+} from "./PortfolioExtras.js";
 
 const signedCredits = (micros: number) =>
   `${micros > 0 ? "+" : ""}${formatCredits(micros)}`;
@@ -175,6 +179,10 @@ export function PortfolioView({
         </p>
       </details>
       <PerformanceStats stats={portfolio?.stats} />
+      <AccuracyCard
+        client={client}
+        resolvedMarkets={portfolio?.stats.resolvedMarkets}
+      />
       <div
         className="category-tabs liquid-material"
         role="group"

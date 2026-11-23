@@ -1,20 +1,24 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import {
   ArrowLeft,
   ArrowRight,
   CircleHelp,
   ExternalLink,
+  Lock,
+  Share2,
   ShieldCheck,
   Wallet,
 } from "lucide-react";
 import { ApiError, WildcatterClient } from "../../shared/client.js";
 import type {
   Action,
+  Capabilities,
   HistoryPoint,
   Market,
   Outcome,
   Portfolio,
   Quote,
+  ResolutionOutcome,
   TradeInput,
   MarketTrade,
 } from "../../shared/types.js";
@@ -32,7 +36,10 @@ import {
   TradeFeed,
   WatchButton,
 } from "./MarketExtras.js";
+import { SharePanel } from "./Share.js";
 import { AnimatedNumber } from "../motion.js";
+import { RuleCheckLine } from "./RuleCheck.js";
+import { ExplainPanel } from "./Explain.js";
 import { motion } from "motion/react";
 
 const cents = (price: number) => `${(price * 100).toFixed(1)}¢`;
@@ -46,6 +53,10 @@ export function MarketDetail({
   onNotice,
   view,
   onView,
+  shareOrigin,
+  capabilities = null,
+  workspaceName,
+  onRule,
 }: {
   market: Market;
   portfolio: Portfolio | null;
@@ -55,7 +66,17 @@ export function MarketDetail({
   onNotice: (text: string) => void;
   view: "forecast" | "rules";
   onView: (view: "forecast" | "rules") => void;
+  shareOrigin: string | null;
+  capabilities?: Capabilities | null;
+  /** Set for a private market, opened from its workspace. */
+  workspaceName?: string;
+  /** A workspace owner, admin or resolver's ruling; see ResolutionPanel. */
+  onRule?: (outcome: ResolutionOutcome) => Promise<Market>;
 }) {
+  // Private markets are never shared or embedded; their links would 404.
+  const privateMarket = Boolean(market.workspaceId);
+  const [sharing, setSharing] = useState(false);
+  const shareId = useId();
   const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [historyError, setHistoryError] = useState("");
   // null until the first response, so the feed can show a loading state.
@@ -239,16 +260,38 @@ export function MarketDetail({
       <div className="detail-actions">
         <button className="back-button" onClick={onBack}>
           <ArrowLeft size={16} />
-          All markets
+          {privateMarket ? "Workspace markets" : "All markets"}
         </button>
-        <WatchButton
-          market={market}
-          portfolio={portfolio}
-          client={client}
-          onChange={onTrade}
-          onNotice={onNotice}
-        />
+        <div className="detail-buttons">
+          <WatchButton
+            market={market}
+            portfolio={portfolio}
+            client={client}
+            onChange={onTrade}
+            onNotice={onNotice}
+          />
+          {!privateMarket && (
+            <button
+              className="back-button"
+              aria-expanded={sharing}
+              aria-controls={sharing ? shareId : undefined}
+              onClick={() => setSharing(!sharing)}
+            >
+              <Share2 size={15} />
+              Share
+            </button>
+          )}
+        </div>
       </div>
+      {!privateMarket && (
+        <SharePanel
+          open={sharing}
+          id={shareId}
+          market={market}
+          client={client}
+          shareOrigin={shareOrigin}
+        />
+      )}
       <div
         className={`detail-layout ${view === "rules" ? "rules-layout" : ""}`}
       >
@@ -264,6 +307,12 @@ export function MarketDetail({
               <span className="category-label">
                 {market.category} <span className="inline-divider">/</span> Demo
               </span>
+              {privateMarket && (
+                <span className="small-pill private-pill">
+                  <Lock size={12} aria-hidden="true" />
+                  Private to {workspaceName ?? "your workspace"}
+                </span>
+              )}
               <h1>{market.title}</h1>
             </div>
           </div>
@@ -433,6 +482,7 @@ export function MarketDetail({
                   </summary>
                   <p>{market.invalidRule}</p>
                 </details>
+                <RuleCheckLine check={market.ruleCheck} />
                 <span className="fine-print">
                   Outcomes are proposed with evidence and can be disputed before
                   payout. Payouts are demo credits, never real money.
@@ -668,6 +718,12 @@ export function MarketDetail({
           // Secondary panels follow the trade panel in source order, so on a
           // phone the trade form sits right under the chart.
           <div className="detail-secondary">
+            <ExplainPanel
+              key={market.id}
+              market={market}
+              client={client}
+              capabilities={capabilities}
+            />
             <ResolutionPanel
               market={market}
               isCreator={
@@ -678,6 +734,7 @@ export function MarketDetail({
               client={client}
               onChange={onTrade}
               onNotice={onNotice}
+              onRule={onRule}
             />
             <TradeFeed feed={feed} />
             <LimitOrders

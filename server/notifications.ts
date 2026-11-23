@@ -19,6 +19,7 @@ interface NotificationRow {
   text: string;
   created_at: string;
   read_at: string | null;
+  workspace_id: string | null;
 }
 
 export const marketTitle = (store: Store, marketId: string): string =>
@@ -76,17 +77,22 @@ export function announceOutcome(
     );
 }
 
+// A person reads their own rows plus those of their active workspace wallets,
+// so a removed member stops seeing private notifications at once.
+const OWN_ACCOUNTS =
+  "account_id IN (SELECT ? UNION SELECT wallet_id FROM workspace_members WHERE account_id=? AND removed_at IS NULL)";
+
 export function inbox(store: Store, accountId: string): Inbox {
   const rows = store.db
     .prepare(
-      "SELECT id,kind,market_id,text,created_at,read_at FROM notifications WHERE account_id=? ORDER BY id DESC LIMIT ?",
+      `SELECT n.id,n.kind,n.market_id,n.text,n.created_at,n.read_at,m.workspace_id FROM notifications n LEFT JOIN markets m ON m.id=n.market_id WHERE n.${OWN_ACCOUNTS} ORDER BY n.id DESC LIMIT ?`,
     )
-    .all(accountId, INBOX_SIZE) as unknown as NotificationRow[];
+    .all(accountId, accountId, INBOX_SIZE) as unknown as NotificationRow[];
   const { unread } = store.db
     .prepare(
-      "SELECT COUNT(*) AS unread FROM notifications WHERE account_id=? AND read_at IS NULL",
+      `SELECT COUNT(*) AS unread FROM notifications WHERE ${OWN_ACCOUNTS} AND read_at IS NULL`,
     )
-    .get(accountId) as { unread: number };
+    .get(accountId, accountId) as { unread: number };
   return {
     items: rows.map((row): InboxNotification => ({
       id: row.id,
@@ -95,6 +101,7 @@ export function inbox(store: Store, accountId: string): Inbox {
       text: row.text,
       createdAt: row.created_at,
       read: row.read_at !== null,
+      ...(row.workspace_id && { workspaceId: row.workspace_id }),
     })),
     unread,
   };
@@ -103,8 +110,8 @@ export function inbox(store: Store, accountId: string): Inbox {
 export function markAllRead(store: Store, accountId: string): { unread: 0 } {
   store.db
     .prepare(
-      "UPDATE notifications SET read_at=? WHERE account_id=? AND read_at IS NULL",
+      `UPDATE notifications SET read_at=? WHERE ${OWN_ACCOUNTS} AND read_at IS NULL`,
     )
-    .run(new Date().toISOString(), accountId);
+    .run(new Date().toISOString(), accountId, accountId);
   return { unread: 0 };
 }

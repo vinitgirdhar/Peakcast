@@ -20,6 +20,6 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
-    proxy: { "/api": api, "/api-docs": api },
+    proxy: { "/api": api, "/api-docs": api, "/embed": api },
   },
 });

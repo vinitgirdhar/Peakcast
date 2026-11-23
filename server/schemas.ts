@@ -46,6 +46,59 @@ export const DraftSchema = Type.Object(
   { additionalProperties: false },
 );
 
+/** Advisory AI critique; checked after parsing the provider's output. */
+export const CritiqueSchema = Type.Object(
+  {
+    summary: Type.String({ maxLength: 400 }),
+    findings: Type.Array(
+      Type.Object(
+        {
+          field: Type.Union(
+            (
+              [
+                "question",
+                "sourceName",
+                "sourceUrl",
+                "closesAt",
+                "yesRule",
+                "noRule",
+                "invalidRule",
+              ] as const
+            ).map((field) => Type.Literal(field)),
+          ),
+          severity: Type.Union([Type.Literal("warn"), Type.Literal("info")]),
+          message: Type.String({ minLength: 1, maxLength: 300 }),
+          suggestion: Type.String({ maxLength: 300 }),
+          quote: Type.String({ maxLength: 200 }),
+        },
+        { additionalProperties: false },
+      ),
+      { maxItems: 8 },
+    ),
+  },
+  { additionalProperties: false },
+);
+const explainItems = (maxItems: number) =>
+  Type.Array(Type.String({ minLength: 1, maxLength: 200 }), { maxItems });
+/** What the model must return for a market explainer; checked before use. */
+export const ExplanationSchema = Type.Object(
+  {
+    summary: Type.String({ minLength: 1, maxLength: 400 }),
+    drivers: explainItems(5),
+    wouldMoveUp: explainItems(3),
+    wouldMoveDown: explainItems(3),
+    baseRateNote: Type.String({ maxLength: 300 }),
+    caveats: explainItems(3),
+  },
+  { additionalProperties: false },
+);
+export const MarketExplanationSchema = Type.Object({
+  provider: AIProviderSchema,
+  generatedAt: Type.String(),
+  probability: Type.Number(),
+  ...ExplanationSchema.properties,
+});
+
 const Text = Type.String();
 export const ErrorSchema = Type.Object({ message: Type.String() });
 const Units = Type.Integer({ minimum: 0 });
@@ -69,6 +122,9 @@ export const MarketSchema = Type.Object({
   trades: Units,
   status: Text,
   feeBps: Units,
+  ruleCheck: Type.Optional(
+    Type.Object({ risk: Type.Number(), warnings: Type.Array(Text) }),
+  ),
   resolution: Type.Optional(
     Type.Object({
       outcome: Text,
@@ -79,6 +135,7 @@ export const MarketSchema = Type.Object({
       resolvedAt: Type.Optional(Text),
     }),
   ),
+  workspaceId: Type.Optional(Text),
 });
 const ResolutionOutcomeSchema = Type.Union([
   Type.Literal("YES"),
@@ -107,6 +164,7 @@ export const LaunchSchema = Type.Object(
         (category) => Type.Literal(category),
       ),
     ),
+    workspaceId: Type.Optional(Type.String({ format: "uuid" })),
   },
   { additionalProperties: false },
 );
@@ -186,6 +244,51 @@ export const StatsSchema = Type.Object({
   creatorFeesMicros: Units,
   payoutsMicros: Units,
 });
+const Probability = Type.Number({ minimum: 0, maximum: 1 });
+const MaybeProbability = Type.Union([Probability, Type.Null()]);
+export const CalibrationSchema = Type.Object({
+  resolvedMarkets: Units,
+  brier: MaybeProbability,
+  skill: Type.Optional(Type.Number()),
+  buckets: Type.Array(
+    Type.Object({
+      from: Probability,
+      to: Probability,
+      count: Units,
+      meanForecast: MaybeProbability,
+      observedRate: MaybeProbability,
+    }),
+  ),
+});
+export const ForecasterRankSchema = Type.Object({
+  rank: Type.Integer(),
+  trader: Text,
+  you: Type.Boolean(),
+  resolvedMarkets: Units,
+  brier: Probability,
+});
+export const LeaderboardSchema = Type.Object({
+  traders: Type.Array(
+    Type.Object({
+      rank: Type.Integer(),
+      trader: Type.String(),
+      you: Type.Boolean(),
+      pnlMicros: Type.Integer(),
+      trades: Type.Integer(),
+    }),
+  ),
+  creators: Type.Array(
+    Type.Object({
+      rank: Type.Integer(),
+      trader: Type.String(),
+      you: Type.Boolean(),
+      markets: Type.Integer(),
+      volumeMicros: Type.Integer(),
+      feesMicros: Type.Integer(),
+    }),
+  ),
+  forecasters: Type.Array(ForecasterRankSchema),
+});
 export const InboxSchema = Type.Object({
   items: Type.Array(
     Type.Object({
@@ -195,6 +298,7 @@ export const InboxSchema = Type.Object({
       text: Text,
       createdAt: Text,
       read: Type.Boolean(),
+      workspaceId: Type.Optional(Text),
     }),
   ),
   unread: Units,
@@ -242,3 +346,116 @@ export const PortfolioSchema = Type.Object({
   bonus: BonusSchema,
   stats: StatsSchema,
 });
+
+// Query strings are not type-coerced, so sizes arrive as digit strings.
+const Size = Type.String({ pattern: "^[1-9][0-9]{0,3}$" });
+export const OEmbedQuerySchema = Type.Object(
+  {
+    url: Type.String({ minLength: 1, maxLength: 2048 }),
+    maxwidth: Type.Optional(Size),
+    maxheight: Type.Optional(Size),
+    format: Type.Optional(Type.Literal("json")),
+  },
+  { additionalProperties: false },
+);
+export const OEmbedSchema = Type.Object({
+  version: Type.Literal("1.0"),
+  type: Type.Literal("rich"),
+  provider_name: Type.Literal("Wildcatter"),
+  provider_url: Text,
+  title: Text,
+  html: Text,
+  width: Type.Integer(),
+  height: Type.Integer(),
+});
+
+// Teams. Names are trimmed by the server and must keep 2+ characters.
+const NoControl = "^[^\\u0000-\\u001f\\u007f]+$";
+export const WorkspaceRoleSchema = Type.Union([
+  Type.Literal("owner"),
+  Type.Literal("admin"),
+  Type.Literal("resolver"),
+  Type.Literal("member"),
+]);
+const InviteRoleSchema = Type.Union([
+  Type.Literal("member"),
+  Type.Literal("resolver"),
+]);
+const WorkspaceName = Type.String({
+  minLength: 2,
+  maxLength: 60,
+  pattern: NoControl,
+});
+const DisplayName = Type.String({
+  minLength: 2,
+  maxLength: 40,
+  pattern: NoControl,
+});
+const InviteToken = Type.String({ pattern: "^[a-f0-9]{64}$" });
+const Uuid = Type.String({ format: "uuid" });
+export const WorkspaceIdParams = Type.Object({ wid: Uuid });
+export const InviteParams = Type.Object({ wid: Uuid, inviteId: Uuid });
+export const MemberParams = Type.Object({ wid: Uuid, memberId: Uuid });
+export const WorkspaceCreateSchema = Type.Object(
+  { name: WorkspaceName, displayName: DisplayName },
+  { additionalProperties: false },
+);
+export const WorkspaceRenameSchema = Type.Object(
+  { name: WorkspaceName },
+  { additionalProperties: false },
+);
+export const WorkspaceSchema = Type.Object({
+  id: Text,
+  name: Text,
+  role: WorkspaceRoleSchema,
+  memberCount: Units,
+  createdAt: Text,
+});
+export const MemberSchema = Type.Object({
+  id: Text,
+  displayName: Text,
+  role: WorkspaceRoleSchema,
+  joinedAt: Text,
+  you: Type.Boolean(),
+});
+export const WorkspaceDetailSchema = Type.Object({
+  ...WorkspaceSchema.properties,
+  members: Type.Array(MemberSchema),
+});
+export const InviteCreateSchema = Type.Object(
+  {
+    role: InviteRoleSchema,
+    expiresInHours: Type.Optional(Type.Integer({ minimum: 1, maximum: 720 })),
+    maxUses: Type.Optional(Type.Integer({ minimum: 1, maximum: 500 })),
+  },
+  { additionalProperties: false },
+);
+export const InviteSchema = Type.Object({
+  id: Text,
+  role: InviteRoleSchema,
+  expiresAt: Text,
+  maxUses: Units,
+  uses: Units,
+  revoked: Type.Boolean(),
+});
+export const CreatedInviteSchema = Type.Object({
+  ...InviteSchema.properties,
+  token: Text,
+});
+export const InvitePreviewSchema = Type.Object({
+  workspaceName: Text,
+  role: InviteRoleSchema,
+  expiresAt: Text,
+});
+export const InviteTokenSchema = Type.Object(
+  { token: InviteToken },
+  { additionalProperties: false },
+);
+export const JoinSchema = Type.Object(
+  { token: InviteToken, displayName: DisplayName },
+  { additionalProperties: false },
+);
+export const RoleChangeSchema = Type.Object(
+  { role: WorkspaceRoleSchema },
+  { additionalProperties: false },
+);

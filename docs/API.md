@@ -15,17 +15,20 @@ The authoritative schemas are [OpenAPI JSON](http://127.0.0.1:3001/api/v1/openap
 | Method       | Relative path                | Access                       | Success and behavior                                                                                                            |
 | ------------ | ---------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | POST         | `/sessions`                  | Public                       | 201; new isolated demo account                                                                                                  |
-| GET          | `/capabilities`              | Public                       | 200; demo mode, market count, `aiConfigured`, `aiProviders` (IDs/models/configured flags), and `defaultAIProvider`              |
+| GET          | `/capabilities`              | Public                       | 200; demo mode, public market count, `aiConfigured`, `aiProviders`, `defaultAIProvider`, `shareOrigin`, `teams`                 |
+| GET          | `/oembed?url=&maxwidth=`     | Public                       | 200; oEmbed 1.0 `rich` JSON with an `<iframe>` widget; 400 not this server's market link, 404 unknown market                    |
 | GET          | `/markets?search=&category=` | Public                       | 200; `{items}`; search max 200 chars, category max 50                                                                           |
 | GET          | `/markets/:id`               | Public                       | 200; full definition, probabilities, `change24h` and demo statistics                                                            |
 | GET          | `/markets/:id/history`       | Public                       | 200; fixture baseline plus last 99 observed demo fills                                                                          |
+| POST         | `/markets/{id}/explain`      | Bearer + `X-AI-Access-Token` | 200; AI explainer of the price, cached 30 minutes; 404 unknown market, 502 provider failure, 503 unconfigured                   |
 | POST         | `/quotes`                    | Public                       | 200; executable estimate, not a reservation                                                                                     |
 | POST         | `/markets/{id}/resolution`   | Bearer (creator)             | 201; body `{outcome, evidenceUrl}`; halts trading, opens challenge window; 403 not creator, 409 already proposed                |
 | POST         | `/markets/{id}/dispute`      | Bearer (not creator)         | 201; posts 100-credit bond; 409 outside challenge window or already disputed                                                    |
 | POST         | `/markets/{id}/settle`       | Bearer                       | 200; pays out an undisputed proposal after the window; 409 too early or disputed                                                |
 | POST         | `/markets/{id}/ruling`       | `X-Operator-Token`           | 200; body `{outcome}`; final ruling for disputed or house markets; 503 when unconfigured                                        |
 | GET          | `/markets/{id}/trades`       | None                         | 200; last 30 trades, newest first; traders shown under an alias, never an account id                                            |
-| GET          | `/leaderboard`               | Optional Bearer              | 200; top 20 traders by profit and creators by fees; viewer's own rows flagged `you`                                             |
+| GET          | `/leaderboard`               | Optional Bearer              | 200; top 20 traders by profit, creators by fees and `forecasters` by Brier score; viewer's own rows flagged `you`               |
+| GET          | `/portfolio/calibration`     | Bearer                       | 200; own `{resolvedMarkets, brier, skill?, buckets}`; `brier` null until a traded market resolves YES or NO                     |
 | POST         | `/orders`                    | Bearer                       | 201; body `{marketId, outcome, action, shares, limitPrice}`; limit order, may fill at once; 409 closed market or 20 open orders |
 | DELETE       | `/orders/{id}`               | Bearer                       | 200; cancels an own open order; 404 otherwise                                                                                   |
 | GET          | `/markets/{id}/comments`     | Optional Bearer              | 200; last 50 comments, newest first, alias plus side held                                                                       |
@@ -38,9 +41,22 @@ The authoritative schemas are [OpenAPI JSON](http://127.0.0.1:3001/api/v1/openap
 | POST         | `/bonus/claim`               | Bearer                       | 200; daily credit bonus, once per UTC day; 409 when already claimed today; no body or `{}`, any field is 400                    |
 | GET          | `/drafts`                    | Bearer                       | 200; own last 50 private drafts                                                                                                 |
 | POST         | `/drafts`                    | Bearer                       | 201; manual draft, private until launched                                                                                       |
-| POST         | `/drafts/{id}/launch`        | Bearer                       | 201; body `{category}`; stakes 500 credits, returns the live market; 404 unknown draft, 409 expired deadline or low balance     |
+| POST         | `/drafts/{id}/launch`        | Bearer                       | 201; body `{category, workspaceId?}`; stakes 500 credits; 404 unknown draft or workspace, 409 expired deadline or low balance   |
 | DELETE       | `/drafts/{id}`               | Bearer                       | 200; deletes own draft, 404 otherwise                                                                                           |
 | POST         | `/drafts/generate`           | Bearer + `X-AI-Access-Token` | 201; optional private AI-refined draft                                                                                          |
+| POST         | `/drafts/critique`           | Bearer + `X-AI-Access-Token` | 200; advisory AI critique of a draft body, nothing saved; 502 invalid output, 503 unconfigured                                  |
+
+## Embeds and oEmbed
+
+`GET /embed/markets/{id}?theme=light|dark|auto` (outside `/api/v1`) returns a self-contained, read-only HTML widget: question, YES probability, 24-hour change, sparkline of the fixture baseline plus recent fills, deadline, status and a "Forecast on Wildcatter" link that opens the market in a new tab. `theme` defaults to `auto` (`prefers-color-scheme`); other values return 400. An unknown market returns a small HTML 404 page. The widget is sized for 360×200 up to about 600 wide.
+
+- **Framing:** only `/embed/*` sends `frame-ancestors *` and omits `X-Frame-Options`. The data is public, there is no session, cookie or state-changing control to clickjack, so any publisher may frame it. Every other route keeps `frame-ancestors 'none'`.
+- **CSP on the widget:** `default-src 'none'`, no script at all, and one static stylesheet allowed by its SHA-256 hash. All market text is HTML-escaped.
+- **Caching and limits:** `Cache-Control: public, max-age=30`; the per-IP rate limit applies as on `/api/`.
+
+`GET /api/v1/oembed?url={market link}` accepts only this server's own `/markets/{id}` (or `/markets/{id}/rules`) links, with optional `maxwidth`, `maxheight` (1–9999) and `format=json`. It returns `{version: "1.0", type: "rich", provider_name: "Wildcatter", provider_url, title, html, width, height}`; the iframe is 480×200 unless the maxima are smaller, uses `loading="lazy"`, and is sandboxed to allow only popups. The SDK method is `api.oembed(url, maxwidth?, maxheight?)`.
+
+Market pages (`/markets/{id}`) include Open Graph and Twitter card tags and an oEmbed discovery link, so shared links unfurl. `shareOrigin` in `/capabilities` is the origin used for share links: the configured `PUBLIC_ORIGIN` on the hosted service, the loopback origin in local development, and `null` in the Windows app, whose server nobody else can reach.
 
 ## SDK example
 
@@ -87,9 +103,10 @@ All application errors return JSON `{ "message": "..." }`.
 | ------ | -------------------------------------------------------- | --------------------------------------------------------------------- |
 | 400    | Invalid fields, types, ranges or manual draft            | Correct the request                                                   |
 | 401    | Missing, invalid or expired bearer credential            | Authenticate/create a demo account                                    |
-| 403    | Host/origin or AI access restriction                     | Correct access/configuration; do not bypass the restriction           |
-| 404    | Unknown market or API resource                           | Correct the ID/path                                                   |
-| 409    | Price limit, balance, holdings or key/input conflict     | Requote/review holdings; keep key/input together on uncertain retries |
+| 403    | Host/origin, AI access or workspace role restriction     | Correct access/configuration; do not bypass the restriction           |
+| 404    | Unknown market or API resource, or not a member of it    | Correct the ID/path                                                   |
+| 409    | Price, balance, holdings, key/input or state conflict    | Requote/review holdings; keep key/input together on uncertain retries |
+| 409    | Launch refused by a blocking rule check                  | Fix the named checks and save a new draft                             |
 | 413    | Body larger than 16 KiB                                  | Reduce request size                                                   |
 | 429    | Rate limit                                               | Respect `Retry-After`                                                 |
 | 500    | Unexpected application failure                           | Investigate server; do not blindly create another trade               |
@@ -116,7 +133,21 @@ Management responses contain configuration metadata only, never keys. Overrides 
 
 `POST /drafts/{id}/launch` turns one of your saved drafts into a live market. The creator stakes 500 demo credits, which funds the market's liquidity: an LMSR pool opened at 50% can lose at most `liquidity × ln 2`, so the stake covers the pool's worst case. The draft is consumed and the market opens for everyone.
 
+### Rule check at launch
+
+Launch runs the same deterministic linter the Draft studio shows (`lintDraft` in `shared/lint.ts`). It is text and URL structure only: the server never fetches, resolves or pings the source URL. After the expired-deadline check, any `block` finding returns **409** and changes nothing (the draft stays, no stake is taken), for example `Fix 2 blocking rule problems before launch: rules-identical, url-shortener.` Blocking checks: `comparator-without-number`, `rules-identical`, `subjective-judge`, `url-shortener`, `url-not-public-host` (IP, `localhost`, single-label, `.local`, `.internal`, `.lan`, `.home.arpa`) and `closes-too-soon` (under one hour).
+
+Warnings never fail the API launch and need no flag; the studio asks the creator to acknowledge them. The launched market carries `ruleCheck: {risk, warnings}` (risk 0–100, distinct warning ids), which the market's rules view shows. Seed markets and markets launched before the linter have no `ruleCheck`. Saving a draft is unaffected, so private drafts may hold findings. Whether the source actually shows the figure is a human check: the studio links the source (Copy link on Windows, which only opens launched markets' links) and asks the creator to confirm they opened it. That is a nudge, not a control.
+
+### AI critique
+
+`POST /drafts/critique?provider=` takes a draft body (`DraftSchema`) with the same bearer, `X-AI-Access-Token`, provider selection and 3-per-minute limit as `/drafts/generate`, and returns `{provider, summary, findings}`. Each finding is `{field, severity, message, suggestion, quote}`, with severity `warn` or `info` only, at most 8 findings and a summary of at most 400 characters. A finding whose `quote` is not found (case-insensitive) in the field it names is dropped. Malformed, refused or oversized output returns 502. The critique is advisory: it is not saved, cannot block or launch, and the model is told the draft is untrusted data and that the source was not opened. The SDK method is `api.critiqueDraft(input, workspaceAccessToken, provider?)`.
+
 Every trade on a launched market pays the creator a 1% fee (`feeBps: 100` on the market; house markets have `feeBps: 0`). The fee is added to a buy and withheld from a sell. `amountMicros` in quotes and fills is always the total the trader pays or receives, fee included, and `feeMicros` shows the fee portion, so `limitMicros: quote.amountMicros` stays correct. `GET /portfolio` lists launched markets under `created` with `feesMicros` earned.
+
+### Market explainer
+
+`POST /markets/{id}/explain?provider=` takes no body and uses the same bearer, `X-AI-Access-Token` and provider selection as `/drafts/critique`, limited to 5 requests per minute. It returns `{provider, generatedAt, probability, summary, drivers, wouldMoveUp, wouldMoveDown, baseRateNote, caveats}`: summary up to 400 characters, at most 5 drivers and 3 items in each other list (each up to 200 characters), and a base-rate note up to 300 characters that may be empty. Output outside these limits returns 502, as does any provider failure; the message never includes provider details. The model receives only the market's own text fields (not its source URL) and its current numbers, sent as JSON and marked as untrusted data whose instructions must be ignored; the server fetches nothing. Answers are cached in memory per market, provider and status for 30 minutes, or until the YES probability moves more than 5 points from `probability`. The result is advisory and not financial advice; treat every string as plain text. The SDK method is `api.explainMarket(id, workspaceAccessToken, provider?)`. The plain-language facts on the market page come from `explainFacts` in `shared/explain.ts` and need no AI.
 
 ## Resolution and payouts
 
@@ -171,4 +202,55 @@ Not covered: push delivery, per-item read, and deletion. Notifications are polle
 
 Every market carries `change24h`: the current YES probability minus the YES probability 24 hours ago, taken from the last trade at or before that moment. If no trade is that old, the baseline is `initialProbability`; a market with no trades reports 0.
 
+## Accuracy (Brier score)
+
+Profit rewards being rich; accuracy rewards good probability judgement. Only markets resolved YES or NO count: INVALID, open, closed, proposed and disputed markets are excluded. Outcome is 1 for YES and 0 for NO.
+
+- **Forecast per market.** The size-weighted mean of `probabilityAfter` (the YES probability each own trade left behind), weighted by the credits the trade moved (`amountMicros`, fees included).
+- **Brier.** `(forecast − outcome)²` per market, then the mean over the account's resolved markets, so one heavily traded market does not dominate. 0 is perfect; always saying 50% scores 0.25.
+- **Skill.** The same score computed from the price just before each of those trades (the crowd), minus `brier`. Positive means the account moved prices toward the truth. The pre-trade price is the previous trade's `probabilityAfter` in that market, or `initialProbability` for its first trade; only trades move an LMSR price, so this is exact.
+- **Buckets.** Ten 0.1-wide buckets over the per-market forecasts (`from` inclusive; a forecast of 1 is in the last), each `{from, to, count, meanForecast, observedRate}`; empty buckets report `null` for both rates.
+
+`GET /portfolio/calibration` returns `{resolvedMarkets, brier, skill?, buckets}` for the bearer's own account; `brier` is `null` and `skill` is absent until a traded market resolves. `GET /leaderboard` adds `forecasters`: `{rank, trader, you, resolvedMarkets, brier}` for accounts with at least 3 resolved markets, lowest Brier first (more resolved markets breaks ties), top 20 plus the viewer's own qualifying row. Forecasters appear under an alias, never an account id.
+
+Limit-order fills count like any other trade, and a sell counts with the price it left behind. Scores are recomputed from trade history on each request rather than stored.
+
 `GET /portfolio` includes `stats`: `tradeCount` and `volumeMicros` (total paid and received across own trades, fees included), `resolvedMarkets` (resolved markets the account traded in), `wins` (those where it received a payout, including INVALID refunds), `winRate` (`wins / resolvedMarkets`, 0 when none), `creatorFeesMicros` and `payoutsMicros` (both from the ledger).
+
+## Teams (workspaces)
+
+A workspace is a private group with its own markets, credits and leaderboard. `capabilities.teams` is `false` in the Windows app, where these routes do not exist. Every route below needs a bearer token.
+
+Each membership gets a **wallet**: a separate balance of 10,000 workspace credits, created when you create or join the workspace. Trades, orders, comments, watchlist entries, disputes and stakes on a private market use the wallet, never your own balance; your `GET /portfolio` never shows wallet activity, and wallet credits cannot leave the workspace. There is no daily bonus in a workspace.
+
+| Method | Relative path                                 | Who                    | Success                                                                        | Errors                                                        |
+| ------ | --------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| POST   | `/workspaces`                                 | Anyone                 | 201 `Workspace`; body `{name, displayName}`; you are the owner                 | 409 you already own 5                                         |
+| GET    | `/workspaces`                                 | Anyone                 | 200 `{items: Workspace[]}`, your active memberships                            |                                                               |
+| GET    | `/workspaces/{wid}`                           | Member                 | 200 `Workspace` plus `members[]` (`{id, displayName, role, joinedAt, you}`)    | 404                                                           |
+| PATCH  | `/workspaces/{wid}`                           | Owner                  | 200 `Workspace`; body `{name}`                                                 | 403, 404                                                      |
+| POST   | `/workspaces/{wid}/invites`                   | Owner, admin           | 201 invite plus `token` (shown once); body `{role, expiresInHours?, maxUses?}` | 403, 404, 409 at 20 usable invites                            |
+| GET    | `/workspaces/{wid}/invites`                   | Owner, admin           | 200 `{items}`: the 50 newest invites, never tokens                             | 403, 404                                                      |
+| DELETE | `/workspaces/{wid}/invites/{inviteId}`        | Owner, admin           | 200 `{revoked: true}`; idempotent                                              | 403, 404                                                      |
+| POST   | `/workspaces/invites/preview`                 | Anyone                 | 200 `{workspaceName, role, expiresAt}`; body `{token}`                         | 404 unknown, expired, revoked or used-up (one message)        |
+| POST   | `/workspaces/join`                            | Anyone                 | 201 `Workspace`; body `{token, displayName}`                                   | 404 as preview; 409 name taken, already a member, 200 members |
+| PATCH  | `/workspaces/{wid}/members/{memberId}`        | Owner, admin           | 200 member; body `{role}`                                                      | 403 outside the role rules, 404                               |
+| DELETE | `/workspaces/{wid}/members/{memberId}`        | See role rules         | 200 `{removed: true}`; your own member id leaves                               | 403, 404, 409 the owner leaving                               |
+| GET    | `/workspaces/{wid}/markets?search=&category=` | Member                 | 200 `{items: Market[]}`, private markets only                                  | 404                                                           |
+| GET    | `/workspaces/{wid}/portfolio`                 | Member                 | 200 your wallet, same shape as `/portfolio`                                    | 404                                                           |
+| GET    | `/workspaces/{wid}/leaderboard`               | Member                 | 200 same shape as `/leaderboard`, this workspace only, display names           | 404                                                           |
+| POST   | `/workspaces/{wid}/markets/{id}/ruling`       | Owner, admin, resolver | 200 `Market`; body `{outcome}`                                                 | 403 members, 404, 409 conflict of interest or not rulable     |
+
+`Workspace` is `{id, name, role, memberCount, createdAt}`, where `role` is your own (`owner`, `admin`, `resolver` or `member`) and `memberCount` counts active members. Names and display names are trimmed and must keep 2–60 and 2–40 characters without control characters; display names are unique per workspace, ignoring case. Invites default to 168 hours (1–720) and 25 uses (1–500), and grant `member` or `resolver`.
+
+**Roles.** Every member can see private markets, trade, place orders, comment, watch, launch a market (the wallet stakes 500 credits) and dispute (100-credit bond from the wallet). The creator proposes as on public markets. The owner may change any other member's role; making someone `owner` transfers ownership and turns the old owner into an admin in the same step. Admins may move other members between `member` and `resolver`. Nobody changes their own role. The owner removes anyone else, admins remove members and resolvers, and anyone except the owner may leave; the owner must transfer ownership first (409). Removing a member cancels their open orders; their positions stay and are paid at resolution, and they stay on the workspace leaderboard. Rejoining with a new invite restores the same wallet.
+
+**Private markets.** `POST /drafts/{id}/launch` with `workspaceId` creates a market only that workspace sees, staked from your wallet. Its id is `ws-<uuid>` and carries no title text. Private markets carry `workspaceId`; public ones never do. All the market routes above (`/markets/{id}`, its history, trades, comments, resolution, dispute and settle, `/quotes`, `/trades`, `/orders`, `/watchlist/{id}`) work on a private market for its active members and act through their wallet. For anyone else, signed in or not, they return the same 404 as an unknown id. Private markets never appear in `/markets`, `/leaderboard`, `capabilities.marketCount`, public comment or trade feeds, embeds, oEmbed or link previews.
+
+**Rulings.** The operator route `/markets/{id}/ruling` returns 404 for private markets. Instead an owner, admin or resolver rules through `/workspaces/{wid}/markets/{id}/ruling`, but only on a `disputed` market or a `closed` one with no proposal (409 otherwise; undisputed proposals still settle on their own). The ruler must not be the creator or the disputer and must hold no shares in the market (409); if every privileged member is conflicted, the owner promotes another member to resolver. Payouts follow the same rules as an operator ruling.
+
+**Notifications.** `GET /notifications` also returns notifications about private markets of workspaces you are an active member of, each with `workspaceId`; after you leave or are removed they disappear from your inbox.
+
+**Invite links.** Share an invite as `https://<host>/join#<token>`. The fragment never reaches the server, so tokens stay out of request logs; the page sends the token in a POST body. Only the token's SHA-256 hash is stored. Rate limits: creating workspaces and invites 10/minute, preview 20/minute, join 10/minute.
+
+SDK methods: `workspaces()`, `createWorkspace(name, displayName)`, `workspace(id)`, `renameWorkspace(id, name)`, `createInvite(id, {role, expiresInHours?, maxUses?})`, `invites(id)`, `revokeInvite(id, inviteId)`, `previewInvite(token)`, `joinWorkspace(token, displayName)`, `setMemberRole(id, memberId, role)`, `removeMember(id, memberId)`, `workspaceMarkets(id, search?, category?)`, `workspacePortfolio(id)`, `workspaceLeaderboard(id)`, `workspaceRuling(id, marketId, outcome)` and `launchDraft(id, category, workspaceId?)`.

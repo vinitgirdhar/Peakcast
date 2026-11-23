@@ -5,7 +5,9 @@ import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 
 const exclusions = [
-  /^\/(src|server|shared|tests|scripts|docs|tmp|data|public|output|test-results|playwright-report|release)(\/|$)/,
+  // Allowlist: only these top-level entries ship, so stray folders (video
+  // renders, reports, worktrees) can never bloat the app.
+  /^\/(?!(?:dist|dist-server|desktop|node_modules)(?:\/|$)|package\.json$)/,
   /\.pdf$/i,
   /^\/\.env($|\.)/,
   /^\/\.(git|claude)(\/|$)/,
@@ -17,6 +19,8 @@ for (const path of [
   "/AI_Prediction_Market_Platform_RFP.pdf",
   "/release/old.exe",
   "/.claude/launch.json",
+  "/brag-output-2026-11-16-192506/render.mp4",
+  "/index.html",
 ])
   assert.ok(
     exclusions.some((pattern) => pattern.test(path)),

@@ -14,7 +14,7 @@ Opaque surfaces replace the previous SVG refraction effects. The third-party gla
 
 - Wide desktop screens (1100px and above) show a persistent sidebar with the current destination selected.
 - Intermediate screens use a modal drawer with focus containment, Escape dismissal and focus restoration.
-- Mobile and touch tablets up to 1024px use a safe-area-aware bottom tab bar with all six destinations. Short landscape viewports can scroll above it.
+- Mobile and touch tablets up to 1024px use a safe-area-aware bottom tab bar with six destinations. Where Teams is available (not in the Windows app), it takes the Developers slot; Developers stays reachable from the footer's About this app link. Short landscape viewports can scroll above it.
 - Markets include a compact charcoal feature with live demo activity totals and an upcoming-deadlines list on larger screens. Totals come from actual market data; closed or expired markets are excluded from upcoming deadlines. The available balance stays in the header. Search and filtering cover the full list, with six results per page. Mobile cards retain outcome prices and deadlines.
 - Forecasts, rules, portfolios, leaderboards, studio, saved drafts, developer tools and settings share the same surfaces and controls. An unfinished trade survives switching between forecast and rules.
 - The landing hero offers web entry, Windows desktop download and Android download together. The page introduces the product through a clearly labeled illustrative workspace. Its example chart and probabilities are presentation content, not live market data.

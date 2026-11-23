@@ -1,0 +1,87 @@
+/* "Explain this market" panel. Unlayered like share.css, so it is not outranked by the components layer. */
+.resolution-panel .explain-heading,
+.explain-result h4 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 620;
+  color: var(--ink);
+}
+.explain-facts {
+  display: grid;
+  margin: 0;
+}
+.explain-facts > div {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.explain-facts > div:first-child {
+  border-top: 0;
+}
+.explain-facts dt {
+  color: var(--muted);
+}
+.explain-facts dd {
+  margin: 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.explain-ai {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+}
+.explain-ai > .text-input,
+.explain-ai > .explain-result {
+  justify-self: stretch;
+}
+.explain-ai > .form-label {
+  margin: 0 0 -4px;
+}
+.explain-ai > .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.explain-result {
+  display: grid;
+  gap: 8px;
+  margin-top: 0;
+}
+.explain-result h4 {
+  margin-top: 4px;
+}
+.explain-result:focus:not(:focus-visible) {
+  outline: none;
+}
+.resolution-panel .explain-result p.explain-summary {
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.explain-result ul {
+  display: block;
+  padding-left: 18px;
+  list-style: disc;
+}
+.explain-result li {
+  display: list-item;
+  padding: 2px 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 480px) {
+  .explain-facts > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+}

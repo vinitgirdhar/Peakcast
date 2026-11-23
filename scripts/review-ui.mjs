@@ -35,6 +35,7 @@ try {
         "/settings",
         "/studio",
         "/studio/drafts",
+        "/teams",
         "/developers",
         "/developers/api",
         "/developers/setup",

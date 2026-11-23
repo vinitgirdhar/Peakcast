@@ -4,6 +4,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { seedMarkets } from "./fixtures.js";
 import { MICRO, probability, quoteTrade } from "./amm.js";
+import { blockingReason, lintDraft, warningIds } from "../shared/lint.js";
 import type {
   Category,
   Draft,
@@ -43,6 +44,8 @@ interface MarketRow {
   /** Net credits traders have paid into the pool, creator fees excluded. */
   pool_micros: number;
   resolution: string | null;
+  /** Set on a private market; NULL for public ones. */
+  workspace_id: string | null;
 }
 export interface StoredResolution {
   status: "proposed" | "disputed" | "resolved";
@@ -108,18 +111,34 @@ export class Store {
       CREATE TABLE IF NOT EXISTS watchlist (account_id TEXT NOT NULL REFERENCES accounts(id), market_id TEXT NOT NULL REFERENCES markets(id), PRIMARY KEY(account_id,market_id));
       CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, account_id TEXT NOT NULL REFERENCES accounts(id), kind TEXT NOT NULL, market_id TEXT REFERENCES markets(id), text TEXT NOT NULL, created_at TEXT NOT NULL, read_at TEXT);
       CREATE INDEX IF NOT EXISTS notifications_account ON notifications(account_id,id);
+      CREATE TABLE IF NOT EXISTS workspaces (id TEXT PRIMARY KEY, name TEXT NOT NULL, created_by TEXT NOT NULL REFERENCES accounts(id), created_at TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS workspace_members (id TEXT NOT NULL UNIQUE, workspace_id TEXT NOT NULL REFERENCES workspaces(id), account_id TEXT NOT NULL REFERENCES accounts(id), wallet_id TEXT NOT NULL UNIQUE REFERENCES accounts(id), role TEXT NOT NULL CHECK(role IN ('owner','admin','resolver','member')), display_name TEXT NOT NULL, joined_at TEXT NOT NULL, removed_at TEXT, PRIMARY KEY(workspace_id,account_id));
+      CREATE UNIQUE INDEX IF NOT EXISTS workspace_members_name ON workspace_members(workspace_id, display_name COLLATE NOCASE);
+      CREATE INDEX IF NOT EXISTS workspace_members_account ON workspace_members(account_id);
+      CREATE TABLE IF NOT EXISTS workspace_invites (id TEXT PRIMARY KEY, workspace_id TEXT NOT NULL REFERENCES workspaces(id), token_hash TEXT NOT NULL UNIQUE, role TEXT NOT NULL CHECK(role IN ('member','resolver')), created_by TEXT NOT NULL REFERENCES accounts(id), created_at TEXT NOT NULL, expires_at TEXT NOT NULL, max_uses INTEGER NOT NULL CHECK(max_uses BETWEEN 1 AND 500), uses INTEGER NOT NULL DEFAULT 0, revoked_at TEXT);
+      CREATE INDEX IF NOT EXISTS workspace_invites_workspace ON workspace_invites(workspace_id);
     `);
-    const columns = this.db.prepare("PRAGMA table_info(markets)").all() as {
-      name: string;
-    }[];
-    for (const [name, type] of [
-      ["creator_id", "TEXT REFERENCES accounts(id)"],
-      ["creator_fees_micros", "INTEGER NOT NULL DEFAULT 0"],
-      ["pool_micros", "INTEGER NOT NULL DEFAULT 0"],
-      ["resolution", "TEXT"],
+    const columns = (table: string) =>
+      (
+        this.db.prepare(`PRAGMA table_info(${table})`).all() as {
+          name: string;
+        }[]
+      ).map((column) => column.name);
+    for (const [table, name, type] of [
+      ["markets", "creator_id", "TEXT REFERENCES accounts(id)"],
+      ["markets", "creator_fees_micros", "INTEGER NOT NULL DEFAULT 0"],
+      ["markets", "pool_micros", "INTEGER NOT NULL DEFAULT 0"],
+      ["markets", "resolution", "TEXT"],
+      ["markets", "workspace_id", "TEXT REFERENCES workspaces(id)"],
+      ["accounts", "workspace_id", "TEXT REFERENCES workspaces(id)"],
     ])
-      if (!columns.some((column) => column.name === name))
-        this.db.exec(`ALTER TABLE markets ADD COLUMN ${name} ${type}`);
+      if (!columns(table).includes(name))
+        this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${type}`);
+    // Only after the loop: on an older database these columns are new.
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS markets_workspace ON markets(workspace_id);
+      CREATE INDEX IF NOT EXISTS accounts_workspace ON accounts(workspace_id);
+    `);
     if (!this.db.prepare("SELECT id FROM markets LIMIT 1").get()) {
       const insert = this.db.prepare(
         "INSERT INTO markets (id,definition,q_yes,q_no,liquidity,created_at) VALUES (?,?,?,?,?,?)",
@@ -153,7 +172,9 @@ export class Store {
     const token = randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 30 * 86400_000).toISOString();
     this.db
-      .prepare("INSERT INTO accounts VALUES (?,?,?,?)")
+      .prepare(
+        "INSERT INTO accounts (id,token_hash,balance_micros,expires_at) VALUES (?,?,?,?)",
+      )
       .run(randomUUID(), hashToken(token), 10_000 * MICRO, expiresAt);
     return { token, expiresAt, balanceMicros: 10_000 * MICRO };
   }
@@ -274,13 +295,15 @@ export class Store {
           resolvedAt: resolution.resolvedAt,
         },
       }),
+      ...(row.workspace_id && { workspaceId: row.workspace_id }),
     };
   }
 
-  markets(search = "", category = "") {
+  /** Public markets by default; a workspace's private markets when given its id. */
+  markets(search = "", category = "", workspaceId: string | null = null) {
     const rows = this.db
-      .prepare("SELECT id FROM markets ORDER BY rowid")
-      .all() as { id: string }[];
+      .prepare("SELECT id FROM markets WHERE workspace_id IS ? ORDER BY rowid")
+      .all(workspaceId) as { id: string }[];
     return rows
       .map((row) => this.market(row.id))
       .filter(
@@ -536,8 +559,15 @@ export class Store {
     };
   }
 
-  /** Stable public alias; the account id itself never leaves the server. */
+  /**
+   * Stable public alias; the account id itself never leaves the server. A
+   * workspace wallet shows its member's display name, which only members see.
+   */
   handle(accountId: string): string {
+    const member = this.db
+      .prepare("SELECT display_name FROM workspace_members WHERE wallet_id=?")
+      .get(accountId) as { display_name: string } | undefined;
+    if (member) return member.display_name;
     return (
       "Trader " +
       createHash("sha256")
@@ -573,7 +603,11 @@ export class Store {
 
   // ponytail: ranks every active account per request; cache or materialise
   // the ranking once accounts reach the tens of thousands.
-  leaderboard(viewerId?: string): Leaderboard {
+  // Public accounts by default; one workspace's wallets when given its id.
+  leaderboard(
+    viewerId?: string,
+    workspaceId: string | null = null,
+  ): Omit<Leaderboard, "forecasters"> {
     const prices = new Map<string, number>();
     const price = (marketId: string) => {
       if (!prices.has(marketId))
@@ -583,9 +617,11 @@ export class Store {
     const held = new Map<string, number>();
     for (const row of this.db
       .prepare(
-        "SELECT account_id,market_id,outcome,shares FROM positions WHERE shares>0",
+        "SELECT p.account_id,p.market_id,p.outcome,p.shares FROM positions p JOIN accounts a ON a.id=p.account_id WHERE p.shares>0 AND a.workspace_id IS ?",
       )
-      .all() as unknown as (PositionRow & { account_id: string })[]) {
+      .all(workspaceId) as unknown as (PositionRow & {
+      account_id: string;
+    })[]) {
       const yes = price(row.market_id);
       held.set(
         row.account_id,
@@ -602,9 +638,9 @@ export class Store {
     const traders = (
       this.db
         .prepare(
-          "SELECT a.id,a.balance_micros,(SELECT COUNT(*) FROM trades t WHERE t.account_id=a.id) AS trades,(SELECT COALESCE(SUM(amount_micros),0) FROM ledger b WHERE b.account_id=a.id AND b.kind='daily_bonus') AS bonus FROM accounts a WHERE EXISTS (SELECT 1 FROM ledger l WHERE l.account_id=a.id)",
+          "SELECT a.id,a.balance_micros,(SELECT COUNT(*) FROM trades t WHERE t.account_id=a.id) AS trades,(SELECT COALESCE(SUM(amount_micros),0) FROM ledger b WHERE b.account_id=a.id AND b.kind='daily_bonus') AS bonus FROM accounts a WHERE a.workspace_id IS ? AND EXISTS (SELECT 1 FROM ledger l WHERE l.account_id=a.id)",
         )
-        .all() as {
+        .all(workspaceId) as {
         id: string;
         balance_micros: number;
         trades: number;
@@ -624,9 +660,14 @@ export class Store {
       .sort((a, b) => b.pnlMicros - a.pnlMicros);
     const creators = this.db
       .prepare(
-        "SELECT creator_id AS id,COUNT(*) AS markets,SUM(volume_micros) AS volume,SUM(creator_fees_micros) AS fees FROM markets WHERE creator_id IS NOT NULL GROUP BY creator_id ORDER BY fees DESC, volume DESC",
+        "SELECT creator_id AS id,COUNT(*) AS markets,SUM(volume_micros) AS volume,SUM(creator_fees_micros) AS fees FROM markets WHERE creator_id IS NOT NULL AND workspace_id IS ? GROUP BY creator_id ORDER BY fees DESC, volume DESC",
       )
-      .all() as { id: string; markets: number; volume: number; fees: number }[];
+      .all(workspaceId) as {
+      id: string;
+      markets: number;
+      volume: number;
+      fees: number;
+    }[];
     return {
       traders: top(traders).map((row) => ({
         rank: row.rank,
@@ -716,7 +757,14 @@ export class Store {
     if (!result.changes) throw new DomainError("Draft not found.", 404);
   }
 
-  launchDraft(accountId: string, id: string, category: Category): Market {
+  /** With a target the market is private: the member's wallet stakes and creates it. */
+  launchDraft(
+    accountId: string,
+    id: string,
+    category: Category,
+    target?: { walletId: string; workspaceId: string },
+  ): Market {
+    const creatorId = target?.walletId ?? accountId;
     this.db.exec("BEGIN IMMEDIATE");
     try {
       const saved = this.db
@@ -730,13 +778,19 @@ export class Store {
           "This draft's closing time has passed. Save a new draft with a future deadline.",
           409,
         );
+      const report = lintDraft(draft, Date.now());
+      const blocked = blockingReason(report);
+      if (blocked) throw new DomainError(blocked, 409);
       const slug = draft.question
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-|-$/g, "")
         .slice(0, 48);
       const definition: MarketDefinition = {
-        id: `${slug || "market"}-${randomUUID().slice(0, 8)}`,
+        // A private id carries no slug, so its title never reaches URLs or logs.
+        id: target
+          ? `ws-${randomUUID()}`
+          : `${slug || "market"}-${randomUUID().slice(0, 8)}`,
         title: draft.question,
         description: `Community market. Resolves using ${draft.sourceName}.`,
         category,
@@ -749,20 +803,22 @@ export class Store {
         noRule: draft.noRule,
         invalidRule: draft.invalidRule,
         initialProbability: 0.5,
+        ruleCheck: { risk: report.risk, warnings: warningIds(report) },
       };
       this.db
         .prepare(
-          "INSERT INTO markets (id,definition,q_yes,q_no,liquidity,created_at,creator_id) VALUES (?,?,0,0,?,?,?)",
+          "INSERT INTO markets (id,definition,q_yes,q_no,liquidity,created_at,creator_id,workspace_id) VALUES (?,?,0,0,?,?,?,?)",
         )
         .run(
           definition.id,
           JSON.stringify(definition),
           LAUNCH_STAKE_MICROS / MICRO / Math.LN2,
           now,
-          accountId,
+          creatorId,
+          target?.workspaceId ?? null,
         );
       this.credit(
-        accountId,
+        creatorId,
         -LAUNCH_STAKE_MICROS,
         "launch_stake",
         definition.id,

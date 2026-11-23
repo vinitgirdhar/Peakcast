@@ -36,10 +36,13 @@ export function MarketExplorer({
   markets,
   onOpen,
   onStudio,
+  embedded = false,
 }: {
   markets: Market[];
   onOpen: (market: Market) => void;
   onStudio: () => void;
+  /** Inside another page (a workspace), which supplies the heading. */
+  embedded?: boolean;
 }) {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All markets");
@@ -79,16 +82,18 @@ export function MarketExplorer({
   const pages = Math.max(1, Math.ceil(ordered.length / 6));
   const currentPage = Math.min(page, pages);
   return (
-    <div className="page explorer">
-      <div className="page-heading">
-        <div>
-          <h1>Markets</h1>
-          <p>Explore what happens next.</p>
+    <div className={embedded ? "explorer" : "page explorer"}>
+      {!embedded && (
+        <div className="page-heading">
+          <div>
+            <h1>Markets</h1>
+            <p>Explore what happens next.</p>
+          </div>
+          <button className="primary-button" onClick={onStudio}>
+            <Plus size={17} /> Draft a market
+          </button>
         </div>
-        <button className="primary-button" onClick={onStudio}>
-          <Plus size={17} /> Draft a market
-        </button>
-      </div>
+      )}
 
       <div className="overview-row">
         {featured && (

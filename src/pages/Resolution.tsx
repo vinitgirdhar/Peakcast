@@ -6,18 +6,27 @@ import type { Market, ResolutionOutcome } from "../../shared/types.js";
 import { errorMessage } from "../ui.js";
 import { DetailPanel } from "./MarketExtras.js";
 
+const outcomes = [
+  { value: "YES", label: "YES" },
+  { value: "NO", label: "NO" },
+  { value: "INVALID", label: "Invalid (split payout)" },
+];
+
 export function ResolutionPanel({
   market,
   isCreator,
   client,
   onChange,
   onNotice,
+  onRule,
 }: {
   market: Market;
   isCreator: boolean;
   client: WildcatterClient;
   onChange: () => Promise<void>;
   onNotice: (text: string) => void;
+  /** Private markets only: a workspace owner, admin or resolver rules here. */
+  onRule?: (outcome: ResolutionOutcome) => Promise<Market>;
 }) {
   const [outcome, setOutcome] = useState<ResolutionOutcome>("YES");
   const [evidenceUrl, setEvidenceUrl] = useState("");
@@ -54,8 +63,36 @@ export function ResolutionPanel({
   }
 
   // House markets have no creator, so only the operator can resolve them.
-  const houseClosed = status === "closed" && market.feeBps === 0;
-  if (!resolution && !isCreator && !houseClosed) return null;
+  // In a workspace, a resolver may also rule a closed market nobody proposed.
+  const privateMarket = Boolean(market.workspaceId);
+  const unproposedClosed =
+    status === "closed" && (market.feeBps === 0 || privateMarket);
+  if (!resolution && !isCreator && !unproposedClosed) return null;
+  const memberForm = onRule && (
+    <form
+      onSubmit={(event: FormEvent) => {
+        event.preventDefault();
+        void run(
+          () => onRule(outcome),
+          "Ruling recorded. Payouts were credited.",
+        );
+      }}
+    >
+      <span className="form-label">Final outcome</span>
+      <Select
+        label="Final outcome"
+        value={outcome}
+        onChange={(value) => setOutcome(value as ResolutionOutcome)}
+        options={outcomes}
+      />
+      <p className="panel-hint">
+        You cannot rule a market you created, disputed or hold shares in.
+      </p>
+      <button className="primary-button" disabled={busy}>
+        Issue final ruling
+      </button>
+    </form>
+  );
   const operatorForm = (
     <details>
       <summary>Operator ruling</summary>
@@ -73,11 +110,7 @@ export function ResolutionPanel({
           label="Final outcome"
           value={outcome}
           onChange={(value) => setOutcome(value as ResolutionOutcome)}
-          options={[
-            { value: "YES", label: "YES" },
-            { value: "NO", label: "NO" },
-            { value: "INVALID", label: "Invalid (split payout)" },
-          ]}
+          options={outcomes}
         />
         <label className="form-label" htmlFor="operator-token">
           Operator token
@@ -100,6 +133,7 @@ export function ResolutionPanel({
       </form>
     </details>
   );
+  const rulingForm = privateMarket ? memberForm : operatorForm;
   return (
     <DetailPanel
       title="Resolution"
@@ -117,8 +151,12 @@ export function ResolutionPanel({
     >
       {!resolution && !isCreator && (
         <>
-          <p>This house market has closed. An operator rules its outcome.</p>
-          {operatorForm}
+          <p>
+            {privateMarket
+              ? "Trading has closed and the creator has not proposed an outcome. A workspace owner, admin or resolver can rule it."
+              : "This house market has closed. An operator rules its outcome."}
+          </p>
+          {rulingForm}
         </>
       )}
       {!resolution && isCreator && (
@@ -141,11 +179,7 @@ export function ResolutionPanel({
             label="Proposed outcome"
             value={outcome}
             onChange={(value) => setOutcome(value as ResolutionOutcome)}
-            options={[
-              { value: "YES", label: "YES" },
-              { value: "NO", label: "NO" },
-              { value: "INVALID", label: "Invalid (split payout)" },
-            ]}
+            options={outcomes}
           />
           <label className="form-label" htmlFor="evidence-url">
             Evidence link
@@ -203,9 +237,10 @@ export function ResolutionPanel({
           )}
           {status === "proposed" && windowOpen && !isCreator && (
             <p className="panel-hint">
-              Think it is wrong? Disputing holds a 100-credit bond. If the
-              operator overturns the outcome you get it back plus up to 100
-              credits; if not, it goes to the creator.
+              Think it is wrong? Disputing holds a 100-credit bond. If{" "}
+              {privateMarket ? "a workspace resolver" : "the operator"}{" "}
+              overturns the outcome you get it back plus up to 100 credits; if
+              not, it goes to the creator.
             </p>
           )}
           {status === "proposed" && windowOpen && !isCreator && (
@@ -238,8 +273,14 @@ export function ResolutionPanel({
           )}
           {status === "disputed" && (
             <>
-              <p>Disputed. Payouts wait for an operator ruling.</p>
-              {operatorForm}
+              <p>
+                Disputed. Payouts wait for{" "}
+                {privateMarket
+                  ? "a ruling by a workspace owner, admin or resolver"
+                  : "an operator ruling"}
+                .
+              </p>
+              {rulingForm}
             </>
           )}
           {status === "resolved" && (

@@ -90,6 +90,10 @@ else {
       );
       api = await buildApp({
         managedAI: true,
+        // Loopback-only: links and embeds from here would not open for anyone else.
+        localOnly: true,
+        // Nobody else can reach this server to join a workspace, so Teams stays hidden.
+        teams: false,
         databasePath: join(app.getPath("userData"), "wildcatter.sqlite"),
         staticRoot: join(root, "dist"),
       });
@@ -106,7 +110,9 @@ else {
             details.webContentsId === window.webContents.id &&
             url.origin === origin &&
             (url.pathname.startsWith("/api/v1/settings/") ||
-              url.pathname === "/api/v1/drafts/generate")
+              url.pathname === "/api/v1/drafts/generate" ||
+              url.pathname === "/api/v1/drafts/critique" ||
+              /^\/api\/v1\/markets\/[^/]+\/explain$/.test(url.pathname))
           )
             details.requestHeaders["X-AI-Access-Token"] =
               process.env.AI_ACCESS_TOKEN;

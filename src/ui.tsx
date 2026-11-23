@@ -1,42 +1,29 @@
 import type { ReactNode } from "react";
-import type { Market } from "../shared/types.js";
 import { ArrowDown, ArrowUp, Layers3 } from "lucide-react";
+import {
+  moveLabel,
+  movePoints,
+  percent,
+  statusLabel,
+} from "../shared/format.js";
 
+export { moveLabel, percent, statusLabel };
 export const MICRO = 1_000_000;
 export const formatCredits = (micros: number, digits = 2) =>
   (micros / MICRO).toLocaleString("en-US", {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   });
-export const percent = (value: number) => `${Math.round(value * 100)}%`;
 export const date = (value: string) =>
   new Date(value).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
-export const statusLabel = (market: Market) =>
-  market.status === "resolved"
-    ? `Resolved ${market.resolution?.outcome ?? ""}`.trim()
-    : {
-        open: "Open",
-        closed: "Closed",
-        proposed: "Outcome proposed",
-        disputed: "Disputed",
-      }[market.status];
 export const errorMessage = (error: unknown) =>
   error instanceof Error
     ? error.message
     : "Something went wrong. Please try again.";
-/** Whole percentage points moved in 24 hours; 0 when the move is under half a point. */
-const movePoints = (change: number) =>
-  Math.abs(change) < 0.005 ? 0 : Math.round(Math.abs(change) * 100);
-/** "Up 4 points in 24 hours", or null when the market is flat. */
-export function moveLabel(change: number): string | null {
-  const points = movePoints(change);
-  if (!points) return null;
-  return `${change > 0 ? "Up" : "Down"} ${points} ${points === 1 ? "point" : "points"} in 24 hours`;
-}
 export function ChangeChip({ change }: { change: number }) {
   const label = moveLabel(change);
   if (!label) return null;

@@ -14,11 +14,17 @@ Status: working **local demo backend**, not the decentralized production exchang
 | `server/community.ts`                  | Market comments (with the side each commenter holds) and per-account watchlist                                                          |
 | `server/notifications.ts`              | Per-account notification inbox; written by orders, resolution and comments in the same transaction as the event where one exists        |
 | `server/engagement.ts`                 | Daily bonus with streak (derived from `daily_bonus` ledger rows) and portfolio performance stats                                        |
+| `server/calibration.ts`                | Brier score, crowd-baseline skill and calibration buckets (pure functions) over read-only queries of resolved markets' trades           |
+| `server/workspaces.ts`                 | Teams: the `marketActor` gate for every market route, membership and roles, wallets, invites and member rulings                         |
+| `server/workspace-routes.ts`           | The `/api/v1/workspaces` routes; not registered when `buildApp({ teams: false })` (the Windows app)                                     |
 | `server/amm.ts`                        | One LMSR quote implementation used by quotes and executions                                                                             |
-| `server/ai.ts`                         | Optional provider call, strict structured output, protected source/deadline checks and output validation                                |
+| `server/ai.ts`                         | Optional provider call, strict structured output, protected source/deadline checks and output validation; advisory draft critique       |
+| `server/explain.ts`                    | AI market explainer: quoted-data prompt, schema-checked output, 30-minute per-process cache invalidated by a 5-point move               |
 | `server/schemas.ts`                    | Runtime input/output contracts and generated error schemas                                                                              |
 | `server/fixtures.ts`                   | Twelve illustrative scenarios and initial probabilities; no live event feed                                                             |
 | `shared/types.ts` / `shared/client.ts` | Client-facing types and the SDK used by the web UI                                                                                      |
+| `shared/lint.ts`                       | Rule linter shared by Draft studio and launch gate; word lists, patterns and agency lag table in `shared/lint-data.ts`; no network      |
+| `shared/explain.ts`                    | Plain-language market facts (odds, move, activity, time left, resolution, rule check) for the market page; pure functions, no AI        |
 | `desktop/main.mjs`                     | Sandboxed renderer plus a separately persisted local API instance                                                                       |
 
 ```mermaid
@@ -67,6 +73,15 @@ The UI caps a buy's optional 1% adverse-price allowance at the available balance
 - Hosts default to `127.0.0.1`/`localhost`. An optional `PUBLIC_ORIGIN` on the web server allows one exact HTTPS preview host, with a matching HTTPS origin; it does not enable arbitrary CORS or change the desktop app. API responses use `Cache-Control: no-store`. This is not regulatory country geofencing.
 - The default per-IP API limit is 300/minute, session creation 10/minute, AI generation 3/minute. Rate limits run in memory and are not shared between processes.
 - Provider keys stay on the server. AI generation needs both a demo credential and the extra AI access secret. Generic provider errors do not reveal upstream details.
+
+## Workspaces: wallets and the gate
+
+Teams adds three tables (`workspaces`, `workspace_members`, `workspace_invites`) and a nullable `workspace_id` column on `markets` and `accounts`. Startup adds the columns to an existing database with the same `PRAGMA table_info` + `ALTER TABLE` loop as earlier columns and creates their indexes only after that loop; no data is rewritten. Public markets keep `workspace_id = NULL` and follow exactly the code paths they did before.
+
+- **Wallets.** Each membership owns an ordinary `accounts` row with `workspace_id` set, funded with the same 10,000 credits as a demo session. Positions, trades, orders, ledger, watchlist, comments and notifications are all keyed by account id, so they become workspace-scoped with no new column and no change to the money paths; `payOut` conservation still holds per market. A wallet's `token_hash` is `wallet:<id>`, which can never equal a SHA-256 digest, so no bearer token authenticates as a wallet. `Store.handle()` shows the member's display name for a wallet, and the generic alias otherwise.
+- **The gate.** `marketActor(store, personId, marketId)` runs first in every market route. For a public market it returns the person (or `undefined` for an anonymous read). For a private market it returns the caller's active wallet, and throws the unknown-market 404 for everyone else. Writes then act as that account. `DELETE /orders/{id}` resolves the order's market the same way. Embeds, oEmbed and link-preview tags call the gate with no viewer, so private markets are never previewable, and the operator ruling route refuses them.
+- **Filters.** `Store.markets()`, `Store.leaderboard()` and the accuracy board take a `workspaceId` that defaults to `null`, and filter with `workspace_id IS ?`, which matches NULL correctly. Public lists, `marketCount`, the public leaderboard and the forecaster board therefore see public markets and person accounts only; the workspace variants see one workspace. The inbox reads the person's own rows plus those of their active wallets, so removing a member hides private notifications immediately.
+- **Tests.** `tests/isolation.test.ts` reads the OpenAPI document and calls every market- and workspace-scoped route as an outsider and anonymously, asserting the response equals the one for an unknown id; a new route missing from its table fails the test. It also scans every public read for private ids, titles, workspace and member names, and checks that wallets cannot authenticate.
 
 ## AI lifecycle
 
