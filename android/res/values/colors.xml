@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
- <!-- The app's page background; the launch screen and window use it so nothing flashes. -->
+ <!-- The app's page background; the launch screen and window use it so nothing flashes.
+      MainActivity.LIGHT and MainActivity.DARK repeat the light and dark values. -->
  <color name="app_background">#F7F8FA</color>
+ <!-- Text cursor, selection handles and the pre-Android 12 overscroll glow. -->
+ <color name="brand">#4B4BE8</color>
 </resources>

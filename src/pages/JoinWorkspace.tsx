@@ -1,4 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { Loader2 } from "lucide-react";
+import { haptic } from "../haptics.js";
 import { ApiError, PeakcastClient } from "../../shared/client.js";
 import type { InvitePreview, Workspace } from "../../shared/types.js";
 import { EmptyState, SkeletonRows, date, errorMessage } from "../ui.js";
@@ -58,8 +60,11 @@ export function JoinWorkspace({
     setBusy(true);
     setJoinError("");
     try {
-      onJoined(await client.joinWorkspace(token, displayName.trim()));
+      const workspace = await client.joinWorkspace(token, displayName.trim());
+      haptic("success");
+      onJoined(workspace);
     } catch (e) {
+      haptic("warning");
       setJoinError(errorMessage(e));
       setBusy(false);
     }
@@ -142,6 +147,7 @@ export function JoinWorkspace({
           </p>
         )}
         <button className="primary-button" disabled={busy}>
+          {busy && <Loader2 size={16} className="button-spinner" />}
           {busy ? "Joining…" : "Join workspace"}
         </button>
       </form>

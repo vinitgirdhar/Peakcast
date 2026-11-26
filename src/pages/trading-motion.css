@@ -1,0 +1,174 @@
+/* Micro-motion for the trading pages (markets, market detail, portfolio,
+   leaderboard). Unlayered, so it wins over styles.css (@layer components);
+   selectors are specific enough to win over design.css. Everything that
+   moves continuously uses transform or opacity only. */
+
+/* Probability bars: scale instead of width, so value changes stay on the compositor. */
+.market-card .probability-track > span.pc-bar {
+  width: 100%;
+  transform-origin: left center;
+  transition: transform 0.6s var(--spring, cubic-bezier(0.2, 0.8, 0.2, 1));
+  animation: none;
+}
+
+/* Lists whose leaving rows are popped out of flow (AnimatePresence popLayout). */
+.market-grid,
+.trade-feed,
+.order-list,
+.comment-list,
+.leaderboard,
+.resolution-panel .panel-body,
+.page .positions-list,
+.page .activity-list {
+  position: relative;
+}
+
+/* Trade panel: YES / NO thumb that glides between the two outcome buttons. */
+.outcome-buttons button {
+  position: relative;
+}
+.outcome-buttons .pc-outcome-thumb {
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 1.5px solid currentColor;
+  pointer-events: none;
+}
+.trade-breakdown strong {
+  transition: opacity 0.2s ease;
+}
+.trade-breakdown.pc-pending strong {
+  opacity: 0.45;
+}
+.execute-button .pc-trade-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+}
+.execute-button .pc-trade-icon > span {
+  display: inline-grid;
+  grid-area: 1 / 1;
+}
+/* A quote refresh after a price move takes ~200 ms: only dim the button if it lasts. */
+.trade-panel .execute-button:disabled {
+  transition: opacity 0.2s ease 0.3s;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .market-card .probability-track > span.pc-bar {
+    animation: pc-bar-in 0.7s var(--spring, cubic-bezier(0.2, 0.8, 0.2, 1))
+      backwards;
+  }
+  @keyframes pc-bar-in {
+    from {
+      transform: scaleX(0);
+    }
+  }
+
+  .pc-spin {
+    animation:
+      pc-spin 0.8s linear infinite,
+      pc-fade-in 0.15s ease 0.15s backwards;
+  }
+  @keyframes pc-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes pc-fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  .execute-button.pc-filled {
+    animation: pc-pop 0.36s var(--spring, cubic-bezier(0.2, 0.8, 0.2, 1));
+  }
+  @keyframes pc-pop {
+    45% {
+      transform: scale(1.03);
+    }
+  }
+
+  .pc-shake {
+    animation: pc-shake 0.36s ease-out;
+  }
+  @keyframes pc-shake {
+    20% {
+      transform: translateX(-6px);
+    }
+    40% {
+      transform: translateX(5px);
+    }
+    60% {
+      transform: translateX(-3px);
+    }
+    80% {
+      transform: translateX(2px);
+    }
+  }
+
+  /* Your leaderboard row: the accent bar grows in, then a soft one-off glow. */
+  .rank-list .rank-you::before {
+    transform-origin: center;
+    animation: pc-grow-y 0.45s var(--spring, cubic-bezier(0.2, 0.8, 0.2, 1))
+      0.25s backwards;
+  }
+  .rank-list .rank-you::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--blue, #315cf5);
+    opacity: 0;
+    pointer-events: none;
+    animation: pc-glow 1.4s ease-out 0.35s;
+  }
+  @keyframes pc-grow-y {
+    from {
+      transform: scaleY(0);
+    }
+  }
+  @keyframes pc-glow {
+    30% {
+      opacity: 0.08;
+    }
+  }
+
+  /* Skeleton shimmer as a moving highlight (transform) rather than a background-position repaint. */
+  :is(.resolution-panel, .leaderboard) .skeleton {
+    position: relative;
+    overflow: hidden;
+    animation: none;
+  }
+  :is(.resolution-panel, .leaderboard) .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(255 255 255 / 0.65),
+      transparent
+    );
+    transform: translateX(-100%);
+    animation: pc-shimmer 1.3s ease-in-out infinite;
+  }
+  [data-theme="dark"] :is(.resolution-panel, .leaderboard) .skeleton::after {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(255 255 255 / 0.07),
+      transparent
+    );
+  }
+  @keyframes pc-shimmer {
+    to {
+      transform: translateX(100%);
+    }
+  }
+}
+:is(.resolution-panel, .leaderboard) .skeleton {
+  background: var(--subtle, #f2f3f5);
+}

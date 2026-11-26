@@ -1,6 +1,6 @@
 import { ApiError } from "../shared/client.js";
 import { useState, type CSSProperties } from "react";
-import { motion } from "motion/react";
+import { motion, type Variants } from "motion/react";
 import { BrandMark } from "./ui.js";
 import { ease } from "./motion.js";
 
@@ -69,10 +69,22 @@ export async function waitForBackend(signal: AbortSignal) {
 // App shows it again; the shared clock lets the logo animation continue, not restart.
 let bootStart: number | undefined;
 
+const leaveScreen: Variants = {
+  leave: { opacity: 0, transition: { duration: 0.32, ease, delay: 0.06 } },
+};
+const leaveLogo: Variants = {
+  leave: { opacity: 0, scale: 1.1, transition: { duration: 0.26, ease } },
+};
+
 /** Full-screen boot logo; fades out when the app is ready (wrap in AnimatePresence). */
 export function BackendStartup({ warming }: { warming: boolean }) {
   const [offset] = useState(() => {
-    bootStart ??= performance.now();
+    // On Android the native splash already played the mark's intro: continue it, not replay it.
+    bootStart ??=
+      performance.now() -
+      ((
+        window as { PeakcastAndroid?: { launchElapsedMs?: () => number } }
+      ).PeakcastAndroid?.launchElapsedMs?.() ?? 0);
     return bootStart - performance.now();
   });
   return (
@@ -82,17 +94,23 @@ export function BackendStartup({ warming }: { warming: boolean }) {
       aria-live="polite"
       aria-atomic="true"
       style={{ "--boot-offset": `${offset}ms` } as CSSProperties}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.24, ease }}
+      // Hand-off to the app: the logo swells and fades as the screen clears,
+      // while the shell rises in underneath (shell-motion.css, data-ready).
+      exit="leave"
+      variants={leaveScreen}
     >
-      <div className="boot-logo" aria-hidden="true">
+      <motion.div
+        className="boot-logo"
+        aria-hidden="true"
+        variants={leaveLogo}
+      >
         <span className="boot-glow" />
         <span className="boot-floor" />
         <span className="boot-tile">
           <BrandMark />
           <span className="boot-sheen" />
         </span>
-      </div>
+      </motion.div>
       {/* Out of flow, so the logo sits dead centre like the Android launch icon. */}
       <div className="boot-below">
         <span className="boot-wordmark" aria-hidden="true">

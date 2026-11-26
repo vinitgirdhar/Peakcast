@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Android 12+ launch screen icon: the Peakcast mark (scripts/make-icons.mjs) at
-  1/8 scale inside the 160dp safe circle of the 240dp splash canvas.
+  Launch screen icon: the Peakcast mark (scripts/make-icons.mjs). Android 12+ draws
+  this 240-unit canvas at 288dp, so the mark group ends at scale 0.8333 to give a
+  128dp tile: the same size and centre as the web boot logo (public/wake/wake.css),
+  which takes over from it. Below Android 12 it is drawn at 288dp by
+  drawable/launch_background.xml (still, as drawable/launch_mark.xml).
   The squircle settles in, the price line draws itself into a peak, the
   forecast dots appear in turn and the sun rises. About 0.95 s in total.
 -->
@@ -9,7 +12,7 @@
     xmlns:aapt="http://schemas.android.com/aapt">
  <aapt:attr name="android:drawable">
   <vector android:width="240dp" android:height="240dp" android:viewportWidth="240" android:viewportHeight="240">
-   <group android:name="mark" android:pivotX="120" android:pivotY="120" android:scaleX="0.82" android:scaleY="0.82">
+   <group android:name="mark" android:pivotX="120" android:pivotY="120" android:scaleX="0.6833" android:scaleY="0.6833">
     <!-- soft contact shadow for depth -->
     <path android:fillColor="#1A160C6B"
         android:pathData="M86,62 h68 a30,30 0 0 1 30,30 v68 a30,30 0 0 1 -30,30 h-68 a30,30 0 0 1 -30,-30 v-68 a30,30 0 0 1 30,-30 z" />
@@ -62,8 +65,8 @@
  <target android:name="mark">
   <aapt:attr name="android:animation">
    <set>
-    <objectAnimator android:propertyName="scaleX" android:valueFrom="0.82" android:valueTo="1" android:duration="420" android:interpolator="@android:interpolator/overshoot" />
-    <objectAnimator android:propertyName="scaleY" android:valueFrom="0.82" android:valueTo="1" android:duration="420" android:interpolator="@android:interpolator/overshoot" />
+    <objectAnimator android:propertyName="scaleX" android:valueFrom="0.6833" android:valueTo="0.8333" android:duration="420" android:interpolator="@android:interpolator/overshoot" />
+    <objectAnimator android:propertyName="scaleY" android:valueFrom="0.6833" android:valueTo="0.8333" android:duration="420" android:interpolator="@android:interpolator/overshoot" />
    </set>
   </aapt:attr>
  </target>

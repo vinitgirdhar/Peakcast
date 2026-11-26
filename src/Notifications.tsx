@@ -18,6 +18,8 @@ import type { Inbox, NotificationKind } from "../shared/types.js";
 import { EmptyState, SkeletonRows, date, errorMessage } from "./ui.js";
 import { ease, itemMotion, listMotion } from "./motion.js";
 
+const popSpring = { type: "spring", stiffness: 520, damping: 34 } as const;
+
 const kinds: Record<NotificationKind, { icon: LucideIcon; tone: string }> = {
   order_filled: { icon: CircleCheck, tone: "yes" },
   order_cancelled: { icon: CircleX, tone: "no" },
@@ -65,6 +67,15 @@ export function NotificationBell({
   const panelId = useId();
   const unread = inbox?.unread ?? 0;
   useEffect(() => setHost(bell.current?.closest("header") ?? null), []);
+  // Count of rings: bumps when the unread count grows after the first load.
+  const [rings, setRings] = useState(0);
+  const lastUnread = useRef<number | null>(null);
+  useEffect(() => {
+    if (!inbox) return;
+    if (lastUnread.current !== null && inbox.unread > lastUnread.current)
+      setRings((count) => count + 1);
+    lastUnread.current = inbox.unread;
+  }, [inbox]);
 
   function close(returnFocus: boolean) {
     setOpen(false);
@@ -127,7 +138,16 @@ export function NotificationBell({
           void load();
         }}
       >
-        <Bell size={19} />
+        {/* Re-keyed on each new arrival, so the bell rings once per new item. */}
+        <motion.span
+          key={rings}
+          className="bell-swing"
+          initial={{ rotate: 0 }}
+          animate={rings ? { rotate: [0, -16, 13, -9, 5, -2, 0] } : undefined}
+          transition={{ duration: 0.7, ease: "easeOut" }}
+        >
+          <Bell size={19} />
+        </motion.span>
         <AnimatePresence>
           {unread > 0 && (
             <motion.span
@@ -135,8 +155,8 @@ export function NotificationBell({
               aria-hidden="true"
               initial={{ scale: 0.4, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.4, opacity: 0 }}
-              transition={{ duration: 0.18, ease }}
+              exit={{ scale: 0.4, opacity: 0, transition: { duration: 0.12 } }}
+              transition={popSpring}
             >
               {unread > 9 ? "9+" : unread}
             </motion.span>
@@ -154,10 +174,17 @@ export function NotificationBell({
                 role="dialog"
                 aria-label="Notifications"
                 tabIndex={-1}
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4, transition: { duration: 0.12 } }}
-                transition={{ duration: 0.18, ease }}
+                // Springs out of the bell's corner; a short tween back so it never lingers over taps.
+                style={{ originX: 1, originY: 0 }}
+                initial={{ opacity: 0, y: -8, scale: 0.94 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{
+                  opacity: 0,
+                  y: -6,
+                  scale: 0.97,
+                  transition: { duration: 0.14, ease },
+                }}
+                transition={popSpring}
               >
                 <div className="notification-head">
                   <h2>Notifications</h2>

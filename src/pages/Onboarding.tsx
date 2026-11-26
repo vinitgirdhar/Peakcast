@@ -1,8 +1,14 @@
 import { useState, type FormEvent } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import {
+  AnimatePresence,
+  motion,
+  useReducedMotion,
+  type Variants,
+} from "motion/react";
 import {
   ArrowLeft,
   ArrowRight,
+  Loader2,
   Scale,
   ShieldCheck,
   Sparkles,
@@ -45,6 +51,24 @@ interface OnboardingProps {
 
 type Step = "profile" | number;
 
+/** Each line of a step rises in after the one before it. */
+const line: Variants = {
+  enter: { opacity: 0, y: 12 },
+  center: { opacity: 1, y: 0, transition: { duration: 0.42, ease } },
+};
+const icon: Variants = {
+  enter: { opacity: 0, scale: 0.5, rotate: -18 },
+  center: {
+    opacity: 1,
+    scale: 1,
+    rotate: 0,
+    transition: { type: "spring", stiffness: 380, damping: 16 },
+  },
+};
+const stagger: Variants = {
+  center: { transition: { staggerChildren: 0.06 } },
+};
+
 export function Onboarding({
   consentOnly = false,
   onComplete,
@@ -58,7 +82,8 @@ export function Onboarding({
       ? ["profile", 0, 1, 2]
       : [0, 1, 2, "profile"];
   const [index, setIndex] = useState(0);
-  const [direction, setDirection] = useState(1);
+  // 0 on first open: the first screen rises in place instead of sliding.
+  const [direction, setDirection] = useState(0);
   const [name, setName] = useState("");
   const [adult, setAdult] = useState(false);
   const [terms, setTerms] = useState(false);
@@ -99,7 +124,7 @@ export function Onboarding({
     if (profileFirst) go(index + 1);
     else void finish();
   }
-  const offset = reduce ? 0 : 28;
+  const offset = reduce ? 0 : 36;
   const slide = typeof step === "number" ? intro[step] : undefined;
   const slides = order.filter((item): item is number => item !== "profile");
   const canSkip = slide !== undefined && index < lastIndex;
@@ -129,46 +154,62 @@ export function Onboarding({
             </button>
           )}
         </div>
-        <AnimatePresence mode="popLayout" initial={false} custom={direction}>
+        <AnimatePresence mode="popLayout" custom={direction}>
           <motion.div
             key={index}
             className="onboarding-step"
             custom={direction}
             variants={{
               enter: (d: number) => ({ opacity: 0, x: d * offset }),
-              center: { opacity: 1, x: 0 },
-              exit: (d: number) => ({ opacity: 0, x: -d * offset }),
+              center: {
+                opacity: 1,
+                x: 0,
+                transition: {
+                  duration: 0.3,
+                  ease,
+                  staggerChildren: 0.07,
+                  delayChildren: direction ? 0.02 : 0.12,
+                },
+              },
+              exit: (d: number) => ({
+                opacity: 0,
+                x: -d * offset,
+                transition: { duration: 0.2, ease },
+              }),
             }}
             initial="enter"
             animate="center"
             exit="exit"
-            transition={{ duration: 0.26, ease }}
           >
             {slide ? (
               <>
-                <span className="onboarding-icon">
+                <motion.span className="onboarding-icon" variants={icon}>
                   <slide.icon size={28} />
-                </span>
-                <h1>{slide.title}</h1>
-                <p>{slide.text}</p>
+                </motion.span>
+                <motion.h1 variants={line}>{slide.title}</motion.h1>
+                <motion.p variants={line}>{slide.text}</motion.p>
               </>
             ) : (
-              <form className="onboarding-form" onSubmit={submit}>
-                <h1>
+              <motion.form
+                className="onboarding-form"
+                onSubmit={submit}
+                variants={stagger}
+              >
+                <motion.h1 variants={line}>
                   {consentOnly
                     ? "Before you continue"
                     : profileFirst
                       ? "Welcome to Peakcast"
                       : "Create your profile"}
-                </h1>
-                <p>
+                </motion.h1>
+                <motion.p variants={line}>
                   {consentOnly
                     ? "We've updated how accounts work. Choose a display name and confirm the terms to keep playing."
                     : profileFirst
                       ? "Choose a display name to get started. It stays on this phone."
                       : "Your display name appears on comments and team leaderboards."}
-                </p>
-                <label className="field">
+                </motion.p>
+                <motion.label className="field" variants={line}>
                   <span>Display name</span>
                   <input
                     value={name}
@@ -178,20 +219,26 @@ export function Onboarding({
                     onChange={(event) => setName(event.target.value)}
                     autoFocus
                   />
-                </label>
-                <label className="check">
+                </motion.label>
+                <motion.label className="check" variants={line}>
                   <input
                     type="checkbox"
                     checked={adult}
-                    onChange={(event) => setAdult(event.target.checked)}
+                    onChange={(event) => {
+                      setAdult(event.target.checked);
+                      haptic("selection");
+                    }}
                   />
                   <span>I am 18 or older.</span>
-                </label>
-                <label className="check">
+                </motion.label>
+                <motion.label className="check" variants={line}>
                   <input
                     type="checkbox"
                     checked={terms}
-                    onChange={(event) => setTerms(event.target.checked)}
+                    onChange={(event) => {
+                      setTerms(event.target.checked);
+                      haptic("selection");
+                    }}
                   />
                   <span>
                     I agree to the{" "}
@@ -204,13 +251,18 @@ export function Onboarding({
                     </a>
                     .
                   </span>
-                </label>
+                </motion.label>
                 {error && (
                   <p className="form-error" role="alert">
                     {error}
                   </p>
                 )}
-                <button className="primary-button" disabled={!valid || busy}>
+                <motion.button
+                  className="primary-button"
+                  disabled={!valid || busy}
+                  variants={line}
+                >
+                  {busy && <Loader2 size={16} className="button-spinner" />}
                   {busy
                     ? "Setting up…"
                     : consentOnly
@@ -218,9 +270,9 @@ export function Onboarding({
                       : profileFirst
                         ? "Continue"
                         : "Start with 5,000 credits"}
-                  {profileFirst && <ArrowRight size={16} />}
-                </button>
-              </form>
+                  {profileFirst && !busy && <ArrowRight size={16} />}
+                </motion.button>
+              </motion.form>
             )}
           </motion.div>
         </AnimatePresence>
@@ -242,6 +294,7 @@ export function Onboarding({
                 disabled={busy}
                 onClick={() => void finish()}
               >
+                {busy && <Loader2 size={16} className="button-spinner" />}
                 {busy ? "Setting up…" : "Start with 5,000 credits"}{" "}
                 {!busy && <ArrowRight size={16} />}
               </button>

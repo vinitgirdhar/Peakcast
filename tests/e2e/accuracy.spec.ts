@@ -27,7 +27,7 @@ test("the leaderboard has a Most accurate board ranked by Brier score", async ({
   await expect(
     page
       .getByRole("heading", { name: "No forecasters yet" })
-      .or(page.locator(".rank-list")),
+      .or(page.locator(".rank-list:not([data-motion-pop-id])")),
   ).toBeVisible();
   await expect(
     page.locator(".fine-print").filter({ hasText: "Brier" }),

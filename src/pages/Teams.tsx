@@ -1,9 +1,11 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { ChevronRight, Users } from "lucide-react";
+import { ChevronRight, Loader2, Users } from "lucide-react";
+import { motion } from "motion/react";
 import { PeakcastClient } from "../../shared/client.js";
 import type { Workspace } from "../../shared/types.js";
 import { EmptyState, SkeletonRows, errorMessage } from "../ui.js";
 import { roleLabels } from "./WorkspaceMembers.js";
+import { itemMotion, listMotion } from "../motion.js";
 
 /** Workspaces you belong to, and a form to create one. */
 export function Teams({
@@ -93,11 +95,17 @@ export function Teams({
             <SkeletonRows label="Loading workspaces…" count={2} />
           </div>
         ) : items.length ? (
-          <div className="activity-list">
+          <motion.div
+            className="activity-list"
+            variants={listMotion}
+            initial="hidden"
+            animate="show"
+          >
             {items.map((workspace) => (
-              <button
+              <motion.button
                 key={workspace.id}
                 className="activity-row"
+                variants={itemMotion}
                 onClick={() => onOpen(workspace.id)}
               >
                 <span className="soft-icon" aria-hidden="true">
@@ -111,9 +119,9 @@ export function Teams({
                   </span>
                 </div>
                 <ChevronRight size={17} className="row-chevron" />
-              </button>
+              </motion.button>
             ))}
-          </div>
+          </motion.div>
         ) : (
           <EmptyState
             title="No workspaces yet"
@@ -173,6 +181,7 @@ export function Teams({
           </p>
         )}
         <button className="primary-button" disabled={busy}>
+          {busy && <Loader2 size={16} className="button-spinner" />}
           {busy ? "Creating…" : "Create workspace"}
         </button>
       </form>

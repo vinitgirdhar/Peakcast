@@ -200,6 +200,7 @@ export function WorkspaceView({
               <motion.span
                 className="tab-selection"
                 layoutId="workspace-view"
+                transition={{ type: "spring", stiffness: 420, damping: 34 }}
               />
             )}
             {item.label}

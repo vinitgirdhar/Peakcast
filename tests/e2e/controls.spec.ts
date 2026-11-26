@@ -59,11 +59,11 @@ test("all discovery filters, sorts and navigation controls work", async ({
   await page
     .getByRole("button", { name: "Draft a market", exact: true })
     .click();
-  await expect(page.locator(".page h1")).toHaveText("Draft studio");
+  await expect(page.locator(".route-surface:not([inert]) .page h1")).toHaveText("Draft studio");
   await page.getByRole("button", { name: "Peakcast home" }).click();
-  await expect(page.locator(".page h1")).toHaveText("Markets");
+  await expect(page.locator(".route-surface:not([inert]) .page h1")).toHaveText("Markets");
   await page.locator(".balance-button").click();
-  await expect(page.locator(".page h1")).toHaveText("Your portfolio");
+  await expect(page.locator(".route-surface:not([inert]) .page h1")).toHaveText("Your portfolio");
   await page
     .getByRole("button", { name: "Trade activity", exact: true })
     .click();
@@ -75,7 +75,7 @@ test("all discovery filters, sorts and navigation controls work", async ({
     .getByRole("button", { name: "Explore markets", exact: true })
     .click();
   await page.locator(".featured-market").click();
-  await expect(page.locator(".page h1")).toHaveText(markets[0].title);
+  await expect(page.locator(".route-surface:not([inert]) .page h1")).toHaveText(markets[0].title);
   await page
     .getByRole("button", { name: "Rules & source", exact: true })
     .click();
@@ -95,7 +95,7 @@ test("all discovery filters, sorts and navigation controls work", async ({
   await popup.close();
   await page.getByRole("button", { name: "All markets", exact: true }).click();
   await page.getByRole("button", { name: "About this app" }).click();
-  await expect(page.locator(".page h1")).toHaveText("About Peakcast");
+  await expect(page.locator(".route-surface:not([inert]) .page h1")).toHaveText("About Peakcast");
 });
 
 test("a buy can spend the available balance without requiring an unaffordable slippage buffer", async ({

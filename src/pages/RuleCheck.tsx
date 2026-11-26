@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { motion } from "motion/react";
+import { ease } from "../motion.js";
 import { CircleCheck, ExternalLink, TriangleAlert } from "lucide-react";
 import {
   blockingReason,
@@ -30,10 +32,17 @@ const count = (report: LintReport, severity: LintFinding["severity"]) =>
   report.findings.filter((item) => item.severity === severity).length;
 
 export function RuleBadge({ report }: { report: LintReport }) {
+  // Keyed by label so a change of verdict pops in rather than swapping silently.
   return (
-    <span className={`rule-badge ${report.label.toLowerCase()}`}>
+    <motion.span
+      key={report.label}
+      className={`rule-badge ${report.label.toLowerCase()}`}
+      initial={{ opacity: 0.4, scale: 0.85 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ type: "spring", stiffness: 520, damping: 22 }}
+    >
       {report.label} · risk {report.risk}
-    </span>
+    </motion.span>
   );
 }
 
@@ -57,28 +66,50 @@ export function FindingList({
   findings: LintFinding[];
   onSelect?: (field: LintField) => void;
 }) {
-  return GROUPS.map(([severity, heading]) => {
+  return GROUPS.map(([severity, heading], group) => {
     const items = findings.filter((item) => item.severity === severity);
     if (!items.length) return null;
+    // Keys that survive edits elsewhere in the list, so only new findings animate.
+    const seen = new Map<string, number>();
     return (
-      <div key={severity} className={`finding-group ${severity}`}>
+      <motion.div
+        key={severity}
+        className={`finding-group ${severity}`}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2, delay: group * 0.06 }}
+      >
         <p className="finding-group-title">{heading}</p>
         <ul>
-          {items.map((item, index) => (
-            <li key={`${item.id}-${item.field}-${index}`}>
-              {onSelect ? (
-                <button type="button" onClick={() => onSelect(item.field)}>
-                  <FindingBody item={item} />
-                </button>
-              ) : (
-                <div>
-                  <FindingBody item={item} />
-                </div>
-              )}
-            </li>
-          ))}
+          {items.map((item, index) => {
+            const base = `${item.id}-${item.field}`;
+            const nth = seen.get(base) ?? 0;
+            seen.set(base, nth + 1);
+            return (
+              <motion.li
+                key={`${base}-${nth}`}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{
+                  duration: 0.28,
+                  ease,
+                  delay: group * 0.06 + Math.min(index, 5) * 0.035,
+                }}
+              >
+                {onSelect ? (
+                  <button type="button" onClick={() => onSelect(item.field)}>
+                    <FindingBody item={item} />
+                  </button>
+                ) : (
+                  <div>
+                    <FindingBody item={item} />
+                  </div>
+                )}
+              </motion.li>
+            );
+          })}
         </ul>
-      </div>
+      </motion.div>
     );
   });
 }

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, type Variants } from "motion/react";
 import {
   ArrowUpRight,
   Check,
@@ -26,7 +26,8 @@ import { MobileDock } from "./Dock.js";
 import { haptic } from "./haptics.js";
 import { isAndroidApp } from "./platform.js";
 import { BrandMark, EmptyState, errorMessage, formatCredits } from "./ui.js";
-import { AnimatedNumber, ease } from "./motion.js";
+import { AnimatedNumber, Bump, ease } from "./motion.js";
+import "./shell-motion.css";
 import { MarketExplorer } from "./pages/Markets.js";
 import { MarketDetail } from "./pages/MarketDetail.js";
 import { PortfolioView } from "./pages/Portfolio.js";
@@ -63,6 +64,28 @@ const workspaceRoute =
 const storageKey = "peakcast.token.v1";
 /** Same breakpoint as the phone layout in styles.css (bottom dock, no sidebar). */
 const phoneQuery = "(max-width:760px), (pointer:coarse) and (max-width:1024px)";
+/**
+ * Page switches, GPU-only. `dir` is +1 deeper, -1 back, 0 sideways (tabs):
+ * deeper pages slide along a shared axis, tab switches fade through with a hint
+ * of scale. The old page leaves quickly while the new one is already arriving.
+ */
+// Labels are unique so pages' own "hidden"/"show" variants never inherit them.
+const pageMotion: Variants = {
+  pageEnter: (dir: number) =>
+    dir ? { opacity: 0, x: dir * 32 } : { opacity: 0, scale: 0.985 },
+  pageShow: {
+    opacity: 1,
+    x: 0,
+    scale: 1,
+    transition: { duration: 0.24, ease },
+  },
+  pageLeave: (dir: number) => ({
+    opacity: 0,
+    x: dir * -20,
+    transition: { duration: 0.12, ease },
+  }),
+};
+const popSpring = { type: "spring", stiffness: 520, damping: 34 } as const;
 export function App() {
   const [path, setPath] = useState(() => {
     // The Android app has no landing page: it opens on the markets.
@@ -84,6 +107,14 @@ export function App() {
   const connected = ready && portfolio !== null;
   const [notice, setNotice] = useState("");
   const [menu, setMenu] = useState(false);
+  // Desktop sidebar item under the mouse (box within the nav), for the hover glass.
+  const [hover, setHover] = useState<{
+    top: number;
+    height: number;
+    /** Moving from another item (glide) rather than arriving from outside (appear in place). */
+    glide: boolean;
+    shown: boolean;
+  } | null>(null);
   // Workspace that Draft studio should launch to when opened from that workspace.
   const [launchTo, setLaunchTo] = useState<string | undefined>();
   // "new": no account yet; "consent": an older account that never accepted the terms.
@@ -94,14 +125,24 @@ export function App() {
     (Event & { prompt: () => Promise<void> }) | null
   >(null);
   const client = new PeakcastClient("", token);
+  // Set by navigate(): the next page opens at the top (see the layout effect below).
+  const scrollReset = useRef(false);
   function navigate(next: string, launchWorkspace?: string) {
     if (isAndroidApp && (next === "/" || next === "/welcome"))
       next = "/markets";
+    // Tapping the current page again glides it back to the top.
+    if (next === location.pathname)
+      scrollTo({
+        top: 0,
+        behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+      });
+    else scrollReset.current = true;
     history.pushState({}, "", next);
     setPath(next);
     setMenu(false);
     setLaunchTo(launchWorkspace);
-    scrollTo(0, 0);
   }
   async function refresh(current = token) {
     const api = new PeakcastClient("", current);
@@ -273,6 +314,22 @@ export function App() {
     addEventListener("scroll", onScroll, { passive: true });
     return () => removeEventListener("scroll", onScroll);
   }, []);
+  // Theme switches cross-fade colours briefly instead of snapping (shell-motion.css).
+  useEffect(() => {
+    const root = document.documentElement;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const observer = new MutationObserver(() => {
+      root.classList.add("theme-fade");
+      clearTimeout(timer);
+      timer = setTimeout(() => root.classList.remove("theme-fade"), 400);
+    });
+    observer.observe(root, { attributeFilter: ["data-theme"] });
+    return () => {
+      observer.disconnect();
+      clearTimeout(timer);
+      root.classList.remove("theme-fade");
+    };
+  }, []);
   async function installApp() {
     if (install) {
       try {
@@ -349,10 +406,24 @@ export function App() {
       dir: Math.sign(depth - lastRoute.depth),
     });
   const phone = matchMedia(phoneQuery).matches;
-  const routeEnter =
-    phone && lastRoute.dir
-      ? { opacity: 0, x: lastRoute.dir * 28 }
-      : { opacity: 0, y: 6 };
+  const routeDir = phone ? lastRoute.dir : 0;
+  // Before paint: the leaving page keeps showing what the reader saw (its
+  // content shifted by the old scroll), then the window jumps to the top for
+  // the new page, so neither page visibly jerks. It is inert while it fades.
+  useLayoutEffect(() => {
+    const y = scrollReset.current ? scrollY : 0;
+    scrollReset.current = false;
+    document
+      .querySelectorAll<HTMLElement>(".route-surface")
+      .forEach((surface) => {
+        // A page re-entered while still leaving (quick back-and-forth) is live again.
+        const leaving = surface.dataset.route !== routeKey;
+        surface.inert = leaving;
+        if (leaving && y) surface.style.setProperty("--leave-y", `${-y}px`);
+        else if (!leaving) surface.style.removeProperty("--leave-y");
+      });
+    if (y) scrollTo(0, 0);
+  }, [path]);
   const legal = legalPaths[path];
   if (legal)
     return (
@@ -400,7 +471,8 @@ export function App() {
   return (
     <>
       {boot}
-      <div className="app-shell">
+      {/* data-ready starts the opening sequence as the boot logo fades (shell-motion.css). */}
+      <div className="app-shell" data-ready={ready || undefined}>
         <a className="skip-link" href="#main">
           Skip to content
         </a>
@@ -414,13 +486,49 @@ export function App() {
             <span>peakcast.</span>
           </button>
           <span className="workspace-label">Your workspace</span>
-          <nav aria-label="Main navigation">
+          <nav
+            aria-label="Main navigation"
+            onPointerLeave={() =>
+              setHover((last) => last && { ...last, shown: false })
+            }
+          >
+            {/* Hover glass: glides between items under the mouse, fades when it leaves. */}
+            <motion.span
+              className="nav-hover-glass"
+              aria-hidden="true"
+              initial={false}
+              animate={
+                hover
+                  ? {
+                      opacity: hover.shown ? 1 : 0,
+                      y: hover.top,
+                      height: hover.height,
+                    }
+                  : { opacity: 0 }
+              }
+              transition={{
+                default: hover?.glide
+                  ? { type: "spring", stiffness: 600, damping: 44 }
+                  : { duration: 0 },
+                opacity: { duration: 0.15, ease },
+              }}
+            />
             {nav.map(({ path: p, label, icon: Icon }) => (
               <button
                 key={p}
                 className={`nav-item ${section === label ? "active" : ""}`}
                 aria-current={section === label ? "page" : undefined}
                 onClick={() => navigate(p)}
+                onPointerEnter={(event) => {
+                  if (event.pointerType !== "mouse") return;
+                  const { offsetTop, offsetHeight } = event.currentTarget;
+                  setHover((last) => ({
+                    top: offsetTop,
+                    height: offsetHeight,
+                    glide: !!last?.shown,
+                    shown: true,
+                  }));
+                }}
               >
                 {section === label && (
                   <motion.span
@@ -563,16 +671,27 @@ export function App() {
               >
                 <span className="balance-icon">
                   <Wallet size={16} />
-                  {portfolio?.bonus.available && (
-                    <span className="bonus-dot" aria-hidden="true" />
-                  )}
+                  <AnimatePresence>
+                    {portfolio?.bonus.available && (
+                      <motion.span
+                        className="bonus-dot"
+                        aria-hidden="true"
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0, opacity: 0 }}
+                        transition={popSpring}
+                      />
+                    )}
+                  </AnimatePresence>
                 </span>
                 <span>
                   {portfolio ? (
-                    <AnimatedNumber
-                      value={portfolio.balanceMicros}
-                      format={formatCredits}
-                    />
+                    <Bump value={portfolio.balanceMicros}>
+                      <AnimatedNumber
+                        value={portfolio.balanceMicros}
+                        format={formatCredits}
+                      />
+                    </Bump>
                   ) : (
                     "—"
                   )}{" "}
@@ -632,162 +751,178 @@ export function App() {
                 text="Use Retry above to reconnect. Your current page will stay open."
               />
             ) : (
-              <AnimatePresence mode="wait" initial={false}>
+              // popLayout: the old page leaves out of flow while the new one arrives, so there is no blank gap.
+              <AnimatePresence
+                mode="popLayout"
+                initial={false}
+                custom={routeDir}
+              >
                 <motion.div
                   className="route-surface"
                   key={routeKey}
-                  // ponytail: no exit fade, so the new page starts immediately instead of after a blank gap.
-                  initial={routeEnter}
-                  animate={{ opacity: 1, x: 0, y: 0 }}
-                  transition={{ duration: phone ? 0.24 : 0.18, ease }}
+                  data-route={routeKey}
+                  custom={routeDir}
+                  variants={pageMotion}
+                  initial="pageEnter"
+                  animate="pageShow"
+                  exit="pageLeave"
                 >
-                  {path === "/markets" && (
-                    <MarketExplorer
-                      markets={markets}
-                      onOpen={(m) => navigate(`/markets/${m.id}`)}
-                      onStudio={() => navigate("/studio")}
-                    />
-                  )}{" "}
-                  {marketId &&
-                    (selected ? (
-                      <MarketDetail
-                        key={selected.id}
-                        market={selected}
-                        portfolio={portfolio}
-                        client={client}
-                        view={route?.[2] ? "rules" : "forecast"}
-                        onView={(view) => {
-                          haptic("selection");
-                          navigate(
-                            `/markets/${selected.id}${view === "rules" ? "/rules" : ""}`,
-                          );
-                        }}
-                        onBack={() => navigate("/markets")}
-                        onTrade={() => refresh()}
-                        onNotice={setNotice}
-                        shareOrigin={capabilities?.shareOrigin ?? null}
-                      />
-                    ) : (
-                      <EmptyState
-                        title="Market not found"
-                        text="This market is not available."
-                        action={
-                          <button
-                            className="primary-button"
-                            onClick={() => navigate("/markets")}
-                          >
-                            Browse markets
-                          </button>
-                        }
-                      />
-                    ))}
-                  {path === "/portfolio" && (
-                    <PortfolioView
-                      portfolio={portfolio}
-                      markets={markets}
-                      onOpen={(id) => navigate(`/markets/${id}`)}
-                      onBrowse={() => navigate("/markets")}
-                      client={client}
-                      onRefresh={() => refresh()}
-                      onNotice={setNotice}
-                    />
-                  )}{" "}
-                  {path === "/leaderboard" && (
-                    <LeaderboardView client={client} />
-                  )}
-                  {path === "/settings" && (
-                    <Settings token={token} onDeleted={signedOut} />
-                  )}{" "}
-                  {studio && (
-                    <DraftStudio
-                      client={client}
-                      example={markets[0]}
-                      onNotice={setNotice}
-                      onLaunched={(market) => {
-                        haptic("success");
-                        setNotice(
-                          market.workspaceId
-                            ? "Private market launched. Only workspace members can see it."
-                            : "Market launched. You earn 1% of every trade.",
-                        );
-                        navigate(
-                          market.workspaceId
-                            ? `/teams/${market.workspaceId}/markets/${market.id}`
-                            : `/markets/${market.id}`,
-                        );
-                        void refresh().catch((e) => setError(errorMessage(e)));
-                      }}
-                      view={path.endsWith("/drafts") ? "drafts" : "create"}
-                      onView={(view) => {
-                        haptic("selection");
-                        navigate(
-                          view === "drafts" ? "/studio/drafts" : "/studio",
-                          launchTo,
-                        );
-                      }}
-                      teams={teams}
-                      launchTo={launchTo}
-                    />
-                  )}{" "}
-                  {teams && path === "/teams" && (
-                    <Teams
-                      client={client}
-                      onOpen={(id) => navigate(`/teams/${id}`)}
-                      onNotice={setNotice}
-                    />
-                  )}
-                  {joining && (
-                    <JoinWorkspace
-                      client={client}
-                      onJoined={(workspace) => {
-                        setNotice(`You joined ${workspace.name}.`);
-                        navigate(`/teams/${workspace.id}`);
-                      }}
-                      onTeams={() => navigate("/teams")}
-                    />
-                  )}
-                  {team && (
-                    <WorkspaceView
-                      client={client}
-                      workspaceId={team[1]}
-                      tab={(team[2] as WorkspaceTab | undefined) ?? "markets"}
-                      marketId={team[3]}
-                      marketView={team[4] ? "rules" : "forecast"}
-                      navigate={navigate}
-                      onNotice={setNotice}
-                      onDraft={() => navigate("/studio", team[1])}
-                      onLeft={() => {
-                        setNotice("You left the workspace.");
-                        navigate("/teams");
-                      }}
-                      shareOrigin={capabilities?.shareOrigin ?? null}
-                    />
-                  )}
-                  {about && (
-                    <About
-                      canInstall={!!install}
-                      onInstall={installApp}
-                      onBack={() => navigate("/settings")}
-                    />
-                  )}{" "}
-                  {!marketId &&
-                    !studio &&
-                    !about &&
-                    !teamsPage &&
-                    !nav.some((n) => n.path === path) && (
-                      <EmptyState
-                        title="Page not found"
-                        text="Return to the market explorer to keep forecasting."
-                        action={
-                          <button
-                            className="primary-button"
-                            onClick={() => navigate("/markets")}
-                          >
-                            Browse markets
-                          </button>
-                        }
-                      />
-                    )}
+                  {/* A presence boundary: exit animations inside a page never hold the leaving page on screen. */}
+                  <AnimatePresence>
+                    <div key="route-content" className="route-content">
+                      {path === "/markets" && (
+                        <MarketExplorer
+                          markets={markets}
+                          onOpen={(m) => navigate(`/markets/${m.id}`)}
+                          onStudio={() => navigate("/studio")}
+                        />
+                      )}{" "}
+                      {marketId &&
+                        (selected ? (
+                          <MarketDetail
+                            key={selected.id}
+                            market={selected}
+                            portfolio={portfolio}
+                            client={client}
+                            view={route?.[2] ? "rules" : "forecast"}
+                            onView={(view) => {
+                              haptic("selection");
+                              navigate(
+                                `/markets/${selected.id}${view === "rules" ? "/rules" : ""}`,
+                              );
+                            }}
+                            onBack={() => navigate("/markets")}
+                            onTrade={() => refresh()}
+                            onNotice={setNotice}
+                            shareOrigin={capabilities?.shareOrigin ?? null}
+                          />
+                        ) : (
+                          <EmptyState
+                            title="Market not found"
+                            text="This market is not available."
+                            action={
+                              <button
+                                className="primary-button"
+                                onClick={() => navigate("/markets")}
+                              >
+                                Browse markets
+                              </button>
+                            }
+                          />
+                        ))}
+                      {path === "/portfolio" && (
+                        <PortfolioView
+                          portfolio={portfolio}
+                          markets={markets}
+                          onOpen={(id) => navigate(`/markets/${id}`)}
+                          onBrowse={() => navigate("/markets")}
+                          client={client}
+                          onRefresh={() => refresh()}
+                          onNotice={setNotice}
+                        />
+                      )}{" "}
+                      {path === "/leaderboard" && (
+                        <LeaderboardView client={client} />
+                      )}
+                      {path === "/settings" && (
+                        <Settings token={token} onDeleted={signedOut} />
+                      )}{" "}
+                      {studio && (
+                        <DraftStudio
+                          client={client}
+                          example={markets[0]}
+                          onNotice={setNotice}
+                          onLaunched={(market) => {
+                            haptic("success");
+                            setNotice(
+                              market.workspaceId
+                                ? "Private market launched. Only workspace members can see it."
+                                : "Market launched. You earn 1% of every trade.",
+                            );
+                            navigate(
+                              market.workspaceId
+                                ? `/teams/${market.workspaceId}/markets/${market.id}`
+                                : `/markets/${market.id}`,
+                            );
+                            void refresh().catch((e) =>
+                              setError(errorMessage(e)),
+                            );
+                          }}
+                          view={path.endsWith("/drafts") ? "drafts" : "create"}
+                          onView={(view) => {
+                            haptic("selection");
+                            navigate(
+                              view === "drafts" ? "/studio/drafts" : "/studio",
+                              launchTo,
+                            );
+                          }}
+                          teams={teams}
+                          launchTo={launchTo}
+                        />
+                      )}{" "}
+                      {teams && path === "/teams" && (
+                        <Teams
+                          client={client}
+                          onOpen={(id) => navigate(`/teams/${id}`)}
+                          onNotice={setNotice}
+                        />
+                      )}
+                      {joining && (
+                        <JoinWorkspace
+                          client={client}
+                          onJoined={(workspace) => {
+                            setNotice(`You joined ${workspace.name}.`);
+                            navigate(`/teams/${workspace.id}`);
+                          }}
+                          onTeams={() => navigate("/teams")}
+                        />
+                      )}
+                      {team && (
+                        <WorkspaceView
+                          client={client}
+                          workspaceId={team[1]}
+                          tab={
+                            (team[2] as WorkspaceTab | undefined) ?? "markets"
+                          }
+                          marketId={team[3]}
+                          marketView={team[4] ? "rules" : "forecast"}
+                          navigate={navigate}
+                          onNotice={setNotice}
+                          onDraft={() => navigate("/studio", team[1])}
+                          onLeft={() => {
+                            setNotice("You left the workspace.");
+                            navigate("/teams");
+                          }}
+                          shareOrigin={capabilities?.shareOrigin ?? null}
+                        />
+                      )}
+                      {about && (
+                        <About
+                          canInstall={!!install}
+                          onInstall={installApp}
+                          onBack={() => navigate("/settings")}
+                        />
+                      )}{" "}
+                      {!marketId &&
+                        !studio &&
+                        !about &&
+                        !teamsPage &&
+                        !nav.some((n) => n.path === path) && (
+                          <EmptyState
+                            title="Page not found"
+                            text="Return to the market explorer to keep forecasting."
+                            action={
+                              <button
+                                className="primary-button"
+                                onClick={() => navigate("/markets")}
+                              >
+                                Browse markets
+                              </button>
+                            }
+                          />
+                        )}
+                    </div>
+                  </AnimatePresence>
                 </motion.div>
               </AnimatePresence>
             )}
@@ -831,10 +966,15 @@ function Toast({
           <motion.div
             role="status"
             className="toast liquid-material"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            transition={{ duration: 0.2, ease }}
+            initial={{ opacity: 0, y: 28, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{
+              opacity: 0,
+              y: 16,
+              scale: 0.98,
+              transition: { duration: 0.16, ease },
+            }}
+            transition={popSpring}
           >
             <Check size={18} />
             <span>{notice}</span>

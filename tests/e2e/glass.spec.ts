@@ -6,7 +6,7 @@ test("opaque surfaces, navigation lifecycle and reduced motion keep controls usa
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/markets");
-  await expect(page.locator(".page h1")).toBeVisible();
+  await expect(page.locator(".route-surface:not([inert]) .page h1")).toBeVisible();
   await expect(page.locator('filter[id^="lg-filter-"]')).toHaveCount(0);
   for (let i = 0; i < 3; i++) {
     const navigation = isMobile

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { PeakcastClient } from "../../shared/client.js";
 import type { Leaderboard } from "../../shared/types.js";
 import {
@@ -8,8 +8,18 @@ import {
   errorMessage,
   formatCredits,
 } from "../ui.js";
-import { itemMotion, listMotion } from "../motion.js";
+import { ease } from "../motion.js";
+import { rowEnter } from "../motion.js";
 import { haptic } from "../haptics.js";
+import "./trading-motion.css";
+
+/** The board's states (loading, each tab, empty) cross-fade instead of swapping in a single frame. */
+const swap = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0, transition: { duration: 0.12 } },
+  transition: { duration: 0.2, ease },
+} as const;
 
 const tabs = [
   {
@@ -132,57 +142,65 @@ export function LeaderboardView({
               <motion.span
                 className="tab-selection"
                 layoutId="leaderboard-tab"
+                transition={{ type: "spring", stiffness: 520, damping: 40 }}
               />
             )}
             {item.label}
           </button>
         ))}
       </div>
-      {error && !board ? (
-        <div role="alert" className="form-error inline-error">
-          <p>{error}</p>
-          <button
-            className="text-button"
-            onClick={() => setAttempt(attempt + 1)}
+      <AnimatePresence mode="popLayout" initial={false}>
+        {error && !board ? (
+          <motion.div
+            key="error"
+            role="alert"
+            className="form-error inline-error"
+            {...swap}
           >
-            Try again
-          </button>
-        </div>
-      ) : !board ? (
-        <div className="activity-list">
-          <SkeletonRows label="Loading leaderboard…" count={4} />
-        </div>
-      ) : rows.length ? (
-        <motion.ol
-          key={tab}
-          className="activity-list rank-list"
-          variants={listMotion}
-          initial="hidden"
-          animate="show"
-        >
-          {rows.map((row) => (
-            <motion.li
-              className={`activity-row ${row.you ? "rank-you" : ""}`}
-              key={row.rank}
-              variants={itemMotion}
+            <p>{error}</p>
+            <button
+              className="text-button"
+              onClick={() => setAttempt(attempt + 1)}
             >
-              <span className="soft-icon rank-badge" data-rank={row.rank}>
-                {row.rank}
-              </span>
-              <div>
-                <strong>
-                  {row.trader}
-                  {row.you && <span className="small-pill">You</span>}
-                </strong>
-                <span>{row.detail}</span>
-              </div>
-              <strong className={row.tone}>{row.value}</strong>
-            </motion.li>
-          ))}
-        </motion.ol>
-      ) : (
-        <EmptyState title={current.empty} text={current.hint} />
-      )}
+              Try again
+            </button>
+          </motion.div>
+        ) : !board ? (
+          <motion.div key="loading" className="activity-list" {...swap}>
+            <SkeletonRows label="Loading leaderboard…" count={4} />
+          </motion.div>
+        ) : rows.length ? (
+          <motion.ol
+            key={tab}
+            className="activity-list rank-list"
+            exit={swap.exit}
+          >
+            {rows.map((row, index) => (
+              <motion.li
+                className={`activity-row ${row.you ? "rank-you" : ""}`}
+                key={row.rank}
+                {...rowEnter(index)}
+              >
+                <span className="soft-icon rank-badge" data-rank={row.rank}>
+                  {row.rank}
+                </span>
+                <div>
+                  <strong>
+                    {row.trader}
+                    {row.you && <span className="small-pill">You</span>}
+                  </strong>
+                  <span>{row.detail}</span>
+                </div>
+                <strong className={row.tone}>{row.value}</strong>
+              </motion.li>
+            ))}
+          </motion.ol>
+        ) : (
+          <motion.div key={`empty-${tab}`} {...swap}>
+            <EmptyState title={current.empty} text={current.hint} />
+          </motion.div>
+        )}
+      </AnimatePresence>
       <p className="fine-print">
         Profit is balance plus open positions at the current price, minus the
         starting credits and any daily bonuses. Creator ranking uses fees

@@ -29,10 +29,21 @@ const categories = [
   "Climate",
   "World",
 ];
-import { motion } from "motion/react";
-import { ease, itemMotion, listMotion } from "../motion.js";
+import { AnimatePresence, motion } from "motion/react";
+import { AnimatedNumber, ease } from "../motion.js";
+import { rowEnter } from "../motion.js";
 import { haptic } from "../haptics.js";
 import { isAndroidApp } from "../platform.js";
+import "./trading-motion.css";
+
+const cents = (value: number) => `${(value * 100).toFixed(1)}¢`;
+const whole = (value: number) => String(Math.round(value));
+const cardExit = { opacity: 0, scale: 0.96, transition: { duration: 0.14 } };
+const emptyEnter = {
+  initial: { opacity: 0, y: 6 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.2, ease },
+} as const;
 
 // ponytail: module flag, so the card cascade plays once per app launch, not on every tab return.
 let gridShown = false;
@@ -110,7 +121,13 @@ export function MarketExplorer({
       <div className="overview-row">
         {/* The Android app opens straight into the list, like a native finance app. */}
         {featured && !isAndroidApp && (
-          <button className="featured-market" onClick={() => onOpen(featured)}>
+          <motion.button
+            className="featured-market"
+            onClick={() => onOpen(featured)}
+            initial={stagger ? { opacity: 0, y: 10, scale: 0.985 } : false}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.4, ease }}
+          >
             <div className="feature-content">
               <span className="feature-kicker">
                 <span className="feature-dot" />
@@ -126,7 +143,7 @@ export function MarketExplorer({
             </div>
             <div className="feature-art" aria-hidden="true">
               <div className="feature-probability">
-                {percent(featured.probability)}
+                <AnimatedNumber value={featured.probability} format={percent} />
                 <small>chance of YES</small>
               </div>
             </div>
@@ -144,9 +161,15 @@ export function MarketExplorer({
                 <small>Volume in credits</small>
               </span>
             </div>
-          </button>
+          </motion.button>
         )}
-        <section className="market-radar" aria-label="Closing next">
+        <motion.section
+          className="market-radar"
+          aria-label="Closing next"
+          initial={stagger ? { opacity: 0, y: 10 } : false}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.06, ease }}
+        >
           <div className="radar-heading">
             <h2>Closing next</h2>
             <Clock3 size={17} />
@@ -160,7 +183,11 @@ export function MarketExplorer({
                     {date(market.closesAt)}
                   </time>
                   <strong>
-                    {percent(market.probability)} <small>YES</small>
+                    <AnimatedNumber
+                      value={market.probability}
+                      format={percent}
+                    />{" "}
+                    <small>YES</small>
                   </strong>
                 </span>
               </button>
@@ -171,13 +198,15 @@ export function MarketExplorer({
               question.
             </p>
           )}
-        </section>
+        </motion.section>
       </div>
 
       <div className="market-toolbar">
         <div className="section-title">
           <h2>Explore markets</h2>
-          <span className="count-pill">{filtered.length}</span>
+          <span className="count-pill">
+            <AnimatedNumber value={filtered.length} format={whole} />
+          </span>
         </div>
         <div className="market-controls">
           <label className="search-field">
@@ -236,7 +265,7 @@ export function MarketExplorer({
               <motion.span
                 className="tab-selection"
                 layoutId="market-category"
-                transition={{ duration: 0.24, ease }}
+                transition={{ type: "spring", stiffness: 520, damping: 40 }}
               />
             )}
             {item === "All markets" && <LayoutGrid size={14} />}
@@ -245,40 +274,41 @@ export function MarketExplorer({
         ))}
       </div>
       {ordered.length ? (
-        <motion.div
-          className="market-grid"
-          // Later visits fade the cards together; filtering still animates new cards in.
-          variants={stagger ? listMotion : undefined}
-          initial="hidden"
-          animate="show"
-        >
-          {ordered
-            .slice((currentPage - 1) * 6, currentPage * 6)
-            .map((market) => (
-              <MarketCard
-                key={market.id}
-                market={market}
-                onOpen={() => onOpen(market)}
-              />
-            ))}
+        <motion.div className="market-grid">
+          {/* Filter, sort, search and paging: leaving cards fade out of flow while the rest glide to their new slots. */}
+          <AnimatePresence mode="popLayout">
+            {ordered
+              .slice((currentPage - 1) * 6, currentPage * 6)
+              .map((market, index) => (
+                <MarketCard
+                  key={market.id}
+                  // The first launch cascades the cards; later visits and filtering fade them in together.
+                  index={stagger ? index : 0}
+                  market={market}
+                  onOpen={() => onOpen(market)}
+                />
+              ))}
+          </AnimatePresence>
         </motion.div>
       ) : (
-        <EmptyState
-          title="No markets match"
-          text="Try a different search or category."
-          action={
-            <button
-              className="secondary-button"
-              onClick={() => {
-                setSearch("");
-                setCategory("All markets");
-                setPage(1);
-              }}
-            >
-              Clear filters
-            </button>
-          }
-        />
+        <motion.div {...emptyEnter}>
+          <EmptyState
+            title="No markets match"
+            text="Try a different search or category."
+            action={
+              <button
+                className="secondary-button"
+                onClick={() => {
+                  setSearch("");
+                  setCategory("All markets");
+                  setPage(1);
+                }}
+              >
+                Clear filters
+              </button>
+            }
+          />
+        </motion.div>
       )}
       {pages > 1 && (
         <nav className="market-pagination" aria-label="Market pages">
@@ -309,16 +339,19 @@ export function MarketExplorer({
 
 function MarketCard({
   market,
+  index,
   onOpen,
 }: {
   market: Market;
+  index: number;
   onOpen: () => void;
 }) {
   const move = moveLabel(market.change24h);
   return (
     <motion.button
-      layout="position"
-      variants={itemMotion}
+      layout
+      {...rowEnter(index)}
+      exit={cardExit}
       whileHover={{ y: -2 }}
       whileTap={{ scale: 0.98 }}
       transition={{ duration: 0.18, ease }}
@@ -335,7 +368,9 @@ function MarketCard({
       </div>
       <h3>{market.title}</h3>
       <div className="market-probability">
-        <strong>{percent(market.probability)}</strong>
+        <strong>
+          <AnimatedNumber value={market.probability} format={percent} />
+        </strong>
         <span>
           <span className="probability-label">chance of </span>YES
         </span>
@@ -343,14 +378,23 @@ function MarketCard({
         <span className="market-open">{statusLabel(market)}</span>
       </div>
       <div className="probability-track">
-        <span style={{ width: percent(market.probability) }} />
+        <span
+          className="pc-bar"
+          style={{ transform: `scaleX(${market.probability})` }}
+        />
       </div>
       <div className="binary-prices">
         <span>
-          Yes <strong>{(market.probability * 100).toFixed(1)}¢</strong>
+          Yes{" "}
+          <strong>
+            <AnimatedNumber value={market.probability} format={cents} />
+          </strong>
         </span>
         <span>
-          No <strong>{((1 - market.probability) * 100).toFixed(1)}¢</strong>
+          No{" "}
+          <strong>
+            <AnimatedNumber value={1 - market.probability} format={cents} />
+          </strong>
         </span>
       </div>
       <div className="market-card-footer">

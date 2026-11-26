@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowDownLeft,
   ArrowRight,
@@ -30,8 +30,10 @@ import {
   errorMessage,
   statusLabel,
 } from "../ui.js";
-import { AnimatedNumber, itemMotion, listMotion } from "../motion.js";
+import { AnimatedNumber, ease } from "../motion.js";
 import { haptic } from "../haptics.js";
+import { rowEnter, rowExit } from "../motion.js";
+import "./trading-motion.css";
 import {
   AccuracyCard,
   DailyBonusCard,
@@ -40,7 +42,19 @@ import {
 
 const signedCredits = (micros: number) =>
   `${micros > 0 ? "+" : ""}${formatCredits(micros)}`;
-const reveal = { variants: listMotion, initial: "hidden", animate: "show" };
+const creditsLabel = (micros: number) => `${formatCredits(micros)} credits`;
+/** Empty states fade up when their tab opens, like the lists do. */
+function TabEmpty(props: Parameters<typeof EmptyState>[0]) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2, ease }}
+    >
+      <EmptyState {...props} />
+    </motion.div>
+  );
+}
 
 interface AndroidWindow {
   PeakcastAndroid?: {
@@ -209,7 +223,11 @@ export function PortfolioView({
             }}
           >
             {tab === item.id && (
-              <motion.span className="tab-selection" layoutId="portfolio-tab" />
+              <motion.span
+                className="tab-selection"
+                layoutId="portfolio-tab"
+                transition={{ type: "spring", stiffness: 520, damping: 40 }}
+              />
             )}
             {item.label}
             {item.count !== undefined && (
@@ -223,52 +241,62 @@ export function PortfolioView({
       </div>
       {tab === "positions" &&
         (portfolio?.positions.length ? (
-          <motion.div className="positions-list" {...reveal}>
-            {portfolio.positions.map((position) => (
-              <motion.button
-                variants={itemMotion}
-                className="position-row"
-                key={`${position.marketId}-${position.outcome}`}
-                onClick={() => onOpen(position.marketId)}
-              >
-                <span
-                  className={`outcome-label ${position.outcome.toLowerCase()}`}
+          <div className="positions-list">
+            {/* A position sold to zero fades out; the rows below close the gap. */}
+            <AnimatePresence mode="popLayout">
+              {portfolio.positions.map((position, index) => (
+                <motion.button
+                  {...rowEnter(index)}
+                  layout="position"
+                  exit={rowExit}
+                  className="position-row"
+                  key={`${position.marketId}-${position.outcome}`}
+                  onClick={() => onOpen(position.marketId)}
                 >
-                  {position.outcome}
-                </span>
-                <div>
-                  <strong>{position.title}</strong>
-                  <span>
-                    {position.shares} shares · Average cost{" "}
-                    {(
-                      (position.costMicros / MICRO / position.shares) *
-                      100
-                    ).toFixed(2)}
-                    ¢
-                  </span>
-                </div>
-                <div className="position-value">
-                  <strong>{formatCredits(position.valueMicros)} credits</strong>
                   <span
-                    className={
-                      position.valueMicros >= position.costMicros
-                        ? "positive"
-                        : "negative"
-                    }
+                    className={`outcome-label ${position.outcome.toLowerCase()}`}
                   >
-                    {position.valueMicros > position.costMicros ? "+" : ""}
-                    {formatCredits(
-                      position.valueMicros - position.costMicros,
-                    )}{" "}
-                    P&L
+                    {position.outcome}
                   </span>
-                </div>
-                <ChevronRight size={16} />
-              </motion.button>
-            ))}
-          </motion.div>
+                  <div>
+                    <strong>{position.title}</strong>
+                    <span>
+                      {position.shares} shares · Average cost{" "}
+                      {(
+                        (position.costMicros / MICRO / position.shares) *
+                        100
+                      ).toFixed(2)}
+                      ¢
+                    </span>
+                  </div>
+                  <div className="position-value">
+                    <strong>
+                      <AnimatedNumber
+                        value={position.valueMicros}
+                        format={creditsLabel}
+                      />
+                    </strong>
+                    <span
+                      className={
+                        position.valueMicros >= position.costMicros
+                          ? "positive"
+                          : "negative"
+                      }
+                    >
+                      <AnimatedNumber
+                        value={position.valueMicros - position.costMicros}
+                        format={signedCredits}
+                      />{" "}
+                      P&L
+                    </span>
+                  </div>
+                  <ChevronRight size={16} />
+                </motion.button>
+              ))}
+            </AnimatePresence>
+          </div>
         ) : (
-          <EmptyState
+          <TabEmpty
             title="Your first forecast is waiting"
             text="Buy YES or NO shares in a sample market to start building your demo portfolio."
             action={
@@ -280,10 +308,10 @@ export function PortfolioView({
         ))}
       {tab === "activity" &&
         (portfolio?.trades.length ? (
-          <motion.div className="activity-list" {...reveal}>
-            {portfolio.trades.map((trade) => (
+          <motion.div className="activity-list">
+            {portfolio.trades.map((trade, index) => (
               <motion.button
-                variants={itemMotion}
+                {...rowEnter(index)}
                 className="activity-row"
                 key={trade.id}
                 onClick={() => onOpen(trade.marketId)}
@@ -314,16 +342,20 @@ export function PortfolioView({
             ))}
           </motion.div>
         ) : (
-          <EmptyState
+          <TabEmpty
             title="No trades yet"
             text="Your completed demo trades will appear here."
           />
         ))}
       {tab === "orders" &&
         (portfolio?.orders?.length ? (
-          <div className="activity-list" aria-label="Limit orders">
-            {portfolio.orders.map((order) => (
-              <div className="activity-row" key={order.id}>
+          <motion.div className="activity-list" aria-label="Limit orders">
+            {portfolio.orders.map((order, index) => (
+              <motion.div
+                className="activity-row"
+                key={order.id}
+                {...rowEnter(index)}
+              >
                 <span
                   className={`outcome-label ${order.outcome.toLowerCase()}`}
                 >
@@ -341,32 +373,46 @@ export function PortfolioView({
                         : `Cancelled${order.note ? `: ${order.note}` : ""}`}
                   </span>
                 </div>
-                {order.status === "open" ? (
-                  <button
-                    className="text-button"
-                    onClick={() => {
-                      setOrderError("");
-                      void client
-                        .cancelOrder(order.id)
-                        .then(onRefresh)
-                        .catch((error) => setOrderError(errorMessage(error)));
-                    }}
-                  >
-                    Cancel
-                  </button>
-                ) : (
-                  <button
-                    className="text-button"
-                    onClick={() => onOpen(order.marketId)}
-                  >
-                    View
-                  </button>
-                )}
-              </div>
+                {/* Cancelling swaps the button in place rather than blinking. */}
+                <AnimatePresence mode="popLayout" initial={false}>
+                  {order.status === "open" ? (
+                    <motion.button
+                      key="cancel"
+                      className="text-button"
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      onClick={() => {
+                        setOrderError("");
+                        void client
+                          .cancelOrder(order.id)
+                          .then(() => {
+                            haptic("selection");
+                            return onRefresh();
+                          })
+                          .catch((error) => {
+                            haptic("warning");
+                            setOrderError(errorMessage(error));
+                          });
+                      }}
+                    >
+                      Cancel
+                    </motion.button>
+                  ) : (
+                    <motion.button
+                      key="view"
+                      className="text-button"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      onClick={() => onOpen(order.marketId)}
+                    >
+                      View
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         ) : (
-          <EmptyState
+          <TabEmpty
             title="No limit orders"
             text="Place a limit order from any open market to buy or sell at your price."
           />
@@ -378,9 +424,10 @@ export function PortfolioView({
       )}
       {tab === "watchlist" &&
         (watched.length ? (
-          <div className="positions-list">
-            {watched.map((market) => (
-              <button
+          <motion.div className="positions-list">
+            {watched.map((market, index) => (
+              <motion.button
+                {...rowEnter(index)}
                 className="position-row"
                 key={market.id}
                 onClick={() => onOpen(market.id)}
@@ -395,11 +442,11 @@ export function PortfolioView({
                   </span>
                 </div>
                 <ChevronRight size={16} />
-              </button>
+              </motion.button>
             ))}
-          </div>
+          </motion.div>
         ) : (
-          <EmptyState
+          <TabEmpty
             title="Nothing watched yet"
             text="Tap Watch on a market to keep it here."
           />
@@ -420,9 +467,10 @@ export function PortfolioView({
         </div>
       )}
       {tab === "activity" && !!statement.length && (
-        <div className="activity-list" aria-label="Credit statement">
-          {statement.map((entry) => (
-            <button
+        <motion.div className="activity-list" aria-label="Credit statement">
+          {statement.map((entry, index) => (
+            <motion.button
+              {...rowEnter(index)}
               className="activity-row"
               key={entry.id}
               disabled={!entry.marketId}
@@ -447,15 +495,16 @@ export function PortfolioView({
                 {entry.amountMicros < 0 ? "−" : "+"}
                 {formatCredits(Math.abs(entry.amountMicros))} credits
               </strong>
-            </button>
+            </motion.button>
           ))}
-        </div>
+        </motion.div>
       )}
       {tab === "created" &&
         (portfolio?.created?.length ? (
-          <div className="positions-list">
-            {portfolio.created.map((market) => (
-              <button
+          <motion.div className="positions-list">
+            {portfolio.created.map((market, index) => (
+              <motion.button
+                {...rowEnter(index)}
                 className="position-row"
                 key={market.marketId}
                 onClick={() => onOpen(market.marketId)}
@@ -475,11 +524,11 @@ export function PortfolioView({
                   <span className="positive">Creator fees earned</span>
                 </div>
                 <ChevronRight size={16} />
-              </button>
+              </motion.button>
             ))}
-          </div>
+          </motion.div>
         ) : (
-          <EmptyState
+          <TabEmpty
             title="Launch your own market"
             text="Turn a saved draft into a live market in Draft Studio. You stake 500 demo credits and earn 1% of every trade."
           />

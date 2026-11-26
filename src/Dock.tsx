@@ -1,5 +1,21 @@
-import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion, type Variants } from "motion/react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+import {
+  AnimatePresence,
+  motion,
+  useMotionValue,
+  useReducedMotion,
+  useSpring,
+  useTransform,
+  useVelocity,
+  type Variants,
+} from "motion/react";
 import { ChevronRight, FilePen, Files, Plus, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { PeakcastClient } from "../shared/client.js";
@@ -130,25 +146,27 @@ export function MobileDock({
       : []),
   ];
 
-  const tab = ({ path, label, icon: Icon }: DockItem) => (
+  function go(path: string) {
+    if (open) choose(path);
+    else onNavigate(path);
+  }
+
+  const glass = useDockGlass(items, section, go);
+
+  const tab = ({ path, label, icon: Icon }: DockItem, index: number) => (
     <button
       key={path}
+      ref={(node) => {
+        glass.tabs.current[index] = node;
+      }}
       onClick={() => {
         if (section !== label) haptic("selection");
-        if (open) choose(path);
-        else onNavigate(path);
+        go(path);
       }}
       aria-current={section === label ? "page" : undefined}
       className={section === label ? "selected" : ""}
+      data-under={glass.under === index || undefined}
     >
-      {section === label && (
-        <motion.span
-          className="dock-selection"
-          layoutId="dock-selection"
-          // Near-critical spring: glides and settles without a visible bounce.
-          transition={spring}
-        />
-      )}
       <Icon size={21} />
       <span>{label}</span>
     </button>
@@ -224,8 +242,22 @@ export function MobileDock({
           </motion.div>
         )}
       </AnimatePresence>
-      <nav className="mobile-dock" aria-label="Quick navigation">
-        {items.slice(0, 2).map(tab)}
+      <nav
+        ref={glass.nav}
+        className="mobile-dock"
+        aria-label="Quick navigation"
+        data-dragging={glass.under !== null || undefined}
+        {...glass.handlers}
+      >
+        {/* One glass pill for the whole dock: it glides to the current tab and follows a drag. */}
+        <motion.span
+          className="dock-selection"
+          aria-hidden="true"
+          style={glass.style}
+          animate={{ opacity: glass.visible ? 1 : 0 }}
+          transition={{ duration: 0.15, ease }}
+        />
+        {items.slice(0, 2).map((item, index) => tab(item, index))}
         <div className="dock-fab-slot">
           <motion.button
             ref={fab}
@@ -247,8 +279,194 @@ export function MobileDock({
             </motion.span>
           </motion.button>
         </div>
-        {items.slice(2).map(tab)}
+        {items.slice(2).map((item, index) => tab(item, index + 2))}
       </nav>
     </>
   );
+}
+
+interface Slot {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+interface Gesture {
+  id: number;
+  startX: number;
+  startY: number;
+  active: boolean;
+  /** Dock's left edge and tab boxes, read once when the drag starts. */
+  origin: number;
+  slots: Slot[];
+}
+
+const nearest = (slots: Slot[], left: number) =>
+  slots.reduce(
+    (best, slot, index) =>
+      Math.abs(slot.left - left) < Math.abs(slots[best].left - left)
+        ? index
+        : best,
+    0,
+  );
+
+/**
+ * Liquid-glass selection: glides to the current tab, and a horizontal drag
+ * anywhere on the dock (but the +) pulls it under the finger, stretching with
+ * speed; release snaps to the nearest tab and opens it. Taps stay plain clicks.
+ */
+function useDockGlass(
+  items: DockItem[],
+  section: string,
+  go: (path: string) => void,
+) {
+  const reduce = useReducedMotion();
+  const nav = useRef<HTMLElement>(null);
+  const tabs = useRef<(HTMLButtonElement | null)[]>([]);
+  const gesture = useRef<Gesture | null>(null);
+  const dragged = useRef(false);
+  const shown = useRef(false);
+  // Index of the tab under the glass while dragging; null when not dragging.
+  const [under, setUnder] = useState<number | null>(null);
+  const underRef = useRef<number | null>(null);
+  const selected = items.findIndex((item) => item.label === section);
+  const visible = selected >= 0 || under !== null;
+
+  const target = useMotionValue(0);
+  // Near-critical spring: glides and settles without a visible bounce.
+  const x = useSpring(target, { stiffness: 520, damping: 40 });
+  const top = useMotionValue(0);
+  const width = useMotionValue(0);
+  const height = useMotionValue(0);
+  const velocity = useVelocity(x);
+  // Stretches along the direction of travel and thins, like a drop of glass.
+  const scaleX = useTransform(velocity, [-2400, 0, 2400], [1.2, 1, 1.2]);
+  const scaleY = useTransform(velocity, [-2400, 0, 2400], [0.88, 1, 0.88]);
+
+  const measure = (): Slot[] =>
+    tabs.current.map((node) => ({
+      left: node?.offsetLeft ?? 0,
+      top: node?.offsetTop ?? 0,
+      width: node?.offsetWidth ?? 0,
+      height: node?.offsetHeight ?? 0,
+    }));
+  function place(slot: Slot, instant: boolean) {
+    top.set(slot.top);
+    width.set(slot.width);
+    height.set(slot.height);
+    target.set(slot.left);
+    if (instant || reduce) x.jump(slot.left);
+  }
+
+  // Rest on the selected tab; re-measure when the dock resizes.
+  useLayoutEffect(() => {
+    if (under !== null || selected < 0) {
+      shown.current = under !== null;
+      return;
+    }
+    // Appearing from nothing (e.g. from Draft studio) lands in place instead of gliding.
+    place(measure()[selected], !shown.current);
+    shown.current = true;
+    const observer = new ResizeObserver(() =>
+      place(measure()[selected], true),
+    );
+    if (nav.current) observer.observe(nav.current);
+    return () => observer.disconnect();
+  }, [selected, under, reduce]);
+
+  function follow(g: Gesture, clientX: number) {
+    const first = g.slots[0];
+    const last = g.slots[g.slots.length - 1];
+    const left = Math.min(
+      Math.max(clientX - g.origin - first.width / 2, first.left - 8),
+      last.left + 8,
+    );
+    target.set(left);
+    if (reduce) x.jump(left);
+    const index = nearest(g.slots, left);
+    if (index !== underRef.current) haptic("selection");
+    underRef.current = index;
+    setUnder(index);
+  }
+  function end(g: Gesture, commit: boolean) {
+    gesture.current = null;
+    if (!g.active) return;
+    const index = nearest(g.slots, target.get());
+    underRef.current = null;
+    setUnder(null);
+    // The click that may follow this release is swallowed; later ones are not.
+    setTimeout(() => (dragged.current = false));
+    if (!commit || index === selected) {
+      if (selected >= 0) place(g.slots[selected], false);
+      return;
+    }
+    place(g.slots[index], false);
+    go(items[index].path);
+  }
+
+  const handlers = {
+    onPointerDown(event: ReactPointerEvent<HTMLElement>) {
+      if (
+        !event.isPrimary ||
+        event.button !== 0 ||
+        (event.target as Element).closest(".dock-fab-slot")
+      )
+        return;
+      dragged.current = false;
+      gesture.current = {
+        id: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        active: false,
+        origin: event.currentTarget.getBoundingClientRect().left,
+        slots: measure(),
+      };
+    },
+    onPointerMove(event: ReactPointerEvent<HTMLElement>) {
+      const g = gesture.current;
+      if (!g || g.id !== event.pointerId) return;
+      if (!g.active) {
+        const dx = Math.abs(event.clientX - g.startX);
+        const dy = Math.abs(event.clientY - g.startY);
+        if (dx < 8 || dx < dy) return;
+        g.active = true;
+        dragged.current = true;
+        underRef.current = selected >= 0 ? selected : null;
+        event.currentTarget.setPointerCapture(event.pointerId);
+        top.set(g.slots[0].top);
+        width.set(g.slots[0].width);
+        height.set(g.slots[0].height);
+        // Starting with no tab selected: appear under the finger, not glide in.
+        if (selected < 0)
+          x.jump(event.clientX - g.origin - g.slots[0].width / 2);
+      }
+      follow(g, event.clientX);
+    },
+    onPointerUp(event: ReactPointerEvent<HTMLElement>) {
+      const g = gesture.current;
+      if (g?.id === event.pointerId) end(g, true);
+    },
+    onPointerCancel(event: ReactPointerEvent<HTMLElement>) {
+      const g = gesture.current;
+      if (g?.id === event.pointerId) end(g, false);
+    },
+    // A drag ends on some button; that click must not also navigate.
+    onClickCapture(event: ReactMouseEvent<HTMLElement>) {
+      if (!dragged.current) return;
+      dragged.current = false;
+      event.preventDefault();
+      event.stopPropagation();
+    },
+  };
+
+  return {
+    nav,
+    tabs,
+    under,
+    visible,
+    handlers,
+    style: reduce
+      ? { x, top, width, height }
+      : { x, top, width, height, scaleX, scaleY },
+  };
 }

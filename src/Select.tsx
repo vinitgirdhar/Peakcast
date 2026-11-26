@@ -1,5 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
+import { AnimatePresence, motion, useIsPresent } from "motion/react";
+import { haptic } from "./haptics.js";
 export interface SelectOption {
   value: string;
   label: string;
@@ -79,38 +81,88 @@ export function Select({
         </span>
         <ChevronDown size={16} />
       </button>
-      {open && (
-        <div
-          id={listId}
-          role="listbox"
-          aria-label={label}
-          className="select-options"
-        >
-          {options.map((option) => (
-            <button
-              type="button"
-              role="option"
-              data-value={option.value}
-              id={`${listId}-${option.value}`}
-              tabIndex={-1}
-              onMouseDown={(event) => event.preventDefault()}
-              aria-selected={option.value === value}
-              key={option.value}
-              disabled={option.disabled}
-              onClick={() => {
-                onChange(option.value);
-                setOpen(false);
-                root.current
-                  ?.querySelector<HTMLButtonElement>('[role="combobox"]')
-                  ?.focus();
-              }}
-            >
-              {option.label}
-              {option.value === value && <Check size={16} />}
-            </button>
-          ))}
-        </div>
-      )}
+      <AnimatePresence>
+        {open && (
+          <Options
+            listId={listId}
+            label={label}
+            value={value}
+            options={options}
+            onPick={(next) => {
+              if (next !== value) haptic("selection");
+              onChange(next);
+              setOpen(false);
+              root.current
+                ?.querySelector<HTMLButtonElement>('[role="combobox"]')
+                ?.focus();
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+/** The open list: springs in, and while it fades out it drops its roles and ids so it never duplicates the next list. */
+function Options({
+  listId,
+  label,
+  value,
+  options,
+  onPick,
+}: {
+  listId: string;
+  label: string;
+  value: string;
+  options: SelectOption[];
+  onPick: (value: string) => void;
+}) {
+  const present = useIsPresent();
+  // The highlight follows the pointer and rests on the selected option.
+  const [hovered, setHovered] = useState<string | null>(null);
+  const lit = hovered ?? value;
+  return (
+    <motion.div
+      id={present ? listId : undefined}
+      role={present ? "listbox" : undefined}
+      aria-label={present ? label : undefined}
+      aria-hidden={present ? undefined : true}
+      className="select-options"
+      style={{
+        transformOrigin: "top",
+        pointerEvents: present ? undefined : "none",
+      }}
+      initial={{ opacity: 0, y: -6, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -4, scale: 0.98, transition: { duration: 0.12 } }}
+      transition={{ type: "spring", stiffness: 560, damping: 36 }}
+      onPointerLeave={() => setHovered(null)}
+    >
+      {options.map((option) => (
+        <button
+          type="button"
+          role={present ? "option" : undefined}
+          data-value={present ? option.value : undefined}
+          id={present ? `${listId}-${option.value}` : undefined}
+          tabIndex={-1}
+          onMouseDown={(event) => event.preventDefault()}
+          onPointerEnter={() => !option.disabled && setHovered(option.value)}
+          aria-selected={present ? option.value === value : undefined}
+          key={option.value}
+          disabled={option.disabled}
+          onClick={() => onPick(option.value)}
+        >
+          {option.value === lit && (
+            <motion.span
+              className="select-highlight"
+              layoutId={`${listId}-highlight`}
+              transition={{ type: "spring", stiffness: 600, damping: 40 }}
+            />
+          )}
+          {option.label}
+          {option.value === value && <Check size={16} />}
+        </button>
+      ))}
+    </motion.div>
   );
 }

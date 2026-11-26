@@ -71,8 +71,8 @@
   border-radius: 999px;
   background: var(--border);
   transition:
-    width 0.25s var(--spring),
-    background 0.25s;
+    width 0.42s cubic-bezier(0.34, 1.45, 0.64, 1),
+    background-color 0.3s;
 }
 .onboarding-dots span.active {
   width: 20px;
@@ -273,10 +273,18 @@
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 1px 3px #0003;
-  transition: translate 0.22s var(--spring);
+  transform-origin: left center;
+  transition:
+    translate 0.34s cubic-bezier(0.34, 1.56, 0.64, 1),
+    scale 0.18s var(--spring);
 }
 .switch[aria-checked="true"]::after {
   translate: 20px 0;
+  transform-origin: right center;
+}
+/* The thumb stretches toward where it is about to go while pressed. */
+.switch:active:not(:disabled)::after {
+  scale: 1.2 1;
 }
 .account-links {
   display: flex;
@@ -293,6 +301,34 @@
   .onboarding-dots span,
   .danger-button {
     transition: none;
+  }
+}
+/* First open: the card settles in, then the step's lines rise (Onboarding.tsx). */
+@media (prefers-reduced-motion: no-preference) {
+  .onboarding-card {
+    animation: onboarding-card-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  }
+  .onboarding-top {
+    animation: onboarding-fade 0.5s 0.1s ease-out backwards;
+  }
+  .onboarding-icon > svg {
+    animation: onboarding-float 3.2s 0.6s ease-in-out infinite;
+  }
+  @keyframes onboarding-card-in {
+    from {
+      opacity: 0;
+      transform: translateY(18px) scale(0.98);
+    }
+  }
+  @keyframes onboarding-fade {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes onboarding-float {
+    50% {
+      transform: translateY(-3px) rotate(-4deg);
+    }
   }
 }
 .account-confirm {

@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { PeakcastClient } from "../../shared/client.js";
 import type { Account } from "../../shared/types.js";
 import { errorMessage, formatCredits } from "../ui.js";
+import { haptic } from "../haptics.js";
 import "../onboarding.css";
 
 interface AccountSectionProps {
@@ -28,9 +30,11 @@ export function AccountSection({ token, onDeleted }: AccountSectionProps) {
   async function togglePlayground() {
     if (!account) return;
     setNotice("");
+    haptic("selection");
     try {
       setAccount(await client.setPlayground(!account.playground));
     } catch (e) {
+      haptic("warning");
       setNotice(errorMessage(e));
     }
   }
@@ -83,26 +87,47 @@ export function AccountSection({ token, onDeleted }: AccountSectionProps) {
             Removes your profile and personal data. This can't be undone.
           </span>
         </div>
-        {confirming ? (
-          <span className="account-confirm">
-            <button
-              className="secondary-button"
-              onClick={() => setConfirming(false)}
+        <AnimatePresence mode="popLayout" initial={false}>
+          {confirming ? (
+            <motion.span
+              key="confirm"
+              className="account-confirm"
+              initial={{ opacity: 0, scale: 0.92, x: 12 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 460, damping: 30 }}
             >
-              Cancel
-            </button>
-            <button className="danger-button" disabled={busy} onClick={remove}>
-              {busy ? "Deleting…" : "Delete"}
-            </button>
-          </span>
-        ) : (
-          <button
-            className="secondary-button"
-            onClick={() => setConfirming(true)}
-          >
-            Delete…
-          </button>
-        )}
+              <button
+                className="secondary-button"
+                onClick={() => setConfirming(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="danger-button"
+                disabled={busy}
+                onClick={remove}
+              >
+                {busy ? "Deleting…" : "Delete"}
+              </button>
+            </motion.span>
+          ) : (
+            <motion.button
+              key="ask"
+              className="secondary-button"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.16 }}
+              onClick={() => {
+                haptic("impact");
+                setConfirming(true);
+              }}
+            >
+              Delete…
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
       <nav className="account-links" aria-label="Legal">
         <a href="/terms">Terms of Use</a>

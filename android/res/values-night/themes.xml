@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
- <style name="Theme.Peakcast" parent="@android:style/Theme.Material.NoActionBar">
-  <item name="android:windowBackground">@color/app_background</item>
+ <style name="Base.Peakcast" parent="@android:style/Theme.Material.NoActionBar">
+  <item name="android:windowBackground">@drawable/launch_background</item>
   <item name="android:statusBarColor">@color/app_background</item>
   <item name="android:navigationBarColor">@color/app_background</item>
+  <item name="android:colorAccent">@color/brand</item>
+  <item name="android:colorEdgeEffect">@color/brand</item>
  </style>
+ <style name="Theme.Peakcast" parent="Base.Peakcast" />
 </resources>

@@ -1,13 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
  <!-- Android 12+ launch screen: the animated Peakcast mark on the app background,
-      light or dark with the system theme (values-night/colors.xml). -->
- <style name="Theme.Peakcast" parent="@android:style/Theme.Material.Light.NoActionBar">
+      light or dark with the system theme (values-night-v31). The system splash covers
+      the window, so the window background is the plain colour. -->
+ <style name="Theme.Peakcast" parent="Base.Peakcast">
   <item name="android:windowBackground">@color/app_background</item>
-  <item name="android:statusBarColor">@color/app_background</item>
-  <item name="android:navigationBarColor">@color/app_background</item>
+  <item name="android:windowLightNavigationBar">true</item>
   <item name="android:windowSplashScreenBackground">@color/app_background</item>
   <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
   <item name="android:windowSplashScreenAnimationDuration">950</item>
+  <item name="android:windowSplashScreenBehavior">icon_preferred</item>
+ </style>
+ <!-- Android 13+: when the theme chosen in the app differs from the system one,
+      MainActivity has the system draw the next launch screen in it. -->
+ <style name="Theme.Peakcast.Splash.Light" parent="@android:style/Theme.Material.Light.NoActionBar">
+  <item name="android:windowSplashScreenBackground">#F7F8FA</item>
+  <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+  <item name="android:windowSplashScreenAnimationDuration">950</item>
+  <item name="android:windowSplashScreenBehavior">icon_preferred</item>
+  <item name="android:windowLightStatusBar">true</item>
+  <item name="android:windowLightNavigationBar">true</item>
+ </style>
+ <style name="Theme.Peakcast.Splash.Dark" parent="@android:style/Theme.Material.NoActionBar">
+  <item name="android:windowSplashScreenBackground">#000000</item>
+  <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+  <item name="android:windowSplashScreenAnimationDuration">950</item>
+  <item name="android:windowSplashScreenBehavior">icon_preferred</item>
  </style>
 </resources>

@@ -1,6 +1,14 @@
 import { Select } from "../Select.js";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { ArrowRight, ChevronDown, Pencil, Rocket, Trash2 } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  ChevronDown,
+  Loader2,
+  Pencil,
+  Rocket,
+  Trash2,
+} from "lucide-react";
 import { PeakcastClient } from "../../shared/client.js";
 import type {
   Category,
@@ -14,6 +22,7 @@ import { errorMessage } from "../ui.js";
 import { haptic } from "../haptics.js";
 import { isAndroidApp } from "../platform.js";
 import { motion } from "motion/react";
+import { ease } from "../motion.js";
 import {
   LaunchReview,
   launchReady,
@@ -52,6 +61,7 @@ const PUBLIC = "public";
 /** The datetime-local value as an ISO time, or "" until it is complete. */
 const isoClosing = (local: string) =>
   Number.isNaN(Date.parse(local)) ? "" : new Date(local).toISOString();
+const tabSpring = { type: "spring", stiffness: 420, damping: 34 } as const;
 export function DraftStudio({
   client,
   example,
@@ -79,6 +89,13 @@ export function DraftStudio({
   const [busy, setBusy] = useState(false);
   const [category, setCategory] = useState<Category>("World");
   const [error, setError] = useState("");
+  // Briefly true after a save, so the button's arrow turns into a check.
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    if (!saved) return;
+    const timer = setTimeout(() => setSaved(false), 1800);
+    return () => clearTimeout(timer);
+  }, [saved]);
   // Acknowledged launch checks, keyed "<draft id>:reviewed" / ":opened".
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -138,6 +155,7 @@ export function DraftStudio({
       const body = { ...input, closesAt: new Date(closingLocal).toISOString() };
       const saved = await client.saveDraft(body);
       setDrafts((previous) => [saved, ...previous]);
+      setSaved(true);
       haptic("success");
       onNotice(
         isAndroidApp
@@ -156,13 +174,13 @@ export function DraftStudio({
     setError("");
     setBusy(true);
     try {
-      onLaunched(
-        await client.launchDraft(
-          id,
-          category,
-          target === PUBLIC ? undefined : target,
-        ),
+      const market = await client.launchDraft(
+        id,
+        category,
+        target === PUBLIC ? undefined : target,
       );
+      haptic("success");
+      onLaunched(market);
     } catch (error) {
       haptic("warning");
       setError(errorMessage(error));
@@ -234,7 +252,11 @@ export function DraftStudio({
             onClick={() => onView("create")}
           >
             {view === "create" && (
-              <motion.span className="tab-selection" layoutId="studio-view" />
+              <motion.span
+                className="tab-selection"
+                layoutId="studio-view"
+                transition={tabSpring}
+              />
             )}
             New draft
           </button>
@@ -243,7 +265,11 @@ export function DraftStudio({
             onClick={() => onView("drafts")}
           >
             {view === "drafts" && (
-              <motion.span className="tab-selection" layoutId="studio-view" />
+              <motion.span
+                className="tab-selection"
+                layoutId="studio-view"
+                transition={tabSpring}
+              />
             )}
             Saved drafts <span className="count-pill">{drafts.length}</span>
           </button>
@@ -361,7 +387,21 @@ export function DraftStudio({
                 disabled={busy}
               >
                 {busy ? "Saving draft…" : "Save private draft"}
-                <ArrowRight size={16} />
+                <motion.span
+                  key={busy ? "busy" : saved ? "saved" : "idle"}
+                  className="button-icon"
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 22 }}
+                >
+                  {busy ? (
+                    <Loader2 size={16} className="button-spinner" />
+                  ) : saved ? (
+                    <Check size={16} />
+                  ) : (
+                    <ArrowRight size={16} />
+                  )}
+                </motion.span>
               </button>
             </form>
           </section>
@@ -374,8 +414,17 @@ export function DraftStudio({
                 <span className="count-pill">{drafts.length}</span>
               </h2>
               {drafts.length ? (
-                drafts.map((draft) => (
-                  <details key={draft.id}>
+                drafts.map((draft, index) => (
+                  <motion.details
+                    key={draft.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      duration: 0.32,
+                      ease,
+                      delay: Math.min(index, 6) * 0.04,
+                    }}
+                  >
                     <summary>
                       <span>{draft.question}</span>
                       <RuleBadge report={reports.get(draft.id)!} />
@@ -440,7 +489,7 @@ export function DraftStudio({
                         }))}
                       />
                       <button
-                        className="primary-button"
+                        className="primary-button launch-button"
                         disabled={
                           busy ||
                           !launchReady(
@@ -475,7 +524,7 @@ export function DraftStudio({
                     >
                       <Trash2 size={14} /> Delete draft
                     </button>
-                  </details>
+                  </motion.details>
                 ))
               ) : (
                 <p>Your drafts will appear here after you save one.</p>

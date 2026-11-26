@@ -1,0 +1,325 @@
+/*
+ * Form feedback and small entrances for the settings, studio, teams, legal and
+ * onboarding screens, plus the shared pieces in src/ui.tsx and src/Select.tsx.
+ * Continuous motion is transform/opacity only. Entrances use fill-mode
+ * "backwards" so no transform lingers afterwards (a lingering transform makes a
+ * stacking context that would trap open dropdowns under the next panel).
+ * Everything that moves sits under prefers-reduced-motion: no-preference.
+ */
+:root {
+  --fm-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --fm-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --fm-tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+  --fm-shimmer: #ffffffc2;
+  --fm-glow: #2021241f;
+}
+[data-theme="dark"] {
+  --fm-tick: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23151517' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+  --fm-shimmer: #ffffff12;
+  --fm-glow: #f5f5f72e;
+}
+
+/* Text fields: a soft ring replaces the offset outline while typing. */
+:root
+  :is(
+    .text-input,
+    textarea,
+    .onboarding-form input:not([type="checkbox"]),
+    .delete-box input
+  ):focus-visible {
+  border-color: var(--ink);
+  outline: 2px solid transparent;
+  box-shadow: 0 0 0 4px var(--fm-glow);
+}
+
+/* Checkboxes: a filled box with a tick that springs in. */
+:is(.check, .launch-review) input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid color-mix(in srgb, var(--ink) 38%, transparent);
+  border-radius: 6px;
+  background: var(--surface) var(--fm-tick) center / 0 no-repeat;
+  cursor: pointer;
+}
+.launch-review input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+}
+:is(.check, .launch-review) input[type="checkbox"]:checked {
+  border-color: var(--ink);
+  background-color: var(--ink);
+  background-size: 14px;
+}
+@media (forced-colors: active) {
+  :is(.check, .launch-review) input[type="checkbox"] {
+    appearance: auto;
+    -webkit-appearance: auto;
+  }
+}
+
+/* Loading rows: a light band sweeps across each bar. */
+.skeleton-rows .skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--subtle);
+  animation: none;
+}
+
+/* Select: one highlight glides between options (src/Select.tsx). */
+.custom-select > .select-options {
+  animation: none;
+}
+:root .custom-select .select-options > button {
+  position: relative;
+  isolation: isolate;
+}
+:root
+  .custom-select
+  .select-options
+  > button:is(:hover, [aria-selected="true"]) {
+  background: transparent;
+}
+.select-highlight {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--subtle);
+  pointer-events: none;
+}
+
+.copy-state-icon {
+  display: inline-grid;
+  width: 15px;
+  height: 15px;
+}
+.copy-state-icon > * {
+  grid-area: 1 / 1;
+  display: grid;
+}
+.button-spinner {
+  flex: none;
+}
+.button-icon {
+  display: inline-grid;
+}
+.activity-row .member-role {
+  display: inline-block;
+}
+
+/* Help FAQ and saved drafts: disclosures open and close by height (Chromium 131+; others jump as before). */
+:is(.legal-faq, .saved-drafts) details {
+  interpolate-size: allow-keywords;
+}
+.legal-faq summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.legal-faq summary::after {
+  content: "+";
+  flex: none;
+  font-size: 1.25rem;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--muted);
+}
+.legal-faq details[open] summary::after {
+  rotate: 45deg;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :is(
+    .text-input,
+    textarea,
+    .onboarding-form input:not([type="checkbox"]),
+    .delete-box input
+  ) {
+    transition:
+      border-color 0.2s,
+      box-shadow 0.2s;
+  }
+
+  :is(.check, .launch-review) input[type="checkbox"] {
+    transition:
+      background-color 0.18s,
+      border-color 0.18s,
+      background-size 0.32s var(--fm-bounce),
+      scale 0.12s var(--fm-ease);
+  }
+  :is(.check, .launch-review) input[type="checkbox"]:active {
+    scale: 0.88;
+  }
+
+  .skeleton-rows .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--fm-shimmer),
+      transparent
+    );
+    transform: translateX(-100%);
+    animation: fm-sweep 1.5s ease-in-out infinite;
+  }
+  /* The first child is the screen-reader label, so rows start at 2. */
+  .skeleton-row:nth-child(3) .skeleton::after {
+    animation-delay: 0.12s;
+  }
+  .skeleton-row:nth-child(4) .skeleton::after {
+    animation-delay: 0.24s;
+  }
+  .skeleton-row:nth-child(5) .skeleton::after {
+    animation-delay: 0.36s;
+  }
+  .skeleton-rows {
+    animation: fm-fade 0.3s ease-out backwards;
+  }
+
+  /* Empty states settle in: icon, heading, text, action. */
+  .empty-state > * {
+    animation: fm-rise 0.42s var(--fm-ease) backwards;
+  }
+  .empty-state > svg:first-child {
+    animation: fm-pop 0.5s var(--fm-bounce) backwards;
+  }
+  .empty-state > :nth-child(2) {
+    animation-delay: 0.05s;
+  }
+  .empty-state > :nth-child(3) {
+    animation-delay: 0.1s;
+  }
+  .empty-state > :nth-child(4) {
+    animation-delay: 0.15s;
+  }
+
+  /* Section cards stagger in on settings, teams, join and members. */
+  :is(.settings-page, .teams-page, .join-page, .workspace-members) > *,
+  .legal-body > * {
+    animation: fm-rise 0.44s var(--fm-ease) backwards;
+  }
+  :is(.settings-page, .teams-page, .join-page, .workspace-members, .legal-body)
+    > :nth-child(2) {
+    animation-delay: 0.04s;
+  }
+  :is(.settings-page, .teams-page, .join-page, .workspace-members, .legal-body)
+    > :nth-child(3) {
+    animation-delay: 0.08s;
+  }
+  :is(.settings-page, .teams-page, .join-page, .workspace-members, .legal-body)
+    > :nth-child(4) {
+    animation-delay: 0.12s;
+  }
+  :is(.settings-page, .teams-page, .join-page, .workspace-members, .legal-body)
+    > :nth-child(n + 5) {
+    animation-delay: 0.16s;
+  }
+
+  /* Inline confirmations and freshly created things pop in. */
+  .confirm-inline,
+  .invite-created,
+  .member-actions > .secondary-button {
+    animation: fm-pop-in 0.3s var(--fm-bounce) backwards;
+  }
+  :is(
+      .settings-page,
+      .teams-page,
+      .join-page,
+      .workspace-members,
+      .onboarding,
+      .legal-page,
+      .studio-layout
+    )
+    .form-error {
+    animation: fm-nudge 0.36s var(--fm-ease) backwards;
+  }
+
+  /* Theme picker: the chosen icon bounces as the selection glides to it. */
+  .appearance-options button[aria-pressed="true"] svg {
+    animation: fm-pop 0.42s var(--fm-bounce);
+  }
+  .appearance-options button:active svg {
+    scale: 0.9;
+  }
+  .appearance-options button svg {
+    transition: scale 0.15s var(--fm-ease);
+  }
+
+  .saved-drafts summary svg {
+    transition: rotate 0.28s var(--fm-ease);
+  }
+  .legal-faq summary::after {
+    transition: rotate 0.28s var(--fm-ease);
+  }
+  :is(.legal-faq, .saved-drafts) details::details-content {
+    block-size: 0;
+    overflow-y: clip;
+    transition:
+      block-size 0.3s var(--fm-ease),
+      content-visibility 0.3s allow-discrete;
+  }
+  :is(.legal-faq, .saved-drafts) details[open]::details-content {
+    block-size: auto;
+  }
+
+  .button-spinner {
+    animation: fm-spin 0.8s linear infinite;
+  }
+  .launch-button:not(:disabled):active svg {
+    transform: translate(2px, -2px);
+  }
+  .launch-button svg {
+    transition: transform 0.2s var(--fm-ease);
+  }
+
+  @keyframes fm-sweep {
+    to {
+      transform: translateX(100%);
+    }
+  }
+  @keyframes fm-fade {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes fm-rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+  }
+  @keyframes fm-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.6);
+    }
+  }
+  @keyframes fm-pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.94);
+    }
+  }
+  @keyframes fm-nudge {
+    from {
+      opacity: 0;
+      transform: translateX(-6px);
+    }
+    40% {
+      opacity: 1;
+      transform: translateX(3px);
+    }
+  }
+  @keyframes fm-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+}

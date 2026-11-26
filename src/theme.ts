@@ -14,6 +14,10 @@ export function applyTheme() {
     value === "dark" ||
     (value === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
   document.documentElement.dataset.theme = dark ? "dark" : "light";
+  // The Android app matches its system bars and next launch screen to this.
+  (
+    window as { PeakcastAndroid?: { setSystemTheme?: (dark: boolean) => void } }
+  ).PeakcastAndroid?.setSystemTheme?.(dark);
   document.documentElement.style.colorScheme = dark ? "dark" : "light";
   document
     .querySelector('meta[name="theme-color"]')

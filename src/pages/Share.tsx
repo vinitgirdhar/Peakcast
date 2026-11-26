@@ -1,9 +1,9 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { Check, Copy } from "lucide-react";
 import { PeakcastClient } from "../../shared/client.js";
 import type { Market } from "../../shared/types.js";
 import { Collapse } from "../motion.js";
-import { errorMessage } from "../ui.js";
+import { CopyStateIcon, errorMessage } from "../ui.js";
+import { haptic } from "../haptics.js";
 import "../share.css";
 
 type Field = HTMLInputElement | HTMLTextAreaElement;
@@ -110,6 +110,7 @@ function ShareFields({
     try {
       await navigator.clipboard.writeText(text);
       setNotice({ text: `${name} copied to clipboard.`, copied: what });
+      haptic("success");
     } catch {
       field?.focus();
       field?.select();
@@ -119,8 +120,9 @@ function ShareFields({
     }
   }
 
-  const icon = (what: "link" | "embed") =>
-    notice?.copied === what ? <Check size={15} /> : <Copy size={15} />;
+  const icon = (what: "link" | "embed") => (
+    <CopyStateIcon copied={notice?.copied === what} />
+  );
   return (
     <div className="share-fields">
       <label className="form-label" htmlFor={`${id}-link`}>

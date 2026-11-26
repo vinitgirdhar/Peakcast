@@ -2,6 +2,7 @@ import { Moon, Sun, Monitor } from "lucide-react";
 import { useTheme } from "../theme.js";
 import { motion } from "motion/react";
 import { AccountSection } from "./AccountSection.js";
+import { haptic } from "../haptics.js";
 import { appVersion, buildDate, platformName } from "../platform.js";
 import "../settings.css";
 export function Settings({
@@ -39,12 +40,16 @@ export function Settings({
             <button
               key={item.id}
               aria-pressed={theme === item.id}
-              onClick={() => setTheme(item.id)}
+              onClick={() => {
+                if (theme !== item.id) haptic("selection");
+                setTheme(item.id);
+              }}
             >
               {theme === item.id && (
                 <motion.span
                   className="appearance-selection"
                   layoutId="appearance-selection"
+                  transition={{ type: "spring", stiffness: 380, damping: 32 }}
                 />
               )}
               <item.icon size={22} />

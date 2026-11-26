@@ -1,8 +1,9 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import {
   AnimatePresence,
   animate,
   motion,
+  useAnimate,
   useMotionValue,
   useReducedMotion,
   useTransform,
@@ -48,6 +49,37 @@ export function AnimatedNumber({
   return <motion.span>{text}</motion.span>;
 }
 
+/** A small spring "bump" each time `value` changes (not on mount): for counters and badges. */
+export function Bump({
+  value,
+  className,
+  children,
+}: {
+  value: unknown;
+  className?: string;
+  children: ReactNode;
+}) {
+  const reduce = useReducedMotion();
+  const [scope, run] = useAnimate<HTMLSpanElement>();
+  const previous = useRef(value);
+  useEffect(() => {
+    if (Object.is(previous.current, value)) return;
+    previous.current = value;
+    if (reduce || !scope.current) return;
+    const controls = run(
+      scope.current,
+      { scale: [1, 1.07, 1] },
+      { duration: 0.36, ease },
+    );
+    return () => controls.stop();
+  }, [reduce, run, scope, value]);
+  return (
+    <span ref={scope} className={className} style={{ display: "inline-flex" }}>
+      {children}
+    </span>
+  );
+}
+
 /** Height and fade for disclosure content; overflow is released once open so menus and focus rings are not clipped. */
 export function Collapse({
   open,
@@ -83,3 +115,25 @@ export function Collapse({
     </AnimatePresence>
   );
 }
+
+/** A row that leaves by fading out of flow while its neighbours glide into place (inside AnimatePresence popLayout). */
+export const rowExit = {
+  opacity: 0,
+  x: -12,
+  transition: { duration: 0.16, ease },
+};
+
+/**
+ * Entrance for a row inside AnimatePresence, where list variants do not
+ * propagate: staggered by index, played once when the row mounts (so a data
+ * refresh that keeps the row does not replay it). The timing lives in the
+ * target, so hover, tap and layout animations stay undelayed.
+ */
+export const rowEnter = (index: number) => ({
+  initial: { opacity: 0, y: 6 },
+  animate: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.2, ease, delay: Math.min(index, 12) * 0.035 },
+  },
+});

@@ -2,6 +2,8 @@ import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import {
   ArrowLeft,
   ArrowRight,
+  Check,
+  LoaderCircle,
   CircleHelp,
   ExternalLink,
   Lock,
@@ -36,13 +38,65 @@ import {
   WatchButton,
 } from "./MarketExtras.js";
 import { SharePanel } from "./Share.js";
-import { AnimatedNumber } from "../motion.js";
+import { AnimatedNumber, ease } from "../motion.js";
 import { haptic } from "../haptics.js";
 import { RuleCheckLine } from "./RuleCheck.js";
 import { ExplainPanel } from "./Explain.js";
-import { motion } from "motion/react";
+import {
+  AnimatePresence,
+  animate,
+  motion,
+  useMotionValue,
+  useReducedMotion,
+  useTransform,
+} from "motion/react";
+import "./trading-motion.css";
 
 const cents = (price: number) => `${(price * 100).toFixed(1)}¢`;
+const fineCents = (price: number) => `${(price * 100).toFixed(2)}¢`;
+const creditsLabel = (micros: number) => `${formatCredits(micros)} credits`;
+const thumbSpring = { type: "spring", stiffness: 520, damping: 40 } as const;
+
+type ChartPoint = readonly [number, number];
+const toPoints = (points: readonly ChartPoint[]) =>
+  points.map(([x, y]) => `${x},${y}`).join(" ");
+
+/**
+ * The chart line as a motion value that morphs to each new history: points
+ * glide to their new places (an axis rescale included) and a new trade grows
+ * out of the previous last point. No React re-render per frame.
+ */
+function useChartLine(target: readonly ChartPoint[]) {
+  const reduce = useReducedMotion();
+  const shown = useRef<readonly ChartPoint[]>(target);
+  const key = toPoints(target);
+  const line = useMotionValue(key);
+  useEffect(() => {
+    const from = shown.current;
+    if (reduce || !from.length || !target.length) {
+      shown.current = target;
+      line.set(key);
+      return;
+    }
+    const start = target.map(
+      (_, index) => from[Math.min(index, from.length - 1)],
+    );
+    const controls = animate(0, 1, {
+      duration: 0.5,
+      ease,
+      onUpdate: (t) => {
+        shown.current = target.map(([x, y], index) => {
+          const [fromX, fromY] = start[index];
+          return [fromX + (x - fromX) * t, fromY + (y - fromY) * t] as const;
+        });
+        line.set(toPoints(shown.current));
+      },
+    });
+    return () => controls.stop();
+    // `key` is the serialised target, so it stands in for `target`.
+  }, [key, reduce]);
+  return line;
+}
 
 export function MarketDetail({
   market,
@@ -76,13 +130,23 @@ export function MarketDetail({
   const [sharing, setSharing] = useState(false);
   const shareId = useId();
   const [history, setHistory] = useState<HistoryPoint[]>([]);
+  // Which market the history belongs to: the chart waits for it instead of
+  // flashing the "no trades yet" placeholder first.
+  const [historyFor, setHistoryFor] = useState("");
   const [historyError, setHistoryError] = useState("");
+  const clipId = `chart-clip-${useId().replace(/[^a-zA-Z0-9-]/g, "")}`;
   // null until the first response, so the feed can show a loading state.
   const [feed, setFeed] = useState<MarketTrade[] | null>(null);
   const [outcome, setOutcome] = useState<Outcome>("YES");
   const [action, setAction] = useState<Action>("buy");
   const [shares, setShares] = useState("25");
   const [quote, setQuote] = useState<Quote | null>(null);
+  // The last quote shown, kept (dimmed) while the next one loads so the
+  // figures tween instead of blinking to "—" on every keystroke.
+  const [lastQuote, setLastQuote] = useState<Quote | null>(null);
+  // Brief check mark on the trade button after a fill; a counter re-runs the error shake.
+  const [filled, setFilled] = useState(false);
+  const [shake, setShake] = useState(0);
   const [quoteError, setQuoteError] = useState("");
   const [quoteRevision, setQuoteRevision] = useState(0);
   const [tradeError, setTradeError] = useState("");
@@ -111,6 +175,7 @@ export function MarketDetail({
       .then((data) => {
         if (active) {
           setHistory(data.items);
+          setHistoryFor(market.id);
           setHistoryError("");
         }
       })
@@ -147,7 +212,10 @@ export function MarketDetail({
       void client
         .quote({ marketId: market.id, outcome, action, shares: quantity })
         .then((data) => {
-          if (active) setQuote(data);
+          if (active) {
+            setQuote(data);
+            setLastQuote(data);
+          }
         })
         .catch((error) => {
           if (active) setQuoteError(errorMessage(error));
@@ -167,6 +235,12 @@ export function MarketDetail({
     validQuantity,
     quoteRevision,
   ]);
+
+  useEffect(() => {
+    if (!filled) return;
+    const timer = setTimeout(() => setFilled(false), 1400);
+    return () => clearTimeout(timer);
+  }, [filled]);
 
   const currentQuote =
     quote &&
@@ -211,6 +285,7 @@ export function MarketDetail({
       const fill = await client.trade(input, retry.current!.key);
       retry.current = null;
       setUnconfirmed(false);
+      setFilled(true);
       haptic("success");
       onNotice(
         `${fill.action === "buy" ? "Bought" : "Sold"} ${fill.shares} ${fill.outcome} shares for ${formatCredits(fill.amountMicros)} demo credits.`,
@@ -225,6 +300,7 @@ export function MarketDetail({
       }
     } catch (error) {
       haptic("warning");
+      setShake((count) => count + 1);
       if (error instanceof ApiError && error.status < 500) {
         retry.current = null;
         setUnconfirmed(false);
@@ -251,12 +327,20 @@ export function MarketDetail({
     Math.ceil((Math.max(...values, market.probability) + 0.03) * 20) / 20,
   );
   const chartY = (value: number) => 180 - ((value - low) / (high - low)) * 160;
-  const line = values
-    .map(
+  const line = useChartLine(
+    values.map(
       (value, index) =>
-        `${history.length === 1 ? 0 : (index / (history.length - 1)) * 600},${chartY(value)}`,
-    )
-    .join(" ");
+        [
+          history.length === 1 ? 0 : (index / (history.length - 1)) * 600,
+          chartY(value),
+        ] as const,
+    ),
+  );
+  const area = useTransform(line, (points) => `${points} 600,180 0,180`);
+  const historyLoaded = historyFor === market.id || Boolean(historyError);
+  // Figures shown in the breakdown: the live quote, else the previous one dimmed.
+  const shownQuote = validQuantity ? (currentQuote ?? lastQuote) : null;
+  const tradeIcon = busy ? "busy" : filled ? "filled" : "ready";
   return (
     <div className="page detail-page">
       <div className="detail-actions">
@@ -392,25 +476,42 @@ export function MarketDetail({
                     stroke="#e8edf4"
                     strokeDasharray="4 5"
                   />
-                  {history.length > 1 ? (
+                  {!historyLoaded ? null : history.length > 1 ? (
                     <>
-                      <polygon
-                        points={`${line} 600,180 0,180`}
-                        fill="#315cf5"
-                        fillOpacity="0.12"
-                      />
-                      <motion.polyline
-                        initial={false}
-                        animate={{ points: line }}
-                        transition={{ duration: 0.45 }}
-                        fill="none"
-                        stroke="#315cf5"
-                        strokeWidth="3"
-                        vectorEffect="non-scaling-stroke"
-                      />
+                      <defs>
+                        {/* Draws the line in from the left once, when the history first arrives. */}
+                        <clipPath id={clipId}>
+                          <motion.rect
+                            width="600"
+                            height="200"
+                            style={{ originX: 0 }}
+                            initial={{ scaleX: 0 }}
+                            animate={{ scaleX: 1 }}
+                            transition={{ duration: 0.8, ease }}
+                          />
+                        </clipPath>
+                      </defs>
+                      <g clipPath={`url(#${clipId})`}>
+                        <motion.polygon
+                          points={area}
+                          fill="#315cf5"
+                          fillOpacity="0.12"
+                        />
+                        <motion.polyline
+                          points={line}
+                          fill="none"
+                          stroke="#315cf5"
+                          strokeWidth="3"
+                          vectorEffect="non-scaling-stroke"
+                        />
+                      </g>
                     </>
                   ) : (
-                    <>
+                    <motion.g
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3 }}
+                    >
                       <path
                         d={`M0 ${chartY(market.probability)}H600`}
                         stroke="#315cf5"
@@ -422,7 +523,7 @@ export function MarketDetail({
                         r="5"
                         fill="#315cf5"
                       />
-                    </>
+                    </motion.g>
                   )}
                 </svg>
               </div>
@@ -526,6 +627,7 @@ export function MarketDetail({
                       <motion.span
                         className="tab-selection"
                         layoutId={`trade-action-${market.id}`}
+                        transition={thumbSpring}
                       />
                     )}
                     {item === "buy" ? "Buy shares" : "Sell shares"}
@@ -550,6 +652,14 @@ export function MarketDetail({
                       setTradeError("");
                     }}
                   >
+                    {outcome === side && (
+                      <motion.span
+                        className="pc-outcome-thumb"
+                        layoutId={`trade-outcome-${market.id}`}
+                        transition={thumbSpring}
+                        aria-hidden="true"
+                      />
+                    )}
                     <span>{side === "YES" ? "Yes" : "No"}</span>
                     <strong>
                       <AnimatedNumber
@@ -603,13 +713,21 @@ export function MarketDetail({
                   </button>
                 )}
               </div>
-              <div className="trade-breakdown">
+              <div
+                className={`trade-breakdown ${shownQuote && !currentQuote ? "pc-pending" : ""}`}
+                aria-busy={Boolean(shownQuote && !currentQuote)}
+              >
                 <div>
                   <span>Average price</span>
                   <strong>
-                    {currentQuote
-                      ? `${(currentQuote.averagePrice * 100).toFixed(2)}¢`
-                      : "—"}
+                    {shownQuote ? (
+                      <AnimatedNumber
+                        value={shownQuote.averagePrice}
+                        format={fineCents}
+                      />
+                    ) : (
+                      "—"
+                    )}
                   </strong>
                 </div>
                 <div>
@@ -617,9 +735,14 @@ export function MarketDetail({
                     {action === "buy" ? "Estimated cost" : "Estimated proceeds"}
                   </span>
                   <strong>
-                    {currentQuote
-                      ? `${formatCredits(currentQuote.amountMicros)} credits`
-                      : "—"}
+                    {shownQuote ? (
+                      <AnimatedNumber
+                        value={shownQuote.amountMicros}
+                        format={creditsLabel}
+                      />
+                    ) : (
+                      "—"
+                    )}
                   </strong>
                 </div>
                 {!!currentQuote?.feeMicros && (
@@ -655,7 +778,11 @@ export function MarketDetail({
                 </p>
               )}
               {(tradeError || quoteError) && (
-                <div className="form-error" role="alert">
+                <div
+                  className={`form-error ${tradeError && shake ? "pc-shake" : ""}`}
+                  role="alert"
+                  key={tradeError ? `trade-${shake}` : "quote"}
+                >
                   <p>{tradeError || quoteError}</p>
                   {!unconfirmed && (
                     <button
@@ -680,7 +807,7 @@ export function MarketDetail({
                 </p>
               )}
               <button
-                className={`execute-button ${outcome.toLowerCase()}`}
+                className={`execute-button ${outcome.toLowerCase()} ${filled ? "pc-filled" : ""}`}
                 type="submit"
                 disabled={
                   busy ||
@@ -695,10 +822,31 @@ export function MarketDetail({
                   ? "Placing trade…"
                   : unconfirmed
                     ? "Retry trade confirmation"
-                    : !currentQuote && validQuantity && !quoteError
+                    : !currentQuote &&
+                        validQuantity &&
+                        !quoteError &&
+                        !lastQuote
                       ? "Getting quote…"
                       : `${action === "buy" ? "Buy" : "Sell"} ${outcome} shares`}
-                <ArrowRight size={16} />
+                <span className="pc-trade-icon" aria-hidden="true">
+                  <AnimatePresence initial={false}>
+                    <motion.span
+                      key={tradeIcon}
+                      initial={{ opacity: 0, scale: 0.5 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.5 }}
+                      transition={{ duration: 0.18, ease }}
+                    >
+                      {tradeIcon === "busy" ? (
+                        <LoaderCircle size={16} className="pc-spin" />
+                      ) : tradeIcon === "filled" ? (
+                        <Check size={16} strokeWidth={2.6} />
+                      ) : (
+                        <ArrowRight size={16} />
+                      )}
+                    </motion.span>
+                  </AnimatePresence>
+                </span>
               </button>
               <div className="trade-balance">
                 <Wallet size={14} />

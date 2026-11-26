@@ -136,9 +136,12 @@ test("dark appearance keeps a quiet black foundation and accessible tablet drawe
   await page.goto("/settings");
   await page.getByRole("button", { name: "Dark", exact: true }).click();
   await expect(page.locator(".appearance-options button > svg")).toHaveCount(3);
-  expect(
-    await page.evaluate(() => getComputedStyle(document.body).backgroundColor),
-  ).toBe("rgb(0, 0, 0)");
+  // The theme cross-fades, so wait for it to settle.
+  await expect
+    .poll(() =>
+      page.evaluate(() => getComputedStyle(document.body).backgroundColor),
+    )
+    .toBe("rgb(0, 0, 0)");
   await expect(page.locator(".ambient-light")).toHaveCount(0);
   await page.getByRole("button", { name: "Open navigation" }).click();
   await expect(

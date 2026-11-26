@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
-import { Copy, Link2, UserRound } from "lucide-react";
+import { Link2, UserRound } from "lucide-react";
+import { motion } from "motion/react";
 import { Select } from "../Select.js";
 import { PeakcastClient } from "../../shared/client.js";
 import type {
@@ -9,7 +10,17 @@ import type {
   WorkspaceMember,
   WorkspaceRole,
 } from "../../shared/types.js";
-import { EmptyState, SkeletonRows, date, errorMessage } from "../ui.js";
+import {
+  CopyStateIcon,
+  EmptyState,
+  SkeletonRows,
+  date,
+  errorMessage,
+} from "../ui.js";
+import { itemMotion, listMotion } from "../motion.js";
+import { haptic } from "../haptics.js";
+
+const COPIED = "Invite link copied to clipboard.";
 
 export const roleLabels: Record<WorkspaceRole, string> = {
   owner: "Owner",
@@ -101,7 +112,12 @@ export function WorkspaceMembers({
         <h2 id="members-heading">
           Members <span className="count-pill">{workspace.members.length}</span>
         </h2>
-        <ul className="activity-list member-list">
+        <motion.ul
+          className="activity-list member-list"
+          variants={listMotion}
+          initial="hidden"
+          animate="show"
+        >
           {workspace.members.map((member) => (
             <MemberRow
               key={member.id}
@@ -124,7 +140,7 @@ export function WorkspaceMembers({
               }
             />
           ))}
-        </ul>
+        </motion.ul>
         {workspace.members.length === 1 && (
           <EmptyState
             compact
@@ -201,7 +217,7 @@ function MemberRow({
   useEffect(() => setRole(member.role), [member.role]);
   const removable = canRemove(me, member);
   return (
-    <li className="activity-row member-row">
+    <motion.li className="activity-row member-row" variants={itemMotion}>
       <span className="soft-icon" aria-hidden="true">
         <UserRound size={17} />
       </span>
@@ -211,7 +227,15 @@ function MemberRow({
           {member.you && <span className="small-pill">You</span>}
         </strong>
         <span>
-          {roleLabels[member.role]} · joined {date(member.joinedAt)}
+          <motion.span
+            key={member.role}
+            className="member-role"
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            {roleLabels[member.role]}
+          </motion.span>{" "}
+          · joined {date(member.joinedAt)}
         </span>
       </div>
       {(choices.length > 0 || removable) && (
@@ -257,7 +281,7 @@ function MemberRow({
           )}
         </div>
       )}
-    </li>
+    </motion.li>
   );
 }
 
@@ -313,7 +337,9 @@ function InvitesPanel({
       });
       setLink(`${shareOrigin ?? location.origin}/join#${invite.token}`);
       setAttempt(attempt + 1);
+      haptic("success");
     } catch (e) {
+      haptic("warning");
       setError(errorMessage(e));
     } finally {
       setBusy(false);
@@ -323,7 +349,8 @@ function InvitesPanel({
   async function copy() {
     try {
       await navigator.clipboard.writeText(link);
-      setCopied("Invite link copied to clipboard.");
+      setCopied(COPIED);
+      haptic("success");
     } catch {
       linkField.current?.focus();
       linkField.current?.select();
@@ -419,7 +446,7 @@ function InvitesPanel({
               className="secondary-button"
               onClick={() => void copy()}
             >
-              <Copy size={15} /> Copy link
+              <CopyStateIcon copied={copied === COPIED} /> Copy link
             </button>
           </div>
           <p id={`${id}-once`} className="panel-hint">
@@ -451,15 +478,36 @@ function InvitesPanel({
       {!invites ? (
         !error && <SkeletonRows label="Loading invites…" count={2} />
       ) : invites.length ? (
-        <ul className="activity-list">
+        <motion.ul
+          className="activity-list"
+          variants={listMotion}
+          initial="hidden"
+          animate="show"
+        >
           {invites.map((invite) => {
             const status = inviteStatus(invite);
             return (
-              <li className="activity-row member-row" key={invite.id}>
+              <motion.li
+                className="activity-row member-row"
+                key={invite.id}
+                variants={itemMotion}
+              >
                 <div>
                   <strong>
                     {roleLabels[invite.role]} invite
-                    <span className="small-pill">{status}</span>
+                    <motion.span
+                      key={status}
+                      className="small-pill"
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 520,
+                        damping: 24,
+                      }}
+                    >
+                      {status}
+                    </motion.span>
                   </strong>
                   <span>
                     {invite.uses} of {invite.maxUses} uses ·{" "}
@@ -477,10 +525,10 @@ function InvitesPanel({
                     />
                   </div>
                 )}
-              </li>
+              </motion.li>
             );
           })}
-        </ul>
+        </motion.ul>
       ) : (
         <EmptyState
           compact

@@ -5,7 +5,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import {
   Activity,
   ChevronDown,
@@ -24,8 +24,33 @@ import type {
   Portfolio,
 } from "../../shared/types.js";
 import { EmptyState, SkeletonRows, errorMessage, percent } from "../ui.js";
-import { Collapse, enterMotion, itemMotion, listMotion } from "../motion.js";
+import { Collapse, ease, enterMotion, rowEnter, rowExit } from "../motion.js";
 import { haptic } from "../haptics.js";
+import "./trading-motion.css";
+
+/** Cross-fades between a list's loading, empty and loaded states. */
+export function FadeSwap({
+  id,
+  children,
+}: {
+  /** Changes when the content is a different state, not on every refresh. */
+  id: string;
+  children: ReactNode;
+}) {
+  return (
+    <AnimatePresence mode="popLayout" initial={false}>
+      <motion.div
+        key={id}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0, transition: { duration: 0.12 } }}
+        transition={{ duration: 0.2, ease }}
+      >
+        {children}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
 
 interface ExtrasProps {
   market: Market;
@@ -105,43 +130,50 @@ export function DetailPanel({
 export function TradeFeed({ feed }: { feed: MarketTrade[] | null }) {
   return (
     <DetailPanel title="Recent trades" icon={<Activity size={17} />}>
-      {feed === null ? (
-        <SkeletonRows label="Loading recent trades…" />
-      ) : feed.length ? (
-        <motion.ul
-          className="trade-feed"
-          variants={listMotion}
-          initial="hidden"
-          animate="show"
-        >
-          {feed.slice(0, 8).map((trade) => (
-            <motion.li key={trade.id} variants={itemMotion}>
-              <span className={`outcome-label ${trade.outcome.toLowerCase()}`}>
-                {trade.outcome}
-              </span>
-              <span>
-                {trade.trader} {trade.action === "buy" ? "bought" : "sold"}{" "}
-                {trade.shares} shares
-              </span>
-              <span className="row-meta">
-                {percent(trade.probabilityAfter)} ·{" "}
-                <time dateTime={trade.createdAt}>
-                  {new Date(trade.createdAt).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </time>
-              </span>
-            </motion.li>
-          ))}
-        </motion.ul>
-      ) : (
-        <EmptyState
-          compact
-          title="No trades yet"
-          text="Trades from every forecaster show up here as they happen."
-        />
-      )}
+      <FadeSwap id={feed === null ? "loading" : feed.length ? "list" : "empty"}>
+        {feed === null ? (
+          <SkeletonRows label="Loading recent trades…" />
+        ) : feed.length ? (
+          <ul className="trade-feed">
+            {/* A new trade slides in on top; the oldest of the eight fades out. */}
+            <AnimatePresence mode="popLayout">
+              {feed.slice(0, 8).map((trade, index) => (
+                <motion.li
+                  key={trade.id}
+                  {...rowEnter(index)}
+                  layout="position"
+                  exit={rowExit}
+                >
+                  <span
+                    className={`outcome-label ${trade.outcome.toLowerCase()}`}
+                  >
+                    {trade.outcome}
+                  </span>
+                  <span>
+                    {trade.trader} {trade.action === "buy" ? "bought" : "sold"}{" "}
+                    {trade.shares} shares
+                  </span>
+                  <span className="row-meta">
+                    {percent(trade.probabilityAfter)} ·{" "}
+                    <time dateTime={trade.createdAt}>
+                      {new Date(trade.createdAt).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </time>
+                  </span>
+                </motion.li>
+              ))}
+            </AnimatePresence>
+          </ul>
+        ) : (
+          <EmptyState
+            compact
+            title="No trades yet"
+            text="Trades from every forecaster show up here as they happen."
+          />
+        )}
+      </FadeSwap>
     </DetailPanel>
   );
 }
@@ -166,7 +198,20 @@ export function WatchButton({
           .catch((error) => onNotice(errorMessage(error)));
       }}
     >
-      <Star size={15} fill={watching ? "currentColor" : "none"} />
+      {/* The star pops when toggled, not on first render. */}
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.span
+          key={String(watching)}
+          className="watch-star"
+          style={{ display: "inline-flex" }}
+          initial={{ scale: 0.4, rotate: -30 }}
+          animate={{ scale: 1, rotate: 0 }}
+          exit={{ opacity: 0, transition: { duration: 0.05 } }}
+          transition={{ type: "spring", stiffness: 600, damping: 18 }}
+        >
+          <Star size={15} fill={watching ? "currentColor" : "none"} />
+        </motion.span>
+      </AnimatePresence>
       {watching ? "Watching" : "Watch"}
     </button>
   );
@@ -310,33 +355,52 @@ export function LimitOrders({
           </button>
         </form>
       )}
-      {!!open.length && (
-        <ul className="order-list" aria-label="Your open orders">
-          {open.map((order) => (
-            <li key={order.id}>
-              <span className={`outcome-label ${order.outcome.toLowerCase()}`}>
-                {order.outcome}
-              </span>
-              <span>
-                {order.action === "buy" ? "Buy" : "Sell"} {order.shares} at{" "}
-                {Math.round(order.limitPrice * 100)}¢
-              </span>
-              <button
-                className="text-button"
-                disabled={busy}
-                onClick={() =>
-                  void run(async () => {
-                    await client.cancelOrder(order.id);
-                    return "Order cancelled.";
-                  })
-                }
-              >
-                Cancel
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      {/* The list itself fades out with the last cancelled order. */}
+      <AnimatePresence initial={false}>
+        {!!open.length && (
+          <motion.ul
+            className="order-list"
+            aria-label="Your open orders"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, transition: { duration: 0.16, ease } }}
+          >
+            <AnimatePresence mode="popLayout" initial={false}>
+              {open.map((order) => (
+                <motion.li
+                  key={order.id}
+                  layout="position"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={rowExit}
+                >
+                  <span
+                    className={`outcome-label ${order.outcome.toLowerCase()}`}
+                  >
+                    {order.outcome}
+                  </span>
+                  <span>
+                    {order.action === "buy" ? "Buy" : "Sell"} {order.shares} at{" "}
+                    {Math.round(order.limitPrice * 100)}¢
+                  </span>
+                  <button
+                    className="text-button"
+                    disabled={busy}
+                    onClick={() =>
+                      void run(async () => {
+                        await client.cancelOrder(order.id);
+                        return "Order cancelled.";
+                      })
+                    }
+                  >
+                    Cancel
+                  </button>
+                </motion.li>
+              ))}
+            </AnimatePresence>
+          </motion.ul>
+        )}
+      </AnimatePresence>
       {error && (
         <p role="alert" className="form-error">
           {error}
@@ -422,46 +486,51 @@ export function Discussion({
           {error}
         </p>
       )}
-      {comments === null ? (
-        <SkeletonRows label="Loading comments…" count={2} />
-      ) : comments.length ? (
-        <motion.ul
-          className="comment-list"
-          variants={listMotion}
-          initial="hidden"
-          animate="show"
-        >
-          {comments.map((comment) => (
-            <motion.li key={comment.id} variants={itemMotion}>
-              <div>
-                <strong>
-                  {comment.trader}
-                  {comment.you && " (you)"}
-                </strong>
-                {comment.holds && (
-                  <span
-                    className={`outcome-label ${comment.holds.toLowerCase()}`}
-                  >
-                    Holds {comment.holds}
-                  </span>
-                )}
-                <time className="row-meta" dateTime={comment.createdAt}>
-                  {shortTime(comment.createdAt)}
-                </time>
-              </div>
-              <p>{comment.body}</p>
-            </motion.li>
-          ))}
-        </motion.ul>
-      ) : (
-        !error && (
-          <EmptyState
-            compact
-            title="No comments yet"
-            text="Be the first to explain your forecast."
-          />
-        )
-      )}
+      <FadeSwap
+        id={comments === null ? "loading" : comments.length ? "list" : "empty"}
+      >
+        {comments === null ? (
+          <SkeletonRows label="Loading comments…" count={2} />
+        ) : comments.length ? (
+          <ul className="comment-list">
+            <AnimatePresence mode="popLayout">
+              {comments.map((comment, index) => (
+                <motion.li
+                  key={comment.id}
+                  {...rowEnter(index)}
+                  layout="position"
+                >
+                  <div>
+                    <strong>
+                      {comment.trader}
+                      {comment.you && " (you)"}
+                    </strong>
+                    {comment.holds && (
+                      <span
+                        className={`outcome-label ${comment.holds.toLowerCase()}`}
+                      >
+                        Holds {comment.holds}
+                      </span>
+                    )}
+                    <time className="row-meta" dateTime={comment.createdAt}>
+                      {shortTime(comment.createdAt)}
+                    </time>
+                  </div>
+                  <p>{comment.body}</p>
+                </motion.li>
+              ))}
+            </AnimatePresence>
+          </ul>
+        ) : (
+          !error && (
+            <EmptyState
+              compact
+              title="No comments yet"
+              text="Be the first to explain your forecast."
+            />
+          )
+        )}
+      </FadeSwap>
     </DetailPanel>
   );
 }

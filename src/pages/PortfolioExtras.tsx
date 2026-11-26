@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from "react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { Check, Flame, Gift } from "lucide-react";
 import { ApiError, PeakcastClient } from "../../shared/client.js";
 import type {
@@ -13,6 +13,8 @@ import { AnimatedNumber, enterMotion } from "../motion.js";
 import { haptic } from "../haptics.js";
 
 const credits = (micros: number) => formatCredits(micros, 0);
+const count = (value: number) => Math.round(value).toLocaleString("en-US");
+const pop = { type: "spring", stiffness: 520, damping: 22 } as const;
 
 export function DailyBonusCard({
   bonus,
@@ -27,6 +29,9 @@ export function DailyBonusCard({
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // Set by a claim from this card, so the confirmation pops only then, not
+  // when the page opens on a bonus already claimed.
+  const [justClaimed, setJustClaimed] = useState(false);
   const amount = credits(bonus.nextAmountMicros);
 
   async function claim() {
@@ -34,6 +39,7 @@ export function DailyBonusCard({
     setError("");
     try {
       const result = await client.claimBonus();
+      setJustClaimed(true);
       haptic("success");
       onNotice(`Daily bonus: +${credits(result.amountMicros)} credits`);
       await onRefresh();
@@ -56,9 +62,15 @@ export function DailyBonusCard({
       aria-label="Daily bonus"
       {...enterMotion}
     >
-      <span className="soft-icon bonus-icon">
+      <motion.span
+        className="soft-icon bonus-icon"
+        key={justClaimed ? "claimed" : "waiting"}
+        initial={justClaimed ? { rotate: -14, scale: 0.8 } : false}
+        animate={{ rotate: 0, scale: 1 }}
+        transition={pop}
+      >
         <Gift size={19} />
-      </span>
+      </motion.span>
       <div className="bonus-copy">
         <h2>
           Daily bonus
@@ -77,20 +89,38 @@ export function DailyBonusCard({
             : `Come back tomorrow for ${amount} credits. Resets at 00:00 UTC.`}
         </p>
       </div>
-      {bonus.available ? (
-        <button
-          className="primary-button"
-          disabled={busy}
-          onClick={() => void claim()}
-        >
-          <Gift size={15} />
-          {busy ? "Claiming…" : `Claim ${amount} credits`}
-        </button>
-      ) : (
-        <span className="bonus-claimed">
-          <Check size={16} /> Claimed today
-        </span>
-      )}
+      <AnimatePresence mode="popLayout" initial={false}>
+        {bonus.available ? (
+          <motion.button
+            key="claim"
+            className="primary-button"
+            disabled={busy}
+            onClick={() => void claim()}
+            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.15 } }}
+          >
+            <Gift size={15} />
+            {busy ? "Claiming…" : `Claim ${amount} credits`}
+          </motion.button>
+        ) : (
+          <motion.span
+            key="claimed"
+            className="bonus-claimed"
+            initial={justClaimed ? { opacity: 0, scale: 0.6 } : false}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={pop}
+          >
+            <motion.span
+              style={{ display: "inline-flex" }}
+              initial={justClaimed ? { scale: 0, rotate: -45 } : false}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ ...pop, delay: 0.12 }}
+            >
+              <Check size={16} />
+            </motion.span>{" "}
+            Claimed today
+          </motion.span>
+        )}
+      </AnimatePresence>
       {error && (
         <p role="alert" className="form-error">
           {error}
@@ -113,7 +143,11 @@ export function PerformanceStats({ stats }: { stats?: AccountStats }) {
     {
       key: "trades",
       label: "Trades",
-      value: stats ? stats.tradeCount.toLocaleString("en-US") : "—",
+      value: stats ? (
+        <AnimatedNumber value={stats.tradeCount} format={count} />
+      ) : (
+        "—"
+      ),
       note: "demo trades placed",
     },
     {
@@ -125,7 +159,11 @@ export function PerformanceStats({ stats }: { stats?: AccountStats }) {
     {
       key: "win-rate",
       label: "Win rate",
-      value: resolved ? percent(stats!.winRate) : "—",
+      value: resolved ? (
+        <AnimatedNumber value={stats!.winRate} format={percent} />
+      ) : (
+        "—"
+      ),
       note: resolved
         ? `${stats!.wins} ${stats!.wins === 1 ? "win" : "wins"} of ${resolved} resolved ${resolved === 1 ? "market" : "markets"}`
         : "No resolved markets yet",

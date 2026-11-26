@@ -1,0 +1,163 @@
+/* Shell motion: app opening, page switches, dock glass, sidebar hover glass,
+   theme cross-fade (src/App.tsx, Dock.tsx, BackendStartup.tsx).
+   Unlayered, so it beats styles.css (@layer components); where it meets
+   design.css (unlayered, loaded later) its selectors are one notch more specific.
+   Only transform, opacity, translate and scale animate. */
+
+/* No grey flash on tap in the Android WebView and mobile browsers. */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---- Page switches ---------------------------------------------------------
+   The leaving page is popped out of flow by AnimatePresence (popLayout); App
+   shifts its content by the old scroll so it fades out where the reader was. */
+.route-surface {
+  transform-origin: 50% 0;
+}
+.route-surface[inert] {
+  pointer-events: none;
+}
+.route-surface[inert] > * {
+  translate: 0 var(--leave-y, 0px);
+}
+
+/* ---- Phone dock: one liquid-glass pill for the whole bar ------------------ */
+nav.mobile-dock {
+  /* The dock owns horizontal drags; it is fixed, so nothing scrolls under it. */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+nav.mobile-dock > .dock-selection {
+  inset: auto;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+nav.mobile-dock button[data-under] {
+  color: var(--ink);
+}
+nav.mobile-dock[data-dragging] > .dock-selection {
+  box-shadow:
+    0 8px 18px -8px #10122040,
+    inset 0 1px 0 #ffffff80;
+}
+[data-theme="dark"] nav.mobile-dock[data-dragging] > .dock-selection {
+  box-shadow:
+    0 8px 18px -8px #000c,
+    inset 0 1px 0 #ffffff24;
+}
+
+/* ---- Desktop sidebar: hover glass under the active pill ------------------- */
+.desktop-sidebar nav {
+  position: relative;
+}
+.nav-hover-glass {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  border-radius: 8px;
+  background: var(--subtle);
+  pointer-events: none;
+  opacity: 0;
+}
+/* The glass replaces the per-item hover fill. */
+.desktop-sidebar nav .nav-item:hover {
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Dock: the pill lifts while dragged; the icon under it swells. */
+  nav.mobile-dock > .dock-selection {
+    transition: scale 0.2s var(--spring, ease-out);
+  }
+  nav.mobile-dock[data-dragging] > .dock-selection {
+    scale: 1.06;
+  }
+  nav.mobile-dock button > svg {
+    transition:
+      transform 0.16s var(--spring, ease-out),
+      scale 0.22s var(--spring, ease-out),
+      translate 0.22s var(--spring, ease-out);
+  }
+  nav.mobile-dock button[data-under] > svg {
+    scale: 1.2;
+    translate: 0 -2px;
+  }
+
+  /* Opening: as the boot logo fades (BackendStartup), the shell settles in:
+     header, then the page, then the dock. Plays once each time data-ready is set. */
+  .app-shell[data-ready] :is(.topbar, .desktop-sidebar) {
+    animation: shell-fade 0.36s var(--spring, ease-out) 0.06s backwards;
+  }
+  .app-shell[data-ready] > .main-shell > main {
+    animation: shell-rise 0.44s var(--spring, ease-out) 0.1s backwards;
+  }
+  .app-shell[data-ready] > nav.mobile-dock {
+    animation: shell-dock 0.48s var(--spring, ease-out) 0.16s backwards;
+  }
+
+  /* Theme switch: colours cross-fade instead of snapping (App adds the class). */
+  :root.theme-fade,
+  :root.theme-fade *,
+  :root.theme-fade *::before,
+  :root.theme-fade *::after {
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease,
+      color 0.3s ease,
+      fill 0.3s ease,
+      stroke 0.3s ease !important;
+  }
+}
+
+@keyframes shell-fade {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@keyframes shell-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+@keyframes shell-dock {
+  from {
+    opacity: 0;
+    transform: translateY(110%);
+  }
+}
+
+/* ---- Header details -------------------------------------------------------- */
+.bell-swing {
+  display: grid;
+  place-items: center;
+  transform-origin: 50% 12%;
+}
+
+/* ---- Press feedback for link-styled buttons (buttons already scale in styles.css). */
+a:is(.secondary-button, .icon-button) {
+  transition:
+    background-color 0.25s,
+    border-color 0.25s,
+    color 0.2s,
+    transform 0.12s ease-out;
+}
+a:is(.secondary-button, .icon-button):active {
+  transform: scale(0.97);
+}
+@media (prefers-reduced-motion: reduce) {
+  a:is(.secondary-button, .icon-button):active {
+    transform: none;
+  }
+}
+
+/* Wrapper that isolates page exit animations from the route transition; adds no box. */
+.route-content {
+  display: contents;
+}

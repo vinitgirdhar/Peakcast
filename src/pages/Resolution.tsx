@@ -3,8 +3,17 @@ import { ExternalLink, Gavel } from "lucide-react";
 import { Select } from "../Select.js";
 import { PeakcastClient } from "../../shared/client.js";
 import type { Market, ResolutionOutcome } from "../../shared/types.js";
+import { motion } from "motion/react";
 import { errorMessage } from "../ui.js";
+import { ease } from "../motion.js";
 import { DetailPanel } from "./MarketExtras.js";
+
+/** Resolution steps fade up one after another when the market's status moves on. */
+const step = (index: number) => ({
+  initial: { opacity: 0, y: 6 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.22, ease, delay: index * 0.06 },
+});
 
 const outcomes = [
   { value: "YES", label: "YES" },
@@ -203,7 +212,7 @@ export function ResolutionPanel({
       )}
       {resolution && (
         <>
-          <p>
+          <motion.p key={`outcome-${status}`} {...step(0)}>
             <strong>
               {status === "resolved" ? "Final outcome" : "Proposed outcome"}:{" "}
               {resolution.outcome}
@@ -220,13 +229,13 @@ export function ResolutionPanel({
                 </a>
               </>
             )}
-          </p>
+          </motion.p>
           {status === "proposed" && (
-            <p>
+            <motion.p key={`window-${windowOpen}`} {...step(1)}>
               {windowOpen
                 ? `Challenge window closes ${new Date(windowEnds).toLocaleTimeString()}.`
                 : "Challenge window closed with no dispute."}
-            </p>
+            </motion.p>
           )}
           {status === "proposed" && windowOpen && (
             <p className="panel-hint">
@@ -244,7 +253,8 @@ export function ResolutionPanel({
             </p>
           )}
           {status === "proposed" && windowOpen && !isCreator && (
-            <button
+            <motion.button
+              {...step(2)}
               className="secondary-button"
               disabled={busy}
               onClick={() =>
@@ -255,10 +265,11 @@ export function ResolutionPanel({
               }
             >
               Dispute · 100-credit bond
-            </button>
+            </motion.button>
           )}
           {status === "proposed" && !windowOpen && (
-            <button
+            <motion.button
+              {...step(2)}
               className="primary-button"
               disabled={busy}
               onClick={() =>
@@ -269,26 +280,26 @@ export function ResolutionPanel({
               }
             >
               Finalize and pay out
-            </button>
+            </motion.button>
           )}
           {status === "disputed" && (
             <>
-              <p>
+              <motion.p {...step(1)}>
                 Disputed. Payouts wait for{" "}
                 {privateMarket
                   ? "a ruling by a workspace owner, admin or resolver"
                   : "an operator ruling"}
                 .
-              </p>
+              </motion.p>
               {rulingForm}
             </>
           )}
           {status === "resolved" && (
-            <p>
+            <motion.p {...step(1)}>
               {resolution.outcome === "INVALID"
                 ? "Every share was paid 0.5 credit."
                 : `${resolution.outcome} shares were paid 1 credit each.`}
-            </p>
+            </motion.p>
           )}
         </>
       )}

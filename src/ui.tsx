@@ -1,11 +1,14 @@
 import { useId, type ReactNode } from "react";
-import { ArrowDown, ArrowUp, Layers3 } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, Copy, Layers3 } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { AnimatedNumber } from "./motion.js";
 import {
   moveLabel,
   movePoints,
   percent,
   statusLabel,
 } from "../shared/format.js";
+import "./forms-motion.css";
 
 export { moveLabel, percent, statusLabel };
 export const MICRO = 1_000_000;
@@ -24,6 +27,7 @@ export const errorMessage = (error: unknown) =>
   error instanceof Error
     ? error.message
     : "Something went wrong. Please try again.";
+const roundPoints = (value: number) => String(Math.round(value));
 export function ChangeChip({ change }: { change: number }) {
   const label = moveLabel(change);
   if (!label) return null;
@@ -34,7 +38,7 @@ export function ChangeChip({ change }: { change: number }) {
     <span className={`change-chip ${up ? "up" : "down"}`}>
       <Arrow size={12} strokeWidth={2.6} aria-hidden="true" />
       <span aria-hidden="true">
-        {points}
+        <AnimatedNumber value={points} format={roundPoints} />
         <span className="change-unit"> {points === 1 ? "pt" : "pts"}</span>
       </span>
       <span className="sr-only">{label}</span>
@@ -126,5 +130,24 @@ export function SkeletonRows({
         </span>
       ))}
     </div>
+  );
+}
+
+/** Copy icon that morphs into a check while a copy confirmation is showing. */
+export function CopyStateIcon({ copied }: { copied: boolean }) {
+  return (
+    <span className="copy-state-icon" aria-hidden="true">
+      <AnimatePresence initial={false} mode="popLayout">
+        <motion.span
+          key={copied ? "check" : "copy"}
+          initial={{ opacity: 0, scale: 0.4, rotate: copied ? -45 : 45 }}
+          animate={{ opacity: 1, scale: 1, rotate: 0 }}
+          exit={{ opacity: 0, scale: 0.4 }}
+          transition={{ type: "spring", stiffness: 520, damping: 26 }}
+        >
+          {copied ? <Check size={15} /> : <Copy size={15} />}
+        </motion.span>
+      </AnimatePresence>
+    </span>
   );
 }
