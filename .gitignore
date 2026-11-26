@@ -3,6 +3,7 @@ dist/
 dist-server/
 release/
 data/
+bin/
 tmp/
 test-results/
 playwright-report/
