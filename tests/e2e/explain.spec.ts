@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures.js";
 
 // Read-only: the shared server runs without AI, so only the facts block shows.
 test("a market explains itself in plain words without AI", async ({

@@ -171,7 +171,7 @@ test("auth isolation, expired/invalid sessions and unowned sales are enforced", 
     ).json();
     assert.equal(otherPortfolio.positions.length, 0);
     assert.equal(otherPortfolio.trades.length, 0);
-    assert.equal(otherPortfolio.balanceMicros, 10_000_000_000);
+    assert.equal(otherPortfolio.balanceMicros, 5_000_000_000);
   } finally {
     await app.close();
   }
@@ -585,7 +585,7 @@ test("launching a draft stakes liquidity, opens a tradeable market and pays the 
     const before = (
       await app.inject({ url: "/api/v1/portfolio", headers })
     ).json();
-    assert.equal(before.balanceMicros, 10_000_000_000 - stake);
+    assert.equal(before.balanceMicros, 5_000_000_000 - stake);
     assert.equal(before.created[0].marketId, market.id);
     assert.equal(before.created[0].feesMicros, 0);
 
@@ -618,7 +618,7 @@ test("launching a draft stakes liquidity, opens a tradeable market and pays the 
     assert.equal(fill.json().feeMicros, quote.feeMicros);
     assert.equal(
       fill.json().balanceMicros,
-      10_000_000_000 - quote.amountMicros,
+      5_000_000_000 - quote.amountMicros,
     );
     const sellInput = { ...input, action: "sell", shares: 40 };
     const sellQuote = (
@@ -639,7 +639,7 @@ test("launching a draft stakes liquidity, opens a tradeable market and pays the 
     const after = (
       await app.inject({ url: "/api/v1/portfolio", headers })
     ).json();
-    assert.equal(after.balanceMicros, 10_000_000_000 - stake + earned);
+    assert.equal(after.balanceMicros, 5_000_000_000 - stake + earned);
     assert.equal(after.created[0].feesMicros, earned);
     assert.equal(after.created[0].trades, 2);
     // House markets stay fee-free.
@@ -678,8 +678,8 @@ test("launch refuses expired deadlines and accounts that cannot cover the stake"
     const soon = await save(new Date(Date.now() + 1500).toISOString());
     await new Promise((resolve) => setTimeout(resolve, 1600));
     assert.equal((await launch(soon.id)).statusCode, 409);
-    // 10,000 credits cover exactly twenty 500-credit stakes.
-    for (let index = 0; index < 20; index++)
+    // 5,000 credits cover exactly ten 500-credit stakes.
+    for (let index = 0; index < 10; index++)
       assert.equal(
         (await launch((await save(draft.closesAt)).id)).statusCode,
         201,

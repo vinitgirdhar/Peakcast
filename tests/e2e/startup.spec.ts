@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures.js";
 import AxeBuilder from "@axe-core/playwright";
 
 const backend = "https://wildcatter-p3yy.onrender.com";
@@ -31,12 +31,12 @@ test("a backend wake during refresh keeps the current screen available", async (
   await expect(page.locator(".backend-connection-notice")).toHaveCount(0);
 });
 
-test("refresh recovers a demo session that disappeared while the server slept", async ({
+test("an account that disappeared while the server slept leads back to onboarding", async ({
   page,
 }) => {
   await page.clock.install();
   let expired = "";
-  await page.route("**/api/v1/portfolio", async (route) => {
+  await page.route("**/api/v1/{portfolio,account}", async (route) => {
     if (
       expired &&
       route.request().headers().authorization === `Bearer ${expired}`
@@ -53,14 +53,15 @@ test("refresh recovers a demo session that disappeared while the server slept", 
     () => localStorage.getItem("wildcatter.demo.token.v1") ?? "",
   );
   await page.clock.runFor(15_500);
+  // An expired account is gone, so the person sets up a new one.
   await expect
     .poll(() =>
       page.evaluate(() => localStorage.getItem("wildcatter.demo.token.v1")),
     )
-    .not.toBe(expired);
-  await expect(page.locator(".market-card")).toHaveCount(6);
+    .toBeNull();
+  await expect(page.locator(".onboarding")).toBeVisible();
   await expect(page.getByRole("status")).toContainText(
-    "previous demo session expired",
+    "previous session expired",
   );
 });
 

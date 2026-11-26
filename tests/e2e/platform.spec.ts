@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures.js";
 
 test("explore, filter, buy, reload, inspect the portfolio and sell", async ({
   page,

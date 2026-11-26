@@ -8,12 +8,18 @@ import {
   type Browser,
   type BrowserContextOptions,
   type Page,
-} from "@playwright/test";
+  onboard,
+} from "./fixtures.js";
 import { buildApp } from "../../server/app.js";
 import { choose } from "./select.js";
 
 // ponytail: Teams journeys get their own in-memory server, so workspaces,
 // wallets and launches never touch the shared server other specs count on.
+// This file runs its own server, so pages onboard against it rather than the shared one.
+test.use({ onboarded: false });
+test.beforeEach(async ({ page }) => {
+  await onboard(page, origin);
+});
 let server: Awaited<ReturnType<typeof buildApp>>;
 let origin = "";
 test.beforeAll(async () => {
@@ -55,7 +61,9 @@ const fitsWidth = async (page: Page) =>
   ).toEqual([]);
 /** Another person on the same kind of device: a separate context, so a separate demo session. */
 async function freshPage(browser: Browser, device: BrowserContextOptions) {
-  return (await browser.newContext(device)).newPage();
+  const page = await (await browser.newContext(device)).newPage();
+  await onboard(page, origin);
+  return page;
 }
 // The members page also has a copy-status region, so target the toast itself.
 const toast = (page: Page) => page.locator(".toast");

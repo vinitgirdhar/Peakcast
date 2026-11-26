@@ -230,7 +230,7 @@ test("daily bonus pays once per UTC day and grows with the streak up to 100 cred
     assert.equal(first.statusCode, 200, first.body);
     assert.deepEqual(first.json(), {
       amountMicros: 50 * CREDIT,
-      balanceMicros: 10_050 * CREDIT,
+      balanceMicros: 5_050 * CREDIT,
       bonus: { available: false, streak: 1, nextAmountMicros: 60 * CREDIT },
     });
     const again = await claim();
@@ -272,7 +272,7 @@ test("daily bonus pays once per UTC day and grows with the streak up to 100 cred
     assert.equal((await claim()).statusCode, 200);
     assert.equal(
       (await portfolio(claimer)).balanceMicros,
-      (10_000 + 50 + 60 + 70 + 80 + 90 + 100 + 100 + 50) * CREDIT,
+      (5_000 + 50 + 60 + 70 + 80 + 90 + 100 + 100 + 50) * CREDIT,
     );
     const spec = (await app.inject("/api/v1/openapi.json")).json();
     const route = spec.paths["/api/v1/bonus/claim"].post;

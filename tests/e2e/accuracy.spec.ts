@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures.js";
 
 // A fresh demo session has no resolved markets, so its accuracy is empty.
 // Other specs share this server, so the board itself may or may not be empty.

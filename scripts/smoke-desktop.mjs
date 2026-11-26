@@ -42,6 +42,16 @@ for (let launch = 0; launch < 2; launch++) {
       "Desktop smoke checks must never write to the user's profile",
     );
     const page = await electron.firstWindow();
+    if (launch === 0) {
+      // A fresh install onboards before the workspace opens.
+      await page.getByRole("button", { name: "Skip" }).click();
+      await page.getByLabel("Display name").fill("Desktop smoke");
+      await page.getByLabel("I am 18 or older.").check();
+      await page.getByRole("checkbox", { name: /I agree/ }).check();
+      await page
+        .getByRole("button", { name: "Start with 5,000 credits" })
+        .click();
+    }
     await page.locator(".page h1").waitFor();
     const current = await page.evaluate(() =>
       localStorage.getItem("wildcatter.demo.token.v1"),

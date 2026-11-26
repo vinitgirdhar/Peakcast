@@ -318,7 +318,7 @@ test("daily bonus credits are not counted as trading profit", async () => {
     const viewer = await session();
     assert.equal((await post("/bonus/claim", viewer)).statusCode, 200);
     const portfolio = (await get("/portfolio", viewer)).json();
-    assert.equal(portfolio.balanceMicros, 10_050_000_000);
+    assert.equal(portfolio.balanceMicros, 5_050_000_000);
     assert.equal(portfolio.pnlMicros, 0);
     const mine = (await get("/leaderboard", viewer))
       .json()

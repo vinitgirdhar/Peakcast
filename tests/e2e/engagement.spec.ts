@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page } from "./fixtures.js";
 import { choose } from "./select.js";
 
 // These journeys never create markets. The one real trade below moves a seeded
@@ -16,18 +16,18 @@ test("the daily bonus credits 50 once and stays claimed", async ({ page }) => {
   await page.goto("/portfolio");
   const card = page.getByRole("region", { name: "Daily bonus" });
   const balance = page.locator(".balance-button");
-  await expect(balance).toContainText("10,000.00");
+  await expect(balance).toContainText("5,000.00");
   await card.getByRole("button", { name: "Claim 50 credits" }).click();
   await expect(page.getByRole("status")).toContainText(
     "Daily bonus: +50 credits",
   );
-  await expect(balance).toContainText("10,050.00");
+  await expect(balance).toContainText("5,050.00");
   await expect(card).toContainText("Come back tomorrow for 60 credits");
   await expect(card).toContainText("1-day streak");
   await expect(card.getByRole("button")).toHaveCount(0);
   await page.reload();
   await expect(card).toContainText("Come back tomorrow for 60 credits");
-  await expect(balance).toContainText("10,050.00");
+  await expect(balance).toContainText("5,050.00");
 });
 
 test("a bonus already claimed elsewhere shows the claimed state, not an error", async ({
@@ -44,7 +44,7 @@ test("a bonus already claimed elsewhere shows the claimed state, not an error", 
   await claim.click();
   await expect(card).toContainText("Come back tomorrow for 60 credits");
   await expect(card.getByRole("alert")).toHaveCount(0);
-  await expect(page.locator(".balance-button")).toContainText("10,050.00");
+  await expect(page.locator(".balance-button")).toContainText("5,050.00");
 });
 
 test("the trading record counts the account's trades", async ({ page }) => {

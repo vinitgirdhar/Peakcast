@@ -5,16 +5,19 @@ import { useTheme } from "../theme.js";
 import type { AIProvider, AIProviderInfo } from "../../shared/types.js";
 import { errorMessage } from "../ui.js";
 import { motion } from "motion/react";
+import { AccountSection } from "./AccountSection.js";
 export function Settings({
   managed = false,
   token,
   providers,
   onRefresh,
+  onDeleted,
 }: {
   managed?: boolean;
   token: string;
   providers: AIProviderInfo[];
   onRefresh: () => Promise<void>;
+  onDeleted: () => void;
 }) {
   const { theme, setTheme } = useTheme();
   const [access, setAccess] = useState("");
@@ -86,6 +89,7 @@ export function Settings({
           <p>Make Wildcatter your own.</p>
         </div>
       </div>
+      <AccountSection token={token} onDeleted={onDeleted} />
       <section className="settings-panel">
         <h2>Appearance</h2>
         <p>Choose a look for the app and website.</p>

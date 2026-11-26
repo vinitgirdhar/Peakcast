@@ -10,6 +10,7 @@ import { hashToken } from "../server/database.js";
 import {
   CREDIT,
   START,
+  PERSON_START,
   draftInput,
   teamsApp,
   type Headers,
@@ -57,7 +58,7 @@ test("creating a workspace funds an owner wallet and leaves the person account a
     assert.equal(workspace.role, "owner");
     assert.equal(workspace.memberCount, 1);
     const person = await t.ok("GET", "/portfolio", owner);
-    assert.equal(person.balanceMicros, START);
+    assert.equal(person.balanceMicros, PERSON_START);
     assert.equal(person.ledger.length, 0);
     const wallet = await t.ok(
       "GET",
@@ -667,7 +668,7 @@ test("launching to a workspace stakes wallet credits and opens an unlisted priva
     );
     assert.match(market.id, /^ws-[0-9a-f-]{36}$/);
     assert.equal(market.workspaceId, wid);
-    assert.equal((await t.ok("GET", "/portfolio", owner)).balanceMicros, START);
+    assert.equal((await t.ok("GET", "/portfolio", owner)).balanceMicros, PERSON_START);
     const wallet = await t.ok("GET", `/workspaces/${wid}/portfolio`, owner);
     assert.equal(wallet.balanceMicros, START - 500 * CREDIT);
     assert.equal(wallet.created[0].marketId, market.id);
@@ -717,7 +718,7 @@ test("launching to a workspace stakes wallet credits and opens an unlisted priva
     assert.equal((await t.ok("GET", "/drafts", outsider)).items.length, 1);
     assert.equal(
       (await t.ok("GET", "/portfolio", outsider)).balanceMicros,
-      START,
+      PERSON_START,
     );
   } finally {
     await t.close();
@@ -764,7 +765,7 @@ test("member rulings: roles, conflicts of interest and rulable states; credits s
     assert.equal(disputed.status, "disputed");
     assert.equal(
       (await t.ok("GET", "/portfolio", people.M2)).balanceMicros,
-      START,
+      PERSON_START,
     );
     // Private disputes stay in the workspace, and the wording says so.
     assert.match(
@@ -835,7 +836,7 @@ test("member rulings: roles, conflicts of interest and rulable states; credits s
     let total = 0;
     for (const who of Object.values(people)) {
       total += (await wallet(who)).balanceMicros;
-      assert.equal((await t.ok("GET", "/portfolio", who)).balanceMicros, START);
+      assert.equal((await t.ok("GET", "/portfolio", who)).balanceMicros, PERSON_START);
     }
     assert.equal(total, Object.keys(people).length * START);
     const publicBoard = await t.ok("GET", "/leaderboard", people.A);

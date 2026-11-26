@@ -1,4 +1,5 @@
 import type {
+  Account,
   BonusClaim,
   Calibration,
   Capabilities,
@@ -79,6 +80,28 @@ export class WildcatterClient {
       expiresAt: string;
       balanceMicros: number;
     }>("/sessions", { method: "POST" });
+  }
+  account() {
+    return this.request<Account>("/account");
+  }
+  completeOnboarding(input: {
+    displayName: string;
+    acceptTerms: boolean;
+    confirmAdult: boolean;
+  }) {
+    return this.request<Account>("/account", {
+      method: "PUT",
+      body: JSON.stringify(input),
+    });
+  }
+  setPlayground(playground: boolean) {
+    return this.request<Account>("/account/mode", {
+      method: "PUT",
+      body: JSON.stringify({ playground }),
+    });
+  }
+  deleteAccount() {
+    return this.request<{ deleted: true }>("/account", { method: "DELETE" });
   }
   capabilities() {
     return this.request<Capabilities>("/capabilities");

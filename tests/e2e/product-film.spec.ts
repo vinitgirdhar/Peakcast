@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures.js";
 
 test("product film keeps loading lightweight and supplies captions and credits", async ({
   page,

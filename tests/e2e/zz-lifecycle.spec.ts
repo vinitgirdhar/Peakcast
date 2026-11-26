@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures.js";
 import { choose } from "./select.js";
 
 // Must match OPERATOR_TOKEN in tests/e2e/server.mjs.
@@ -25,9 +25,17 @@ test("a launched market is proposed, disputed, ruled by the operator and ranked"
   // its own server if more journeys like it are added.
   test.skip(testInfo.project.name !== "mobile-webkit");
   test.setTimeout(60000);
-  const session = async () =>
-    (await (await request.post("/api/v1/sessions")).json()).token as string;
   const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
+  // An account that has finished onboarding, as a returning player's is.
+  const session = async () => {
+    const token = (await (await request.post("/api/v1/sessions")).json())
+      .token as string;
+    await request.put("/api/v1/account", {
+      headers: auth(token),
+      data: { displayName: "Player", acceptTerms: true, confirmAdult: true },
+    });
+    return token;
+  };
   const creator = await session();
   const trader = await session();
   const saved = await (

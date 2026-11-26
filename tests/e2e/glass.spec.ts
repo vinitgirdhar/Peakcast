@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures.js";
 
 test("opaque surfaces, navigation lifecycle and reduced motion keep controls usable", async ({
   page,

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { ApiError, WildcatterClient } from "../shared/client.js";
 import type {
+  Account,
   Capabilities,
   Inbox,
   Market,
@@ -37,6 +38,9 @@ import { BackendStartup, waitForBackend } from "./BackendStartup.js";
 import { Teams } from "./pages/Teams.js";
 import { WorkspaceView, type WorkspaceTab } from "./pages/Workspace.js";
 import { JoinWorkspace } from "./pages/JoinWorkspace.js";
+import { Onboarding, type OnboardingInput } from "./pages/Onboarding.js";
+import { Legal, legalPaths } from "./pages/Legal.js";
+import { TERMS_VERSION } from "../shared/legal.js";
 const navItems = [
   { path: "/markets", label: "Markets", icon: LayoutGrid },
   { path: "/portfolio", label: "Portfolio", icon: Wallet },
@@ -76,6 +80,10 @@ export function App() {
   const [menu, setMenu] = useState(false);
   // Workspace that Draft studio should launch to when opened from that workspace.
   const [launchTo, setLaunchTo] = useState<string | undefined>();
+  // "new": no account yet; "consent": an older account that never accepted the terms.
+  const [onboarding, setOnboarding] = useState<"new" | "consent" | null>(
+    null,
+  );
   const dialog = useRef<HTMLDialogElement>(null);
   const menuTrigger = useRef<HTMLButtonElement>(null);
   const [install, setInstall] = useState<
@@ -127,23 +135,24 @@ export function App() {
         await waitForBackend(controller.signal);
         if (!active) return;
         let current = localStorage.getItem(storageKey) ?? "";
+        let account: Account | null = null;
         if (current) {
           try {
-            await new WildcatterClient("", current).portfolio();
+            account = await new WildcatterClient("", current).account();
           } catch (e) {
             if (!(e instanceof ApiError) || e.status !== 401) throw e;
             current = "";
-            setNotice(
-              "Your previous demo session expired. A new demo account was created.",
-            );
+            localStorage.removeItem(storageKey);
+            setNotice("Your previous session expired. Set up a new account.");
           }
         }
-        if (!current) {
-          current = (await new WildcatterClient().createSession()).token;
-          localStorage.setItem(storageKey, current);
-        }
-        if (active) {
-          setToken(current);
+        if (!active) return;
+        setToken(current);
+        if (!current) setOnboarding("new");
+        else if (account?.termsVersion !== TERMS_VERSION)
+          setOnboarding("consent");
+        else {
+          setOnboarding(null);
           await refresh(current);
         }
       } catch (e) {
@@ -266,6 +275,53 @@ export function App() {
         : teamsPage
           ? "Teams"
           : (nav.find((n) => n.path === path)?.label ?? "Page not found");
+  async function finishOnboarding(input: OnboardingInput) {
+    let current = token;
+    // Reuse an account a failed earlier attempt already created.
+    if (!current) {
+      current = (await new WildcatterClient().createSession()).token;
+      localStorage.setItem(storageKey, current);
+      setToken(current);
+    }
+    await new WildcatterClient("", current).completeOnboarding(input);
+    await refresh(current);
+    setOnboarding(null);
+  }
+  function signedOut() {
+    localStorage.removeItem(storageKey);
+    setToken("");
+    setPortfolio(null);
+    setInbox(null);
+    setOnboarding("new");
+    navigate("/");
+    setNotice("Your account was deleted.");
+  }
+  const legal = legalPaths[path];
+  if (legal)
+    return (
+      <>
+        <Legal
+          page={legal}
+          token={token}
+          onBack={() =>
+            history.length > 1 ? history.back() : navigate("/markets")
+          }
+          onDeleted={signedOut}
+        />
+        <Toast notice={notice} onDismiss={() => setNotice("")} />
+      </>
+    );
+  if (ready && onboarding && !landing)
+    return (
+      <>
+        <Onboarding
+          key={onboarding}
+          consentOnly={onboarding === "consent"}
+          onComplete={finishOnboarding}
+        />
+        <Toast notice={notice} onDismiss={() => setNotice("")} />
+      </>
+    );
   if (landing)
     return (
       <>
@@ -541,10 +597,10 @@ export function App() {
                         ? "/studio"
                         : path
                 }
-                initial={{ opacity: 0, y: 8 }}
+                // ponytail: no exit fade, so the new page starts immediately instead of after a blank gap.
+                initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, transition: { duration: 0.12 } }}
-                transition={{ duration: 0.2, ease }}
+                transition={{ duration: 0.18, ease }}
               >
                 {path === "/markets" && (
                   <MarketExplorer
@@ -604,6 +660,7 @@ export function App() {
                     token={token}
                     providers={capabilities?.aiProviders ?? []}
                     onRefresh={() => refresh()}
+                    onDeleted={signedOut}
                   />
                 )}{" "}
                 {studio && (

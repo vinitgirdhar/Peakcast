@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import { test, expect, type APIRequestContext } from "@playwright/test";
+import { test, expect, type APIRequestContext } from "./fixtures.js";
 
 // Read-only journeys: nothing here trades or creates markets.
 const origin = "http://127.0.0.1:3101";

@@ -9,7 +9,9 @@ import { buildApp } from "../server/app.js";
 // Shared setup for the Teams tests: an app on a throwaway SQLite file, so a
 // test can also read rows the API never returns (account and wallet ids).
 export const CREDIT = 1_000_000;
+/** Workspace wallets keep their 10,000-credit grant; personal accounts start with 5,000. */
 export const START = 10_000 * CREDIT;
+export const PERSON_START = 5_000 * CREDIT;
 export const HOST = "127.0.0.1:3001";
 export type Headers = Record<string, string>;
 export type Method = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";

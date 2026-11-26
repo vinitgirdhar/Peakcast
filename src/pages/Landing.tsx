@@ -45,7 +45,7 @@ const faqs = [
   {
     question: "Can I try Wildcatter without installing anything?",
     answer:
-      "Yes. Choose Continue on the web above to open the workspace in your browser. You start with 10,000 practice credits.",
+      "Yes. Choose Continue on the web above to open the workspace in your browser. You start with 5,000 practice credits.",
   },
   {
     question: "How do I install the Windows desktop app?",
@@ -210,7 +210,7 @@ export function Landing({
             </a>
           </motion.div>
           <motion.p className="landing-disclaimer" variants={itemMotion}>
-            10,000 practice credits to begin. No real money.
+            5,000 practice credits to begin. No real money.
           </motion.p>
           <motion.div variants={itemMotion} className="landing-install">
             <button className="text-button" onClick={() => void onInstall()}>
@@ -341,9 +341,12 @@ export function Landing({
         </div>
       </motion.section>
       <footer>
-        <span>Wildcatter · Demo environment, no real-money payouts.</span>
+        <span>Wildcatter · Practice credits only, no real-money payouts.</span>
         <nav aria-label="Footer">
           <a href="#faq">FAQ</a>
+          <a href="/terms">Terms</a>
+          <a href="/privacy">Privacy</a>
+          <a href="/help">Help</a>
           <a href="/developers">
             Build with our API <ArrowRight size={14} />
           </a>

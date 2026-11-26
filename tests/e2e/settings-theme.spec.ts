@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures.js";
 import { choose } from "./select.js";
 test("appearance persists between Settings, the app and short landing page", async ({
   page,

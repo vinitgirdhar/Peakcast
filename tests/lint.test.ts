@@ -587,7 +587,7 @@ test("launch refuses blocking drafts without side effects and publishes the rule
     const portfolio = (
       await app.inject({ url: "/api/v1/portfolio", headers })
     ).json();
-    assert.equal(portfolio.balanceMicros, 10_000_000_000);
+    assert.equal(portfolio.balanceMicros, 5_000_000_000);
     assert.equal(portfolio.created.length, 0);
     assert.deepEqual(
       (await app.inject({ url: "/api/v1/drafts", headers }))

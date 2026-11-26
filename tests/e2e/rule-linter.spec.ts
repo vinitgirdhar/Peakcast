@@ -2,11 +2,15 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page, onboard } from "./fixtures.js";
 import { buildApp } from "../../server/app.js";
 
 // ponytail: this journey launches a market, so it runs against its own
 // in-memory server and leaves the shared server's market counts alone.
+test.use({ onboarded: false });
+test.beforeEach(async ({ page }) => {
+  await onboard(page, origin);
+});
 let server: Awaited<ReturnType<typeof buildApp>>;
 let origin = "";
 test.beforeAll(async () => {

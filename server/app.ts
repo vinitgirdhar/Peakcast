@@ -1,4 +1,10 @@
 import { saveProvider } from "./provider-settings.js";
+import {
+  completeOnboarding,
+  deleteAccount,
+  getAccount,
+  setPlayground,
+} from "./account.js";
 import Fastify, { type FastifyRequest } from "fastify";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
@@ -422,7 +428,7 @@ export async function buildApp(options: AppOptions = {}) {
       config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
       schema: {
         tags: ["Accounts"],
-        summary: "Create an isolated demo account with 10,000 credits",
+        summary: "Create an isolated account with 5,000 practice credits",
         response: {
           201: Type.Object({
             token: Type.String(),
@@ -433,6 +439,88 @@ export async function buildApp(options: AppOptions = {}) {
       },
     },
     async (_request, reply) => reply.code(201).send(store.createSession()),
+  );
+
+  const AccountSchema = Type.Object({
+    displayName: Type.Union([Type.String(), Type.Null()]),
+    termsVersion: Type.Union([Type.String(), Type.Null()]),
+    termsAcceptedAt: Type.Union([Type.String(), Type.Null()]),
+    playground: Type.Boolean(),
+    realMoneyAvailable: Type.Boolean(),
+    startingMicros: Type.Integer(),
+  });
+  app.get(
+    "/api/v1/account",
+    {
+      schema: {
+        tags: ["Accounts"],
+        summary: "Own profile, consent and Playground mode",
+        security,
+        response: { 200: AccountSchema },
+      },
+    },
+    async (request) => getAccount(store, accountId(request)),
+  );
+  app.put<{
+    Body: { displayName: string; acceptTerms: boolean; confirmAdult: boolean };
+  }>(
+    "/api/v1/account",
+    {
+      config: { rateLimit: { max: 20, timeWindow: "1 minute" } },
+      schema: {
+        tags: ["Accounts"],
+        summary: "Finish onboarding: display name, age and terms consent",
+        security,
+        body: Type.Object(
+          {
+            displayName: Type.String({
+              minLength: 2,
+              maxLength: 40,
+              pattern: "^[\\p{L}\\p{N} ._'-]+$",
+            }),
+            acceptTerms: Type.Boolean(),
+            confirmAdult: Type.Boolean(),
+          },
+          { additionalProperties: false },
+        ),
+        response: { 200: AccountSchema },
+      },
+    },
+    async (request) =>
+      completeOnboarding(store, accountId(request), request.body),
+  );
+  app.put<{ Body: { playground: boolean } }>(
+    "/api/v1/account/mode",
+    {
+      schema: {
+        tags: ["Accounts"],
+        summary: "Switch Playground mode",
+        description:
+          "Playground mode trades practice credits. Turning it off returns 409 until real-money trading is licensed and enabled.",
+        security,
+        body: Type.Object(
+          { playground: Type.Boolean() },
+          { additionalProperties: false },
+        ),
+        response: { 200: AccountSchema },
+      },
+    },
+    async (request) =>
+      setPlayground(store, accountId(request), request.body.playground),
+  );
+  app.delete(
+    "/api/v1/account",
+    {
+      schema: {
+        tags: ["Accounts"],
+        summary: "Delete own account",
+        description:
+          "Removes the profile, drafts, comments, watchlist and notifications, cancels open orders and revokes the token. Trades and ledger rows stay without a profile because market prices and payouts depend on them.",
+        security,
+        response: { 200: Type.Object({ deleted: Type.Literal(true) }) },
+      },
+    },
+    async (request) => deleteAccount(store, accountId(request)),
   );
 
   app.get<{ Querystring: { search?: string; category?: string } }>(

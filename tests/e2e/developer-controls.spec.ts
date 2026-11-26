@@ -1,5 +1,5 @@
 import { choose } from "./select.js";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures.js";
 
 test("copy credential handles browser clipboard success and denial", async ({
   page,

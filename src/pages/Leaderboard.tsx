@@ -177,7 +177,7 @@ export function LeaderboardView({
       )}
       <p className="fine-print">
         Profit is balance plus open positions at the current price, minus the
-        10,000 starting credits and any daily bonuses. Creator ranking uses fees
+        starting credits and any daily bonuses. Creator ranking uses fees
         earned. Accuracy ranks forecasters with at least 3 markets resolved YES
         or NO by Brier score: 0 is perfect, always saying 50% scores 0.25, and
         lower ranks higher.{" "}

@@ -8,7 +8,7 @@
 
 A quiet forecasting workspace: crisp typography, a persistent desktop sidebar, and a touch-friendly mobile tab bar. A compact market pulse shows open questions, actual demo activity and upcoming deadlines. The hero offers the web app, Windows desktop download and Android download together. Light and dark appearances, hidden scrollbars that preserve scrolling, section reveals, sliding selections, animated charts and values, expanding panels, and tactile controls work across the shared frontend, with reduced-motion support.
 
-> Wildcatter runs on demo credits. Every account starts with 10,000 credits; nothing here is real money, a wallet, or an on-chain asset. See [Scope and honesty](#scope-and-honesty).
+> Wildcatter runs on practice credits. Every new account starts with 5,000 credits after a short onboarding (display name, 18+ confirmation, Terms and Privacy consent). Playground mode is always on; nothing here is real money, a wallet, or an on-chain asset. See [Scope and honesty](#scope-and-honesty).
 
 ## Product film
 
@@ -207,7 +207,7 @@ The official demo entry is a small Render static site at https://wildcatter-welc
 The repository includes a Render blueprint ([render.yaml](render.yaml)). The hosted demo runs on Render's free plan, which means:
 
 - the service sleeps when idle, so the first request can take up to a minute;
-- the database is on an ephemeral disk, so accounts and trades reset on deploy, restart or idle spin-down. Sample markets are recreated at start. Expired demo sessions recover automatically with a visible notice.
+- the database is on an ephemeral disk. When `LITESTREAM_REPLICA_URL`, `LITESTREAM_ACCESS_KEY_ID` and `LITESTREAM_SECRET_ACCESS_KEY` are set, [Litestream](https://litestream.io) restores it from a Cloudflare R2 bucket at every start and streams changes back within about 10 seconds ([litestream.yml](litestream.yml), [scripts/start-hosted.sh](scripts/start-hosted.sh)). Writes made to the old instance during the few seconds a deploy runs both instances can still be lost. Without those values, accounts and trades reset on deploy, restart or idle spin-down. Sample markets are recreated only when the database has none. Expired demo sessions recover automatically with a visible notice.
 
 The server only answers on its own public origin and rejects cross-origin browser requests.
 

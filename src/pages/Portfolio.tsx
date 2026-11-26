@@ -41,6 +41,11 @@ const signedCredits = (micros: number) =>
   `${micros > 0 ? "+" : ""}${formatCredits(micros)}`;
 const reveal = { variants: listMotion, initial: "hidden", animate: "show" };
 
+interface AndroidWindow {
+  WildcatterAndroid?: {
+    saveFile(name: string, mimeType: string, text: string): void;
+  };
+}
 export function PortfolioView({
   portfolio,
   markets,
@@ -102,16 +107,15 @@ export function PortfolioView({
         .map(cell)
         .join(","),
     );
-    const url = URL.createObjectURL(
-      new Blob(
-        [
-          ["Date,Type,Market,Amount (credits),Balance (credits)", ...rows].join(
-            "\r\n",
-          ),
-        ],
-        { type: "text/csv" },
-      ),
-    );
+    const csv = [
+      "Date,Type,Market,Amount (credits),Balance (credits)",
+      ...rows,
+    ].join("\r\n");
+    // The Android WebView cannot save blob downloads; its native bridge can.
+    const android = (window as AndroidWindow).WildcatterAndroid;
+    if (android)
+      return android.saveFile("wildcatter-statement.csv", "text/csv", csv);
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const link = document.createElement("a");
     link.href = url;
     link.download = "wildcatter-statement.csv";

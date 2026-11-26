@@ -413,3 +413,15 @@ export interface InvitePreview {
   role: InviteRole;
   expiresAt: string;
 }
+
+export interface Account {
+  displayName: string | null;
+  /** Terms version the account accepted, or null before onboarding. */
+  termsVersion: string | null;
+  termsAcceptedAt: string | null;
+  /** True while the account trades practice credits. */
+  playground: boolean;
+  /** False until real-money trading is licensed and switched on. */
+  realMoneyAvailable: boolean;
+  startingMicros: number;
+}

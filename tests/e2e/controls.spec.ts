@@ -1,5 +1,5 @@
 import { choose } from "./select.js";
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures.js";
 
 test("all discovery filters, sorts and navigation controls work", async ({
   page,
@@ -121,9 +121,9 @@ test("a buy can spend the available balance without requiring an unaffordable sl
         outcome: "YES",
         action: "buy",
         shares: 10000,
-        amountMicros: 9_999_000_000,
-        averagePrice: 0.9999,
-        priceAfter: 0.9999,
+        amountMicros: 4_999_000_000,
+        averagePrice: 0.4999,
+        priceAfter: 0.4999,
       },
     }),
   );

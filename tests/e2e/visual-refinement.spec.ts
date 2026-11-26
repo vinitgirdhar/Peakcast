@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures.js";
 import AxeBuilder from "@axe-core/playwright";
 
 test("landing reveals and animated selections keep content available with reduced motion", async ({

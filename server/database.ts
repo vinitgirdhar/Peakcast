@@ -22,6 +22,13 @@ import type {
   TradeInput,
 } from "../shared/types.js";
 
+/** Practice credits granted to every new personal account. */
+export const STARTING_CREDITS = 5_000;
+const STARTING_MICROS = STARTING_CREDITS * MICRO;
+
+/** Prefix of a deleted member's name; `handle` shows only this. */
+export const FORMER_MEMBER = "Former member ";
+
 export class DomainError extends Error {
   constructor(
     message: string,
@@ -131,6 +138,14 @@ export class Store {
       ["markets", "resolution", "TEXT"],
       ["markets", "workspace_id", "TEXT REFERENCES workspaces(id)"],
       ["accounts", "workspace_id", "TEXT REFERENCES workspaces(id)"],
+      // Accounts created before onboarding started with 10,000 credits.
+      ["accounts", "starting_micros", `INTEGER NOT NULL DEFAULT ${10_000 * MICRO}`],
+      ["accounts", "display_name", "TEXT"],
+      ["accounts", "terms_version", "TEXT"],
+      ["accounts", "terms_accepted_at", "TEXT"],
+      ["accounts", "adult_confirmed_at", "TEXT"],
+      ["accounts", "playground", "INTEGER NOT NULL DEFAULT 1"],
+      ["accounts", "deleted_at", "TEXT"],
     ])
       if (!columns(table).includes(name))
         this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${type}`);
@@ -173,10 +188,16 @@ export class Store {
     const expiresAt = new Date(Date.now() + 30 * 86400_000).toISOString();
     this.db
       .prepare(
-        "INSERT INTO accounts (id,token_hash,balance_micros,expires_at) VALUES (?,?,?,?)",
+        "INSERT INTO accounts (id,token_hash,balance_micros,starting_micros,expires_at) VALUES (?,?,?,?,?)",
       )
-      .run(randomUUID(), hashToken(token), 10_000 * MICRO, expiresAt);
-    return { token, expiresAt, balanceMicros: 10_000 * MICRO };
+      .run(
+        randomUUID(),
+        hashToken(token),
+        STARTING_MICROS,
+        STARTING_MICROS,
+        expiresAt,
+      );
+    return { token, expiresAt, balanceMicros: STARTING_MICROS };
   }
 
   account(token?: string): AccountRow {
@@ -184,7 +205,7 @@ export class Store {
       token &&
       (this.db
         .prepare(
-          "SELECT id,balance_micros,expires_at FROM accounts WHERE token_hash=?",
+          "SELECT id,balance_micros,expires_at FROM accounts WHERE token_hash=? AND deleted_at IS NULL",
         )
         .get(hashToken(token)) as AccountRow | undefined);
     if (!account || account.expires_at <= new Date().toISOString())
@@ -465,8 +486,8 @@ export class Store {
     accountId: string,
   ): Omit<Portfolio, "orders" | "watchlist" | "bonus" | "stats"> {
     const account = this.db
-      .prepare("SELECT balance_micros FROM accounts WHERE id=?")
-      .get(accountId) as { balance_micros: number };
+      .prepare("SELECT balance_micros,starting_micros FROM accounts WHERE id=?")
+      .get(accountId) as { balance_micros: number; starting_micros: number };
     const rows = this.db
       .prepare(
         "SELECT market_id,outcome,shares,cost_micros FROM positions WHERE account_id=? AND shares>0",
@@ -514,7 +535,7 @@ export class Store {
             )
             .get(accountId) as { total: number }
         ).total -
-        10_000 * MICRO,
+        account.starting_micros,
       positions,
       trades: trades.map((row) => parseTrade(row.payload)),
       created: (
@@ -567,7 +588,10 @@ export class Store {
     const member = this.db
       .prepare("SELECT display_name FROM workspace_members WHERE wallet_id=?")
       .get(accountId) as { display_name: string } | undefined;
-    if (member) return member.display_name;
+    if (member)
+      return member.display_name.startsWith(FORMER_MEMBER)
+        ? FORMER_MEMBER.trim()
+        : member.display_name;
     return (
       "Trader " +
       createHash("sha256")
@@ -638,11 +662,12 @@ export class Store {
     const traders = (
       this.db
         .prepare(
-          "SELECT a.id,a.balance_micros,(SELECT COUNT(*) FROM trades t WHERE t.account_id=a.id) AS trades,(SELECT COALESCE(SUM(amount_micros),0) FROM ledger b WHERE b.account_id=a.id AND b.kind='daily_bonus') AS bonus FROM accounts a WHERE a.workspace_id IS ? AND EXISTS (SELECT 1 FROM ledger l WHERE l.account_id=a.id)",
+          "SELECT a.id,a.balance_micros,a.starting_micros,(SELECT COUNT(*) FROM trades t WHERE t.account_id=a.id) AS trades,(SELECT COALESCE(SUM(amount_micros),0) FROM ledger b WHERE b.account_id=a.id AND b.kind='daily_bonus') AS bonus FROM accounts a WHERE a.workspace_id IS ? AND EXISTS (SELECT 1 FROM ledger l WHERE l.account_id=a.id)",
         )
         .all(workspaceId) as {
         id: string;
         balance_micros: number;
+        starting_micros: number;
         trades: number;
         bonus: number;
       }[]
@@ -655,7 +680,7 @@ export class Store {
           row.balance_micros +
           (held.get(row.id) ?? 0) -
           row.bonus -
-          10_000 * MICRO,
+          row.starting_micros,
       }))
       .sort((a, b) => b.pnlMicros - a.pnlMicros);
     const creators = this.db

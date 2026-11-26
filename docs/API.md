@@ -6,7 +6,7 @@ The authoritative schemas are [OpenAPI JSON](http://127.0.0.1:3001/api/v1/openap
 
 ## Authentication and units
 
-`POST /sessions` returns `{token, expiresAt, balanceMicros}` with 10,000 demo credits. Send `Authorization: Bearer <token>` for portfolio, trades and drafts. Never use an account ID instead of a credential. The token expires after 30 days; no revocation endpoint or production identity is implemented.
+`POST /sessions` returns `{token, expiresAt, balanceMicros}` with 5,000 practice credits (accounts created before 2026-11-25 started with 10,000). Finish onboarding with `PUT /account` `{displayName, acceptTerms, confirmAdult}`; `GET /account` returns the profile, consent and Playground state; `PUT /account/mode` `{playground}` returns 409 until real-money trading is licensed and enabled; `DELETE /account` removes personal data and revokes the token. Send `Authorization: Bearer <token>` for portfolio, trades and drafts. Never use an account ID instead of a credential. The token expires after 30 days; no revocation endpoint or production identity is implemented.
 
 1 credit = **1,000,000 microcredits**. A winning share would pay 1 credit in the intended settlement model; this demo has no resolution/redemption implementation. Probabilities are fractions from 0 to 1. Trade share quantities are integers from 1 to 10,000.
 
@@ -160,7 +160,7 @@ A market moves through `open` → `proposed` → `resolved`, with `disputed` in 
 
 Payouts: each winning share pays 1 credit; `INVALID` pays 0.5 credit per share on both sides; losing shares pay nothing. Positions are closed.
 
-Creator settlement: the creator receives `stake + net trader payments − payouts`, the liquidity the pool did not need. The LMSR bound guarantees this is never negative, so every payout is fully funded and community markets only move credits between accounts. The only credits that enter after the 10,000-credit starting grant are opt-in daily bonuses (see below).
+Creator settlement: the creator receives `stake + net trader payments − payouts`, the liquidity the pool did not need. The LMSR bound guarantees this is never negative, so every payout is fully funded and community markets only move credits between accounts. The only credits that enter after the starting grant are opt-in daily bonuses (see below).
 
 Dispute outcome: if the ruling matches the proposal, the bond goes to the creator. If it overturns the proposal, the disputer gets the bond back plus up to 100 credits taken from the creator's returned liquidity.
 

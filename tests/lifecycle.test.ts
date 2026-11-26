@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { buildApp } from "../server/app.js";
 
 const CREDIT = 1_000_000;
-const START = 10_000 * CREDIT;
+const START = 5_000 * CREDIT;
 const OPERATOR = "operator-secret-for-tests";
 const draft = {
   question: "Will a measurable event occur before 2028?",
