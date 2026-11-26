@@ -82,10 +82,11 @@ test("market pages, filtering and separate rules preserve an unfinished order", 
   await page.getByRole("button", { name: "Next markets" }).click();
   await expect(
     page.getByRole("navigation", { name: "Market pages" }),
-  ).toContainText("2 of 2");
+  ).toContainText("2 of 3");
   expect(await titles.allTextContents()).not.toEqual(first);
+  // Two house markets plus one a sample player created (server/demo.ts).
   await page.getByRole("button", { name: "Crypto", exact: true }).click();
-  await expect(titles).toHaveCount(2);
+  await expect(titles).toHaveCount(3);
   await expect(
     page.getByRole("navigation", { name: "Market pages" }),
   ).toHaveCount(0);
@@ -109,26 +110,57 @@ test("market pages, filtering and separate rules preserve an unfinished order", 
   ).toBeVisible();
 });
 
-test("developer hub and saved drafts are focused pages rather than one long screen", async ({
+test("the phone dock has four tabs around a create button and its sheet", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(!isMobile, "The dock is the phone navigation.");
+  await page.goto("/markets");
+  const dock = page.getByRole("navigation", { name: "Quick navigation" });
+  await expect(dock.getByRole("button")).toHaveText([
+    "Markets",
+    "Portfolio",
+    "",
+    "Leaderboard",
+    "Settings",
+  ]);
+  const create = dock.getByRole("button", { name: "Create" });
+  const sheet = page.getByRole("dialog", { name: "Create" });
+  await create.click();
+  await expect(sheet).toBeVisible();
+  await expect(
+    dock.getByRole("button", { name: "Close create menu" }),
+  ).toHaveAttribute("aria-expanded", "true");
+  await page.keyboard.press("Escape");
+  await expect(sheet).toBeHidden();
+  await create.click();
+  await page.goBack();
+  await expect(sheet).toBeHidden();
+  await expect(page).toHaveURL(/\/markets$/);
+  await create.click();
+  await sheet.getByRole("button", { name: /^Saved drafts/ }).click();
+  await expect(page).toHaveURL(/\/studio\/drafts$/);
+  await expect(sheet).toBeHidden();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/markets$/);
+  await dock.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("link", { name: "About Peakcast" }).click();
+  await expect(
+    page.getByRole("heading", { name: "About Peakcast" }),
+  ).toBeVisible();
+  await expect(
+    dock.getByRole("button", { name: "Settings", exact: true }),
+  ).toHaveAttribute("aria-current", "page");
+});
+
+test("about and saved drafts are focused pages rather than one long screen", async ({
   page,
 }) => {
-  await page.goto("/developers");
-  await expect(page.locator(".endpoint-list")).toHaveCount(0);
+  await page.goto("/about");
   await expect(
-    page.getByText(
-      /later milestone|development preview|A place to test your edge/,
-    ),
-  ).toHaveCount(0);
-  await page
-    .getByRole("button", { name: "API & credentials", exact: false })
-    .click();
-  await expect(page).toHaveURL(/\/developers\/api$/);
-  await expect(page.locator(".endpoint")).toHaveCount(8);
-  await expect(page.getByLabel("TypeScript API example")).toBeHidden();
-  await page
-    .getByText("JavaScript / TypeScript example", { exact: true })
-    .click();
-  await expect(page.getByLabel("TypeScript API example")).toBeVisible();
+    page.getByRole("heading", { name: "About Peakcast" }),
+  ).toBeVisible();
+  await expect(page.getByText("Your data stays here")).toBeVisible();
   await page.goto("/studio");
   await page.getByRole("button", { name: "Use an example" }).click();
   await page.getByRole("button", { name: /^Saved drafts/ }).click();

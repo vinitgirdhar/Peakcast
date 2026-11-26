@@ -222,7 +222,7 @@ test("8: alternative sources warn", () => {
     expectFindings({ ...base, yesRule }, { warn: ["multiple-sources"] });
 });
 
-test("9: markets about Wildcatter itself warn", () => {
+test("9: markets about Peakcast itself warn", () => {
   expectFindings(
     { ...base, question: "Will this market reach 70% probability by 2027?" },
     { warn: ["self-reference"] },

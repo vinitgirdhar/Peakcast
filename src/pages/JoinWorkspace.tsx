@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { ApiError, WildcatterClient } from "../../shared/client.js";
+import { ApiError, PeakcastClient } from "../../shared/client.js";
 import type { InvitePreview, Workspace } from "../../shared/types.js";
 import { EmptyState, SkeletonRows, date, errorMessage } from "../ui.js";
 import { roleLabels } from "./WorkspaceMembers.js";
@@ -18,7 +18,7 @@ export function JoinWorkspace({
   onJoined,
   onTeams,
 }: {
-  client: WildcatterClient;
+  client: PeakcastClient;
   onJoined: (workspace: Workspace) => void;
   onTeams: () => void;
 }) {

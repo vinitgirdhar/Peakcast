@@ -668,7 +668,10 @@ test("launching to a workspace stakes wallet credits and opens an unlisted priva
     );
     assert.match(market.id, /^ws-[0-9a-f-]{36}$/);
     assert.equal(market.workspaceId, wid);
-    assert.equal((await t.ok("GET", "/portfolio", owner)).balanceMicros, PERSON_START);
+    assert.equal(
+      (await t.ok("GET", "/portfolio", owner)).balanceMicros,
+      PERSON_START,
+    );
     const wallet = await t.ok("GET", `/workspaces/${wid}/portfolio`, owner);
     assert.equal(wallet.balanceMicros, START - 500 * CREDIT);
     assert.equal(wallet.created[0].marketId, market.id);
@@ -836,7 +839,10 @@ test("member rulings: roles, conflicts of interest and rulable states; credits s
     let total = 0;
     for (const who of Object.values(people)) {
       total += (await wallet(who)).balanceMicros;
-      assert.equal((await t.ok("GET", "/portfolio", who)).balanceMicros, PERSON_START);
+      assert.equal(
+        (await t.ok("GET", "/portfolio", who)).balanceMicros,
+        PERSON_START,
+      );
     }
     assert.equal(total, Object.keys(people).length * START);
     const publicBoard = await t.ok("GET", "/leaderboard", people.A);
@@ -891,7 +897,7 @@ test("the Windows app build leaves Teams unregistered", async () => {
 
 test("a pre-Teams database file upgrades in place without losing data", async () => {
   const path = join(
-    mkdtempSync(join(tmpdir(), "wildcatter-upgrade-")),
+    mkdtempSync(join(tmpdir(), "peakcast-upgrade-")),
     "old.sqlite",
   );
   const old = new DatabaseSync(path);

@@ -1,4 +1,4 @@
-const CACHE = 'wildcatter-shell-v6';
+const CACHE = 'peakcast-shell-v1';
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE);
@@ -10,7 +10,7 @@ self.addEventListener('install', event => {
   })());
 });
 self.addEventListener('activate', event => {
-  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('wildcatter-shell-') && key !== CACHE).map(key => caches.delete(key)))));
+  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => (key.startsWith('wildcatter-shell-') || key.startsWith('peakcast-shell-')) && key !== CACHE).map(key => caches.delete(key)))));
 });
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);

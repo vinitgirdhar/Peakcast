@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { buildApp } from "../dist-server/server/app.js";
-import { ApiError, WildcatterClient } from "../dist-server/shared/client.js";
+import { ApiError, PeakcastClient } from "../dist-server/shared/client.js";
 
 const report = {
   checkedAt: new Date().toISOString(),
@@ -14,7 +14,7 @@ const report = {
 mkdirSync("output", { recursive: true });
 const app = await buildApp({ databasePath: ":memory:" });
 const base = await app.listen({ host: "127.0.0.1", port: 0 });
-const publicApi = new WildcatterClient(base);
+const publicApi = new PeakcastClient(base);
 const rejectsStatus = (operation, status) =>
   assert.rejects(
     operation,
@@ -61,15 +61,15 @@ try {
     },
   );
   const session = await publicApi.createSession();
-  const api = new WildcatterClient(base, session.token);
+  const api = new PeakcastClient(base, session.token);
   await check(
     "Isolated demo session, bearer authorization and no-store responses",
     async () => {
       assert.match(session.token, /^[a-f0-9]{64}$/);
-      assert.equal((await api.portfolio()).balanceMicros, 10_000_000_000);
+      assert.equal((await api.portfolio()).balanceMicros, 5_000_000_000);
       await rejectsStatus(() => publicApi.portfolio(), 401);
       await rejectsStatus(
-        () => new WildcatterClient(base, "invalid").drafts(),
+        () => new PeakcastClient(base, "invalid").drafts(),
         401,
       );
       const response = await fetch(`${base}/api/v1/portfolio`, {
@@ -131,8 +131,7 @@ try {
       );
       const other = await publicApi.createSession();
       assert.equal(
-        (await new WildcatterClient(base, other.token).portfolio()).trades
-          .length,
+        (await new PeakcastClient(base, other.token).portfolio()).trades.length,
         0,
       );
       assert.equal((await api.portfolio()).trades.length, 6);
@@ -159,25 +158,11 @@ try {
       assert.equal((await api.drafts()).items[0].id, saved.id);
       const other = await publicApi.createSession();
       assert.equal(
-        (await new WildcatterClient(base, other.token).drafts()).items.length,
+        (await new PeakcastClient(base, other.token).drafts()).items.length,
         0,
       );
     },
   );
-  if (!capabilities.aiConfigured)
-    await check("Unconfigured AI returns 503", () =>
-      rejectsStatus(
-        () => api.generateDraft(draft, "unconfigured-test-token"),
-        503,
-      ),
-    );
-  else
-    report.checks.push({
-      name: "Live AI inference",
-      status: "not-run",
-      reason:
-        "Configured paid inference requires an explicit live-provider test.",
-    });
   await check(
     "OpenAPI, Swagger, SPA, install assets and credential exclusions",
     async () => {
@@ -196,11 +181,7 @@ try {
         "/sw.js",
       ])
         assert.equal((await fetch(`${base}${path}`)).status, 200, path);
-      for (const path of [
-        "/.env",
-        "/data/wildcatter.sqlite",
-        "/api/v1/unknown",
-      ])
+      for (const path of ["/.env", "/data/peakcast.sqlite", "/api/v1/unknown"])
         assert.equal((await fetch(`${base}${path}`)).status, 404, path);
     },
   );

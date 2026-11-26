@@ -9,8 +9,9 @@ test("explore, filter, buy, reload, inspect the portfolio and sell", async ({
   await expect(
     page.getByRole("heading", { name: "Markets", exact: true }),
   ).toBeVisible();
+  // Two house markets plus one a sample player created (server/demo.ts).
   await page.getByRole("button", { name: "Crypto", exact: true }).click();
-  await expect(page.locator(".market-card")).toHaveCount(2);
+  await expect(page.locator(".market-card")).toHaveCount(3);
   await page.getByRole("textbox", { name: "Search markets" }).fill("Bitcoin");
   await expect(page.locator(".market-card")).toHaveCount(1);
   await page
@@ -33,22 +34,9 @@ test("explore, filter, buy, reload, inspect the portfolio and sell", async ({
   await expect(
     page.getByRole("button", { name: "Buy YES shares" }),
   ).toBeEnabled();
-  // WebKit reports requests cut off by reload as page errors; finish both post-trade refreshes.
-  const tradeStarted = Date.now();
-  const chartRefresh = page.waitForResponse(
-    (response) =>
-      response.url().endsWith("/history") &&
-      response.request().timing().startTime > tradeStarted,
-  );
-  const quoteRefresh = page.waitForResponse(
-    (response) =>
-      response.url().endsWith("/quotes") &&
-      response.request().timing().startTime > tradeStarted,
-  );
   await page.getByRole("button", { name: "Buy YES shares" }).click();
   await expect(page.getByRole("status")).toContainText("Bought 10 YES shares");
-  await chartRefresh;
-  await (await quoteRefresh).finished();
+  // The trade is saved on the device before it is confirmed, so a reload keeps it.
   await page.reload();
   await expect(
     page.getByRole("heading", {
@@ -74,14 +62,9 @@ test("save and inspect a private manual draft", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: "Draft studio" }),
   ).toBeVisible();
-  await expect(
-    page.getByText("AI not connected", { exact: true }),
-  ).toBeVisible();
   await page.getByRole("button", { name: "Use an example" }).click();
   await page.getByRole("button", { name: "Save private draft" }).click();
-  await expect(page.getByRole("status")).toContainText(
-    "Manual draft saved privately",
-  );
+  await expect(page.getByRole("status")).toContainText("Draft saved privately");
   await page.getByRole("button", { name: /^Saved drafts/ }).click();
   await page
     .getByText("Will the Fed cut interest rates before 2027?", { exact: true })
@@ -101,12 +84,12 @@ test("save and inspect a private manual draft", async ({ page }) => {
   );
 });
 
-test("developer reference, PWA assets, no horizontal overflow, explicit offline failure", async ({
+test("about page, PWA assets, no horizontal overflow, and trading offline", async ({
   page,
 }) => {
-  await page.goto("/developers");
+  await page.goto("/about");
   await expect(
-    page.getByRole("heading", { name: "Developer tools" }),
+    page.getByRole("heading", { name: "About Peakcast" }),
   ).toBeVisible();
   const manifest = await page.request.get("/manifest.webmanifest");
   expect(manifest.ok()).toBeTruthy();
@@ -123,25 +106,17 @@ test("developer reference, PWA assets, no horizontal overflow, explicit offline 
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBeTruthy();
-  await page
-    .getByRole("link", { name: "Open API reference", exact: true })
-    .click();
-  await expect(
-    page.getByRole("heading", { name: /Wildcatter API/ }),
-  ).toBeVisible();
   await page.goto("/markets");
   await expect(
     page.getByRole("heading", { name: "Markets", exact: true }),
   ).toBeVisible();
+  // Everything runs on the device, so quotes and trading keep working offline.
   await page.context().setOffline(true);
   await page.locator(".market-card").first().click();
-  await expect(
-    page
-      .locator(".form-error")
-      .filter({ hasText: /fetch|network|load failed/i }),
-  ).toBeVisible();
+  await page.getByLabel("Number of shares").fill("5");
   await expect(
     page.getByRole("button", { name: "Buy YES shares" }),
-  ).toBeDisabled();
+  ).toBeEnabled();
+  await expect(page.locator(".form-error")).toHaveCount(0);
   await page.context().setOffline(false);
 });

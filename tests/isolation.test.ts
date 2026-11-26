@@ -19,10 +19,10 @@ const OPERATOR = "operator-secret-for-isolation";
 const evidenceUrl = "https://example.org/data/result";
 
 function staticRoot() {
-  const root = mkdtempSync(join(tmpdir(), "wildcatter-isolation-"));
+  const root = mkdtempSync(join(tmpdir(), "peakcast-isolation-"));
   writeFileSync(
     join(root, "index.html"),
-    "<!doctype html><html><head><title>Wildcatter</title></head><body></body></html>",
+    "<!doctype html><html><head><title>Peakcast</title></head><body></body></html>",
   );
   return root;
 }
@@ -158,9 +158,6 @@ const cases: Record<string, (ids: Ids) => Call> = {
   "POST /api/v1/markets/{id}/ruling": () => ({
     headers: { "x-operator-token": OPERATOR },
     payload: { outcome: "YES" },
-  }),
-  "POST /api/v1/markets/{id}/explain": () => ({
-    headers: { "x-ai-access-token": "isolation-explain-token" },
   }),
   "POST /api/v1/quotes": (ids) => ({ payload: tradeInput(ids) }),
   "POST /api/v1/trades": (ids) => ({

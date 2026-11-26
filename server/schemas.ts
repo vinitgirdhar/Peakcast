@@ -1,12 +1,5 @@
 import { Type } from "@sinclair/typebox";
 
-export const AIProviderSchema = Type.Union([
-  Type.Literal("ollama"),
-  Type.Literal("gemini"),
-  Type.Literal("groq"),
-  Type.Literal("openai"),
-]);
-
 export const TradeInputSchema = Type.Object(
   {
     marketId: Type.String({
@@ -45,59 +38,6 @@ export const DraftSchema = Type.Object(
   },
   { additionalProperties: false },
 );
-
-/** Advisory AI critique; checked after parsing the provider's output. */
-export const CritiqueSchema = Type.Object(
-  {
-    summary: Type.String({ maxLength: 400 }),
-    findings: Type.Array(
-      Type.Object(
-        {
-          field: Type.Union(
-            (
-              [
-                "question",
-                "sourceName",
-                "sourceUrl",
-                "closesAt",
-                "yesRule",
-                "noRule",
-                "invalidRule",
-              ] as const
-            ).map((field) => Type.Literal(field)),
-          ),
-          severity: Type.Union([Type.Literal("warn"), Type.Literal("info")]),
-          message: Type.String({ minLength: 1, maxLength: 300 }),
-          suggestion: Type.String({ maxLength: 300 }),
-          quote: Type.String({ maxLength: 200 }),
-        },
-        { additionalProperties: false },
-      ),
-      { maxItems: 8 },
-    ),
-  },
-  { additionalProperties: false },
-);
-const explainItems = (maxItems: number) =>
-  Type.Array(Type.String({ minLength: 1, maxLength: 200 }), { maxItems });
-/** What the model must return for a market explainer; checked before use. */
-export const ExplanationSchema = Type.Object(
-  {
-    summary: Type.String({ minLength: 1, maxLength: 400 }),
-    drivers: explainItems(5),
-    wouldMoveUp: explainItems(3),
-    wouldMoveDown: explainItems(3),
-    baseRateNote: Type.String({ maxLength: 300 }),
-    caveats: explainItems(3),
-  },
-  { additionalProperties: false },
-);
-export const MarketExplanationSchema = Type.Object({
-  provider: AIProviderSchema,
-  generatedAt: Type.String(),
-  probability: Type.Number(),
-  ...ExplanationSchema.properties,
-});
 
 const Text = Type.String();
 export const ErrorSchema = Type.Object({ message: Type.String() });
@@ -361,7 +301,7 @@ export const OEmbedQuerySchema = Type.Object(
 export const OEmbedSchema = Type.Object({
   version: Type.Literal("1.0"),
   type: Type.Literal("rich"),
-  provider_name: Type.Literal("Wildcatter"),
+  provider_name: Type.Literal("Peakcast"),
   provider_url: Text,
   title: Text,
   html: Text,

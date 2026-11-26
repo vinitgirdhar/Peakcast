@@ -1,8 +1,16 @@
 import { useState, type FormEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ArrowLeft, ArrowRight, Scale, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Scale,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import { BrandMark, errorMessage } from "../ui.js";
 import { ease } from "../motion.js";
+import { haptic } from "../haptics.js";
+import { isAndroidApp } from "../platform.js";
 import "../onboarding.css";
 
 const intro = [
@@ -35,8 +43,21 @@ interface OnboardingProps {
   onComplete: (input: OnboardingInput) => Promise<void>;
 }
 
-export function Onboarding({ consentOnly = false, onComplete }: OnboardingProps) {
-  const [step, setStep] = useState(consentOnly ? intro.length : 0);
+type Step = "profile" | number;
+
+export function Onboarding({
+  consentOnly = false,
+  onComplete,
+}: OnboardingProps) {
+  // The Android app asks for the profile first, then walks through the intro;
+  // the website shows the intro first and ends with the profile.
+  const profileFirst = isAndroidApp && !consentOnly;
+  const order: Step[] = consentOnly
+    ? ["profile"]
+    : profileFirst
+      ? ["profile", 0, 1, 2]
+      : [0, 1, 2, "profile"];
+  const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const [name, setName] = useState("");
   const [adult, setAdult] = useState(false);
@@ -44,14 +65,16 @@ export function Onboarding({ consentOnly = false, onComplete }: OnboardingProps)
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const reduce = useReducedMotion();
-  const last = intro.length;
+  const step = order[index];
+  const profileAt = order.indexOf("profile");
+  const lastIndex = order.length - 1;
   const go = (next: number) => {
-    setDirection(next > step ? 1 : -1);
-    setStep(next);
+    setDirection(next > index ? 1 : -1);
+    setIndex(next);
+    haptic("selection");
   };
   const valid = name.trim().length >= 2 && adult && terms;
-  async function submit(event: FormEvent) {
-    event.preventDefault();
+  async function finish() {
     if (!valid || busy) return;
     setBusy(true);
     setError("");
@@ -61,39 +84,54 @@ export function Onboarding({ consentOnly = false, onComplete }: OnboardingProps)
         acceptTerms: terms,
         confirmAdult: adult,
       });
+      haptic("success");
     } catch (e) {
+      haptic("warning");
       setError(errorMessage(e));
       setBusy(false);
+      // The error is shown on the profile step, where it can be fixed.
+      if (profileFirst) go(profileAt);
     }
   }
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!valid || busy) return;
+    if (profileFirst) go(index + 1);
+    else void finish();
+  }
   const offset = reduce ? 0 : 28;
-  const slide = intro[step];
+  const slide = typeof step === "number" ? intro[step] : undefined;
+  const slides = order.filter((item): item is number => item !== "profile");
+  const canSkip = slide !== undefined && index < lastIndex;
   return (
     <div className="onboarding">
       <div className="onboarding-card">
         <div className="onboarding-top">
-          {step > 0 && !(consentOnly && step === last) ? (
+          {index > 0 ? (
             <button
               className="icon-button"
               aria-label="Back"
-              onClick={() => go(step - 1)}
+              onClick={() => go(index - 1)}
             >
               <ArrowLeft size={18} />
             </button>
           ) : (
             <span className="onboarding-brand">
-              <BrandMark /> wildcatter.
+              <BrandMark /> peakcast.
             </span>
           )}
-          {step < last && (
-            <button className="text-button" onClick={() => go(last)}>
+          {canSkip && (
+            <button
+              className="text-button"
+              onClick={() => (profileFirst ? void finish() : go(profileAt))}
+            >
               Skip
             </button>
           )}
         </div>
         <AnimatePresence mode="popLayout" initial={false} custom={direction}>
           <motion.div
-            key={step}
+            key={index}
             className="onboarding-step"
             custom={direction}
             variants={{
@@ -116,11 +154,19 @@ export function Onboarding({ consentOnly = false, onComplete }: OnboardingProps)
               </>
             ) : (
               <form className="onboarding-form" onSubmit={submit}>
-                <h1>{consentOnly ? "Before you continue" : "Create your profile"}</h1>
+                <h1>
+                  {consentOnly
+                    ? "Before you continue"
+                    : profileFirst
+                      ? "Welcome to Peakcast"
+                      : "Create your profile"}
+                </h1>
                 <p>
                   {consentOnly
                     ? "We've updated how accounts work. Choose a display name and confirm the terms to keep playing."
-                    : "Your display name appears on comments and team leaderboards."}
+                    : profileFirst
+                      ? "Choose a display name to get started. It stays on this phone."
+                      : "Your display name appears on comments and team leaderboards."}
                 </p>
                 <label className="field">
                   <span>Display name</span>
@@ -169,22 +215,37 @@ export function Onboarding({ consentOnly = false, onComplete }: OnboardingProps)
                     ? "Setting up…"
                     : consentOnly
                       ? "Continue"
-                      : "Start with 5,000 credits"}
+                      : profileFirst
+                        ? "Continue"
+                        : "Start with 5,000 credits"}
+                  {profileFirst && <ArrowRight size={16} />}
                 </button>
               </form>
             )}
           </motion.div>
         </AnimatePresence>
-        {step < last && (
+        {slide && (
           <div className="onboarding-bottom">
             <div className="onboarding-dots" aria-hidden="true">
-              {intro.map((_, index) => (
-                <span key={index} className={index === step ? "active" : ""} />
+              {slides.map((item) => (
+                <span key={item} className={item === step ? "active" : ""} />
               ))}
             </div>
-            <button className="primary-button" onClick={() => go(step + 1)}>
-              {step === last - 1 ? "Get started" : "Next"} <ArrowRight size={16} />
-            </button>
+            {index < lastIndex ? (
+              <button className="primary-button" onClick={() => go(index + 1)}>
+                {order[index + 1] === "profile" ? "Get started" : "Next"}{" "}
+                <ArrowRight size={16} />
+              </button>
+            ) : (
+              <button
+                className="primary-button"
+                disabled={busy}
+                onClick={() => void finish()}
+              >
+                {busy ? "Setting up…" : "Start with 5,000 credits"}{" "}
+                {!busy && <ArrowRight size={16} />}
+              </button>
+            )}
           </div>
         )}
       </div>

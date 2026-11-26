@@ -14,13 +14,13 @@ Status: plan written 2026-11-25. Phase 1 is built in this change; later phases a
 
 Turning Playground mode off means users stake real money on future events. Legally and on Google Play that is **real-money gambling** (or, in the US, a regulated event-contract exchange). It cannot be switched on by code alone.
 
-| Requirement                | Why                                                                                                                                                                                                                                                                           |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Requirement                | Why                                                                                                                                                                                                                                                                            |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | A licence per country      | India's Promotion and Regulation of Online Gaming Act, 2025 prohibits online money games, their payments and their ads. In the US, event contracts need CFTC registration (as Kalshi has). Most other countries need a gambling licence.                                       |
 | Google Play approval       | Real-money gambling apps need an approved application, a licence for each target country, an age gate, geofencing, and must not be rated or marketed for minors. An app that adds real-money betting without that approval is removed and the developer account can be closed. |
-| KYC and AML                | Identity checks before deposit, transaction monitoring, withdrawal limits.                                                                                                                                                                                                    |
-| A licensed payment partner | Payment providers refuse gambling deposits without the licence.                                                                                                                                                                                                               |
-| Lawyer sign-off            | On terms, risk disclosures and geography.                                                                                                                                                                                                                                     |
+| KYC and AML                | Identity checks before deposit, transaction monitoring, withdrawal limits.                                                                                                                                                                                                     |
+| A licensed payment partner | Payment providers refuse gambling deposits without the licence.                                                                                                                                                                                                                |
+| Lawyer sign-off            | On terms, risk disclosures and geography.                                                                                                                                                                                                                                      |
 
 **Decision built into Phase 1:** the Playground switch exists and is enforced by the server, but real-money mode stays **unavailable** (`REAL_MONEY_ENABLED` is not set). Turning it off explains why and changes nothing. This is the version that passes Play review as a _simulated_ prediction game. Real money is Phase 4, after the items above exist.
 
@@ -29,7 +29,7 @@ Turning Playground mode off means users stake real money on future events. Legal
 ### Onboarding
 
 - First launch, with no saved account, shows a four-step flow instead of silently creating a demo account:
-  1. **Welcome:** what Wildcatter is.
+  1. **Welcome:** what Peakcast is.
   2. **How it works:** YES/NO prices as probabilities, trading, resolution and disputes.
   3. **Playground:** 5,000 practice credits with no cash value, and that you cannot buy them.
   4. **Profile and consent:** display name, an 18+ confirmation, and agreement to the Terms and Privacy Policy, with links to both.
@@ -44,12 +44,12 @@ Turning Playground mode off means users stake real money on future events. Legal
 
 ### Account API
 
-| Endpoint                     | Purpose                                                                                                    |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `GET /api/v1/account`        | Profile, consent state, Playground state, starting grant, whether real money is available.                 |
-| `PUT /api/v1/account`        | Set the display name and record consent (both confirmations required).                                     |
-| `PUT /api/v1/account/mode`   | `{ playground }`. Turning it off returns 409 until real money is licensed and enabled.                     |
-| `DELETE /api/v1/account`     | Deletes the account. Required by Google Play for any app that creates accounts.                           |
+| Endpoint                   | Purpose                                                                                    |
+| -------------------------- | ------------------------------------------------------------------------------------------ |
+| `GET /api/v1/account`      | Profile, consent state, Playground state, starting grant, whether real money is available. |
+| `PUT /api/v1/account`      | Set the display name and record consent (both confirmations required).                     |
+| `PUT /api/v1/account/mode` | `{ playground }`. Turning it off returns 409 until real money is licensed and enabled.     |
+| `DELETE /api/v1/account`   | Deletes the account. Required by Google Play for any app that creates accounts.            |
 
 Deletion removes drafts, comments, the watchlist and notifications. It cancels open orders, leaves workspaces, clears the profile and revokes the token. Trades, positions and ledger rows stay, without the profile, because other traders' prices and payouts depend on them. The Privacy Policy states this.
 
@@ -65,15 +65,15 @@ Deletion removes drafts, comments, the watchlist and notifications. It cancels o
 
 ### Android
 
-| Item                    | Change                                                                                                                         |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Target API              | 35 → **36**. Google Play requires API 36 for new apps and updates from 31 Aug 2026.                                             |
-| Edge-to-edge            | Enforced from API 35. The WebView now pads itself by the system-bar and cutout insets, so content no longer sits under the status bar. |
-| Predictive back         | `OnBackInvokedCallback` on API 33+, and `enableOnBackInvokedCallback` set.                                                      |
-| Offline                 | A native "You're offline" screen with Retry instead of the WebView error page.                                                 |
-| Play format             | `build-android.ps1 -Bundle` builds a signed **.aab** with bundletool (Play does not accept APKs for new apps).                 |
-| Signing                 | The upload key comes from environment variables. The demo key stays for local APK testing only.                                |
-| Version                 | `versionCode 4`, `versionName 1.2.0`.                                                                                          |
+| Item            | Change                                                                                                                                 |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Target API      | 35 → **36**. Google Play requires API 36 for new apps and updates from 31 Aug 2026.                                                    |
+| Edge-to-edge    | Enforced from API 35. The WebView now pads itself by the system-bar and cutout insets, so content no longer sits under the status bar. |
+| Predictive back | `OnBackInvokedCallback` on API 33+, and `enableOnBackInvokedCallback` set.                                                             |
+| Offline         | A native "You're offline" screen with Retry instead of the WebView error page.                                                         |
+| Play format     | `build-android.ps1 -Bundle` builds a signed **.aab** with bundletool (Play does not accept APKs for new apps).                         |
+| Signing         | The upload key comes from environment variables. The demo key stays for local APK testing only.                                        |
+| Version         | `versionCode 4`, `versionName 1.2.0`.                                                                                                  |
 
 ### Smoothness (first pass)
 
@@ -94,7 +94,7 @@ Without this, a reinstalled app or a cleared browser loses the account. That is 
 - Store listing: a 512×512 icon, a 1024×500 feature graphic, at least 2 phone screenshots, and short and full descriptions that say "practice credits, no real money".
 - Content rating questionnaire: answer **yes** to simulated gambling. Expect an 18+ / Mature rating; target audience 18+.
 - Data safety form: collects a display name and app activity (trades, comments); no location, contacts or ads ID; data encrypted in transit; deletion available at `/delete-account`. Draft text sent to the configured AI provider (Gemini, Groq or OpenAI) counts as **shared** user content: declare it.
-- Replace the placeholder contact `support@wildcatter.app` in `src/pages/Legal.tsx` with a real, monitored address, and use the same one as the Play developer contact.
+- Replace the placeholder contact `girdharvinit786@gmail.com` in `src/pages/Legal.tsx` with a real, monitored address, and use the same one as the Play developer contact.
 - Deploy this build to the hosted API before submitting: the Android app loads the hosted site, so onboarding and the legal pages only exist in the app once they are live there.
 - App access: no login needed.
 - Ads: none.

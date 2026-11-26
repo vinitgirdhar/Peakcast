@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { WildcatterClient } from "../../shared/client.js";
+import { PeakcastClient } from "../../shared/client.js";
 import type { Leaderboard } from "../../shared/types.js";
 import {
   EmptyState,
@@ -9,6 +9,7 @@ import {
   formatCredits,
 } from "../ui.js";
 import { itemMotion, listMotion } from "../motion.js";
+import { haptic } from "../haptics.js";
 
 const tabs = [
   {
@@ -70,7 +71,7 @@ export function LeaderboardView({
   client,
   load,
 }: {
-  client: WildcatterClient;
+  client: PeakcastClient;
   /** A workspace board: loaded from here, shown inside the workspace page, members named. */
   load?: () => Promise<Leaderboard>;
 }) {
@@ -105,6 +106,10 @@ export function LeaderboardView({
           <div>
             <h1>Leaderboard</h1>
             <p>Who reads the future best? Ranked on demo credits.</p>
+            <p className="fine-print">
+              Includes sample players added with the app so you have someone to
+              beat. They are not real people.
+            </p>
           </div>
         </div>
       )}
@@ -118,7 +123,10 @@ export function LeaderboardView({
             key={item.id}
             className={tab === item.id ? "selected" : ""}
             aria-pressed={tab === item.id}
-            onClick={() => setTab(item.id)}
+            onClick={() => {
+              if (tab !== item.id) haptic("selection");
+              setTab(item.id);
+            }}
           >
             {tab === item.id && (
               <motion.span

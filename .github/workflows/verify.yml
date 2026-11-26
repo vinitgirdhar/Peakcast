@@ -1,4 +1,4 @@
-name: Verify Wildcatter
+name: Verify Peakcast
 
 on:
   push:

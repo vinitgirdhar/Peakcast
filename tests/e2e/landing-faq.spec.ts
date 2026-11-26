@@ -35,7 +35,7 @@ test("landing FAQ supports keyboard disclosure and footer navigation", async ({
     await page.keyboard.press("Enter");
   }
   await expect(faq).toContainText(
-    "signing into the same account across devices is not currently available",
+    "keeps its own separate account, credits and markets",
   );
   await expect(faq).toContainText("no real-money payouts");
   expect(
@@ -48,8 +48,8 @@ test("landing FAQ supports keyboard disclosure and footer navigation", async ({
   await expect(
     page
       .getByRole("navigation", { name: "Footer", exact: true })
-      .getByRole("link", { name: "Build with our API" }),
-  ).toHaveAttribute("href", "/developers");
+      .getByRole("link", { name: "About Peakcast" }),
+  ).toHaveAttribute("href", "/about");
 });
 
 test("FAQ opens on mouse hover and closes after leaving the answer", async ({

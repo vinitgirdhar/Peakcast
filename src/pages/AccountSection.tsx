@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { WildcatterClient } from "../../shared/client.js";
+import { PeakcastClient } from "../../shared/client.js";
 import type { Account } from "../../shared/types.js";
 import { errorMessage, formatCredits } from "../ui.js";
 import "../onboarding.css";
@@ -14,7 +14,7 @@ export function AccountSection({ token, onDeleted }: AccountSectionProps) {
   const [notice, setNotice] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
-  const client = new WildcatterClient("", token);
+  const client = new PeakcastClient("", token);
   useEffect(() => {
     let active = true;
     client
@@ -57,7 +57,7 @@ export function AccountSection({ token, onDeleted }: AccountSectionProps) {
         <div id="playground-label">
           Playground mode
           <span>
-            {account?.playground ?? true
+            {(account?.playground ?? true)
               ? `Trading practice credits. New accounts start with ${formatCredits(account?.startingMicros ?? 5_000_000_000, 0)} credits.`
               : "Trading real money."}
           </span>
@@ -79,11 +79,16 @@ export function AccountSection({ token, onDeleted }: AccountSectionProps) {
       <div className="account-row">
         <div>
           Delete account
-          <span>Removes your profile and personal data. This can't be undone.</span>
+          <span>
+            Removes your profile and personal data. This can't be undone.
+          </span>
         </div>
         {confirming ? (
           <span className="account-confirm">
-            <button className="secondary-button" onClick={() => setConfirming(false)}>
+            <button
+              className="secondary-button"
+              onClick={() => setConfirming(false)}
+            >
               Cancel
             </button>
             <button className="danger-button" disabled={busy} onClick={remove}>
@@ -91,7 +96,10 @@ export function AccountSection({ token, onDeleted }: AccountSectionProps) {
             </button>
           </span>
         ) : (
-          <button className="secondary-button" onClick={() => setConfirming(true)}>
+          <button
+            className="secondary-button"
+            onClick={() => setConfirming(true)}
+          >
             Delete…
           </button>
         )}

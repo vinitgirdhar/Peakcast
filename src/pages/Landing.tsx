@@ -1,6 +1,6 @@
 import {
   ArrowRight,
-  Code2,
+  HardDrive,
   Download,
   LineChart,
   Monitor,
@@ -31,31 +31,31 @@ const features = [
   },
   {
     icon: Sparkles,
-    title: "AI-assisted drafting",
-    text: "Write a question, then tighten its resolution rules with Gemini, Groq, OpenAI or a local Ollama model.",
+    title: "Build your own markets",
+    text: "Draft a question, let the rule checker flag vague wording, then launch it and earn 1% of every trade.",
   },
   {
-    icon: Code2,
-    title: "Open developer API",
-    text: "The same versioned HTTP API and typed client that power this app, documented with OpenAPI.",
+    icon: HardDrive,
+    title: "Private by design",
+    text: "No server, no sign-up, no tracking. Everything runs and stays on your device, even offline.",
   },
 ];
 
 const faqs = [
   {
-    question: "Can I try Wildcatter without installing anything?",
+    question: "Can I try Peakcast without installing anything?",
     answer:
       "Yes. Choose Continue on the web above to open the workspace in your browser. You start with 5,000 practice credits.",
   },
   {
     question: "How do I install the Windows desktop app?",
     answer:
-      "Choose Download desktop app above, extract the entire ZIP into a folder, then open Wildcatter.exe. The download is for Windows 64-bit and includes its own local server and database.",
+      "Choose Download desktop app above, extract the entire ZIP into a folder, then open Peakcast.exe. The download is for Windows 64-bit and runs fully offline.",
   },
   {
     question: "Is there an Android app?",
     answer:
-      "Yes. Choose Download for Android above, open the downloaded APK on your phone, and follow the installation prompts. The Android app connects to the hosted service and needs an internet connection.",
+      "Yes. Choose Download for Android above, open the downloaded APK on your phone, and follow the installation prompts. The app runs fully on your phone and needs no internet connection.",
   },
   {
     question: "Can I use it on iPhone, iPad, or Mac?",
@@ -63,24 +63,19 @@ const faqs = [
       "Use the web app in your browser. On iPhone or iPad, open the site in Safari and choose Share, then Add to Home Screen. Other supported browsers offer an Install app option in their menu. There is no native iOS or macOS download.",
   },
   {
-    question: "Does my workspace sync across devices?",
+    question: "Does my data sync across devices?",
     answer:
-      "Web and Android use the same hosted service and show shared public market updates. Your session belongs to the browser or app you use; signing into the same account across devices is not currently available. Windows stores a separate local workspace, so its balance, portfolio, and drafts do not sync with the hosted service.",
+      "No. Peakcast has no server, so each browser, phone or computer keeps its own separate account, credits and markets. Nothing you do leaves the device.",
   },
   {
-    question: "Does Wildcatter use real money?",
+    question: "Does Peakcast use real money?",
     answer:
       "No. This is a demo with practice credits. Credits cannot be purchased, withdrawn, or exchanged for money, and there are no real-money payouts.",
   },
   {
-    question: "Why does the app sometimes take a moment to start?",
+    question: "What happens if I clear my browser data or uninstall?",
     answer:
-      "The hosted demo runs on Render’s free plan, which can put the server to sleep when it is inactive. The warm-up screen stays visible while it starts. Keep the page open and allow a minute or two; the app continues automatically when the server is ready.",
-  },
-  {
-    question: "Where can I find developer documentation?",
-    answer:
-      "Choose Developers at the top of this page or Build with our API in the footer. The developer guide includes API documentation, integration examples, and setup instructions.",
+      "Your account and everything in it are erased, because they exist only on that device. You can start again with a fresh 5,000 credits.",
   },
 ];
 
@@ -150,10 +145,10 @@ export function Landing({
       <header>
         <a className="brand" href="/">
           <BrandMark />
-          <span>wildcatter.</span>
+          <span>peakcast.</span>
         </a>
         <div className="landing-nav">
-          <a href="/developers">Developers</a>
+          <a href="/about">About</a>
           <button
             className="icon-button theme-toggle"
             aria-label="Switch color theme"
@@ -186,14 +181,14 @@ export function Landing({
             className="landing-actions"
             variants={itemMotion}
             role="region"
-            aria-label="Get Wildcatter"
+            aria-label="Get Peakcast"
           >
             <button className="primary-button" onClick={onContinue}>
               Continue on the web
               <ArrowRight size={18} />
             </button>
             <a
-              href="/downloads/Wildcatter-Windows.zip"
+              href="/downloads/Peakcast-Windows.zip"
               className="secondary-button"
             >
               <Monitor size={17} />
@@ -201,7 +196,7 @@ export function Landing({
               <Download size={15} />
             </a>
             <a
-              href="/downloads/Wildcatter-Android.apk"
+              href="/downloads/Peakcast-Android.apk"
               className="secondary-button"
             >
               <Smartphone size={17} />
@@ -230,7 +225,7 @@ export function Landing({
             <span className="landing-eyebrow">
               The product film · 1 min 54 sec
             </span>
-            <h2 id="product-film-title">A closer look at Wildcatter.</h2>
+            <h2 id="product-film-title">A closer look at Peakcast.</h2>
           </div>
           <p>
             From your first question to a considered forecast. See the real app
@@ -246,7 +241,7 @@ export function Landing({
             poster="/media/wildcatter-product-introduction.jpg"
             width="1920"
             height="1080"
-            aria-label="Introducing Wildcatter — narrated product film"
+            aria-label="Introducing Peakcast — narrated product film"
           >
             <track
               kind="captions"
@@ -261,7 +256,7 @@ export function Landing({
             />
             <p>
               <a href="/media/wildcatter-product-introduction.mp4">
-                Download the Wildcatter product film
+                Download the Peakcast product film
               </a>
               .
             </p>
@@ -270,7 +265,7 @@ export function Landing({
             <button
               type="button"
               className="product-film-start"
-              aria-label="Play the Wildcatter product film"
+              aria-label="Play the Peakcast product film"
               onClick={playFilm}
             >
               <span>
@@ -341,14 +336,14 @@ export function Landing({
         </div>
       </motion.section>
       <footer>
-        <span>Wildcatter · Practice credits only, no real-money payouts.</span>
+        <span>Peakcast · Practice credits only, no real-money payouts.</span>
         <nav aria-label="Footer">
           <a href="#faq">FAQ</a>
           <a href="/terms">Terms</a>
           <a href="/privacy">Privacy</a>
           <a href="/help">Help</a>
-          <a href="/developers">
-            Build with our API <ArrowRight size={14} />
+          <a href="/about">
+            About Peakcast <ArrowRight size={14} />
           </a>
         </nav>
       </footer>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { ArrowLeft, Plus, Wallet } from "lucide-react";
-import { WildcatterClient } from "../../shared/client.js";
+import { PeakcastClient } from "../../shared/client.js";
 import type {
   Market,
   Portfolio,
@@ -30,7 +30,7 @@ const tabs: { id: WorkspaceTab; label: string; path: string }[] = [
 const RULERS: WorkspaceRole[] = ["owner", "admin", "resolver"];
 
 interface WorkspaceProps {
-  client: WildcatterClient;
+  client: PeakcastClient;
   workspaceId: string;
   tab: WorkspaceTab;
   /** Set on /teams/:wid/markets/:id. */

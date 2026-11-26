@@ -336,7 +336,7 @@ test("hosted deployments redirect the Windows download to its release asset", as
   process.chdir(tmpdir());
   try {
     const download = () =>
-      app.inject({ url: "/downloads/Wildcatter-Windows.zip" });
+      app.inject({ url: "/downloads/Peakcast-Windows.zip" });
     assert.equal((await download()).statusCode, 404);
     process.env.WINDOWS_DOWNLOAD_URL = "http://insecure.example.org/app.zip";
     assert.equal((await download()).statusCode, 404);
@@ -344,7 +344,7 @@ test("hosted deployments redirect the Windows download to its release asset", as
     const redirect = await download();
     assert.equal(redirect.statusCode, 302);
     assert.equal(redirect.headers.location, "https://example.org/app.zip");
-    const apk = () => app.inject({ url: "/downloads/Wildcatter-Android.apk" });
+    const apk = () => app.inject({ url: "/downloads/Peakcast-Android.apk" });
     assert.equal((await apk()).statusCode, 404);
     process.env.ANDROID_DOWNLOAD_URL = "https://example.org/app.apk";
     assert.equal((await apk()).headers.location, "https://example.org/app.apk");

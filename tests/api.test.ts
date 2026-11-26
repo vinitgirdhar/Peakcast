@@ -330,20 +330,21 @@ test("private drafts validate dates, sources and missing rules; no publishing ro
       ).statusCode,
       404,
     );
+    // AI was removed: there is no generation route.
     const unavailable = await app.inject({
       method: "POST",
       url: "/api/v1/drafts/generate",
       headers: { ...headers, "x-ai-access-token": "not-configured-token" },
       payload: draft,
     });
-    assert.equal(unavailable.statusCode, 503);
+    assert.equal(unavailable.statusCode, 404);
   } finally {
     await app.close();
   }
 });
 
 test("database restart preserves balances and retry identity; tokens are hashed and expire", () => {
-  const folder = mkdtempSync(join(tmpdir(), "wildcatter-test-"));
+  const folder = mkdtempSync(join(tmpdir(), "peakcast-test-"));
   let store = new Store(join(folder, "state.sqlite"));
   try {
     const session = store.createSession();
@@ -425,49 +426,6 @@ test("host/origin policy blocks DNS rebinding and cross-site requests", async ()
     );
   } finally {
     await app.close();
-  }
-});
-
-test("configured AI requires its own secret and validates output before saving", async () => {
-  const previousToken = process.env.AI_ACCESS_TOKEN;
-  process.env.AI_ACCESS_TOKEN = "only-for-test-ai-secret";
-  const app = await buildApp({
-    databasePath: ":memory:",
-    rateLimiting: false,
-    draftGenerator: async (input) => ({
-      ...input,
-      yesRule:
-        "A refined measurable criterion with explicit units and a deadline.",
-    }),
-  });
-  try {
-    const token = (
-      await app.inject({ method: "POST", url: "/api/v1/sessions" })
-    ).json().token;
-    const headers = {
-      authorization: `Bearer ${token}`,
-      "x-ai-access-token": process.env.AI_ACCESS_TOKEN,
-    };
-    const denied = await app.inject({
-      method: "POST",
-      url: "/api/v1/drafts/generate",
-      headers: { ...headers, "x-ai-access-token": "wrong-token-long-enough" },
-      payload: draft,
-    });
-    assert.equal(denied.statusCode, 403);
-    const result = await app.inject({
-      method: "POST",
-      url: "/api/v1/drafts/generate",
-      headers,
-      payload: draft,
-    });
-    assert.equal(result.statusCode, 201, result.body);
-    assert.equal(result.json().mode, "openai");
-    assert.ok(result.json().yesRule.includes("refined"));
-  } finally {
-    await app.close();
-    if (previousToken === undefined) delete process.env.AI_ACCESS_TOKEN;
-    else process.env.AI_ACCESS_TOKEN = previousToken;
   }
 });
 
@@ -616,10 +574,7 @@ test("launching a draft stakes liquidity, opens a tradeable market and pays the 
     });
     assert.equal(fill.statusCode, 201, fill.body);
     assert.equal(fill.json().feeMicros, quote.feeMicros);
-    assert.equal(
-      fill.json().balanceMicros,
-      5_000_000_000 - quote.amountMicros,
-    );
+    assert.equal(fill.json().balanceMicros, 5_000_000_000 - quote.amountMicros);
     const sellInput = { ...input, action: "sell", shares: 40 };
     const sellQuote = (
       await app.inject({

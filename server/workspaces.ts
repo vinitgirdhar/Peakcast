@@ -22,7 +22,7 @@ import type {
   WorkspaceRole,
 } from "../shared/types.js";
 
-// Wildcatter for Teams. Each membership owns a wallet: an ordinary accounts
+// Peakcast for Teams. Each membership owns a wallet: an ordinary accounts
 // row tagged with workspace_id. Trading, orders, payouts, comments and
 // notifications all key on an account id, so they stay per-tenant unchanged.
 // marketActor() is the one gate every market route goes through.

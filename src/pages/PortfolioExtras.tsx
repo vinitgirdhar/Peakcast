@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from "react";
 import { motion } from "motion/react";
 import { Check, Flame, Gift } from "lucide-react";
-import { ApiError, WildcatterClient } from "../../shared/client.js";
+import { ApiError, PeakcastClient } from "../../shared/client.js";
 import type {
   AccountStats,
   Calibration,
@@ -10,6 +10,7 @@ import type {
 } from "../../shared/types.js";
 import { errorMessage, formatCredits, percent } from "../ui.js";
 import { AnimatedNumber, enterMotion } from "../motion.js";
+import { haptic } from "../haptics.js";
 
 const credits = (micros: number) => formatCredits(micros, 0);
 
@@ -20,7 +21,7 @@ export function DailyBonusCard({
   onNotice,
 }: {
   bonus: DailyBonus;
-  client: WildcatterClient;
+  client: PeakcastClient;
   onRefresh: () => Promise<void>;
   onNotice: (text: string) => void;
 }) {
@@ -33,13 +34,17 @@ export function DailyBonusCard({
     setError("");
     try {
       const result = await client.claimBonus();
+      haptic("success");
       onNotice(`Daily bonus: +${credits(result.amountMicros)} credits`);
       await onRefresh();
     } catch (e) {
       // Claimed elsewhere today (another tab, the API): show the claimed state.
       if (e instanceof ApiError && e.status === 409)
         await onRefresh().catch((refresh) => setError(errorMessage(refresh)));
-      else setError(errorMessage(e));
+      else {
+        haptic("warning");
+        setError(errorMessage(e));
+      }
     } finally {
       setBusy(false);
     }
@@ -161,7 +166,7 @@ export function AccuracyCard({
   client,
   resolvedMarkets,
 }: {
-  client: WildcatterClient;
+  client: PeakcastClient;
   /** From portfolio stats; undefined until the portfolio has loaded. */
   resolvedMarkets?: number;
 }) {

@@ -9,7 +9,7 @@ import {
   Download,
 } from "lucide-react";
 import type { LedgerKind, Market, Portfolio } from "../../shared/types.js";
-import { WildcatterClient } from "../../shared/client.js";
+import { PeakcastClient } from "../../shared/client.js";
 
 const ledgerLabels: Record<LedgerKind, string> = {
   trade: "Trade",
@@ -31,6 +31,7 @@ import {
   statusLabel,
 } from "../ui.js";
 import { AnimatedNumber, itemMotion, listMotion } from "../motion.js";
+import { haptic } from "../haptics.js";
 import {
   AccuracyCard,
   DailyBonusCard,
@@ -42,7 +43,7 @@ const signedCredits = (micros: number) =>
 const reveal = { variants: listMotion, initial: "hidden", animate: "show" };
 
 interface AndroidWindow {
-  WildcatterAndroid?: {
+  PeakcastAndroid?: {
     saveFile(name: string, mimeType: string, text: string): void;
   };
 }
@@ -55,7 +56,7 @@ export function PortfolioView({
   onRefresh,
   onNotice,
 }: {
-  client: WildcatterClient;
+  client: PeakcastClient;
   onRefresh: () => Promise<void>;
   onNotice: (text: string) => void;
   portfolio: Portfolio | null;
@@ -112,13 +113,13 @@ export function PortfolioView({
       ...rows,
     ].join("\r\n");
     // The Android WebView cannot save blob downloads; its native bridge can.
-    const android = (window as AndroidWindow).WildcatterAndroid;
+    const android = (window as AndroidWindow).PeakcastAndroid;
     if (android)
-      return android.saveFile("wildcatter-statement.csv", "text/csv", csv);
+      return android.saveFile("peakcast-statement.csv", "text/csv", csv);
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const link = document.createElement("a");
     link.href = url;
-    link.download = "wildcatter-statement.csv";
+    link.download = "peakcast-statement.csv";
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -198,6 +199,7 @@ export function PortfolioView({
             className={tab === item.id ? "selected" : ""}
             aria-pressed={tab === item.id}
             onClick={(event) => {
+              if (tab !== item.id) haptic("selection");
               setTab(item.id);
               // Five tabs overflow a phone; keep the chosen one in view.
               event.currentTarget.scrollIntoView({

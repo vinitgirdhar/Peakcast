@@ -1,16 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { test, expect, type Page } from "./fixtures.js";
+import { test, expect, api, mockApi, type Page } from "./fixtures.js";
 import { choose } from "./select.js";
 
 // These journeys never create markets. The one real trade below moves a seeded
 // market's price and volume; the specs that check order read the API at runtime.
 
 /** The page's own demo session; call once the app has rendered loaded data. */
-const demoAuth = async (page: Page) => ({
-  Authorization: `Bearer ${await page.evaluate(() =>
-    localStorage.getItem("wildcatter.demo.token.v1"),
-  )}`,
-});
+const demoToken = (page: Page) =>
+  page.evaluate(() => localStorage.getItem("peakcast.token.v1") ?? "");
 
 test("the daily bonus credits 50 once and stays claimed", async ({ page }) => {
   await page.goto("/portfolio");
@@ -37,10 +34,11 @@ test("a bonus already claimed elsewhere shows the claimed state, not an error", 
   const card = page.getByRole("region", { name: "Daily bonus" });
   const claim = card.getByRole("button", { name: "Claim 50 credits" });
   await expect(claim).toBeVisible();
-  const elsewhere = await page.request.post("/api/v1/bonus/claim", {
-    headers: await demoAuth(page),
+  const elsewhere = await api(page, "/bonus/claim", {
+    method: "POST",
+    token: await demoToken(page),
   });
-  expect(elsewhere.ok()).toBeTruthy();
+  expect(elsewhere.ok).toBeTruthy();
   await claim.click();
   await expect(card).toContainText("Come back tomorrow for 60 credits");
   await expect(card.getByRole("alert")).toHaveCount(0);
@@ -58,14 +56,15 @@ test("the trading record counts the account's trades", async ({ page }) => {
     action: "buy",
     shares: 10,
   };
-  const quote = await (
-    await page.request.post("/api/v1/quotes", { data: order })
-  ).json();
-  const fill = await page.request.post("/api/v1/trades", {
-    headers: { ...(await demoAuth(page)), "Idempotency-Key": randomUUID() },
+  const quote = (
+    await api<{ amountMicros: number }>(page, "/quotes", { data: order })
+  ).body;
+  const fill = await api(page, "/trades", {
+    token: await demoToken(page),
+    headers: { "Idempotency-Key": randomUUID() },
     data: { ...order, limitMicros: quote.amountMicros },
   });
-  expect(fill.status()).toBe(201);
+  expect(fill.status).toBe(201);
   await page.reload();
   await expect(record.locator(".stat-trades strong")).toHaveText("1");
   await expect(record.locator(".stat-volume strong")).not.toHaveText("0.00");
@@ -96,8 +95,8 @@ test("a server-cancelled order raises the badge, is listed and opens its market"
   await page.goto("/markets");
   await expect(page.locator(".market-card").first()).toBeVisible();
   // Selling shares the account does not hold is cancelled at once.
-  const order = await page.request.post("/api/v1/orders", {
-    headers: await demoAuth(page),
+  const order = await api<{ status: string }>(page, "/orders", {
+    token: await demoToken(page),
     data: {
       marketId: "fed-rate",
       outcome: "YES",
@@ -106,7 +105,7 @@ test("a server-cancelled order raises the badge, is listed and opens its market"
       limitPrice: 0.01,
     },
   });
-  expect((await order.json()).status).toBe("cancelled");
+  expect(order.body.status).toBe("cancelled");
   await page.reload();
   const bell = page.getByRole("button", { name: "Notifications, 1 unread" });
   await expect(bell).toBeVisible();
@@ -138,18 +137,17 @@ test("biggest movers sorts by absolute 24h change and labels each move", async (
     7: -0.2,
     9: 0.004,
   };
-  let served: { title: string; change24h: number }[] = [];
-  await page.route("**/api/v1/markets?**", async (route) => {
-    const body = await (await route.fetch()).json();
-    body.items = body.items.map(
-      (market: { change24h: number }, index: number) => ({
-        ...market,
-        change24h: moves[index] ?? 0,
-      }),
-    );
-    served = body.items;
-    await route.fulfill({ json: body });
+  await mockApi(page, "/api/v1/markets?", {
+    transform: `const moves = ${JSON.stringify(moves)};
+      body.items = body.items.map((market, index) => ({ ...market, change24h: moves[index] ?? 0 }));
+      return body;`,
   });
+  const served = (
+    await api<{ items: { title: string }[] }>(page, "/markets")
+  ).body.items.map((market, index) => ({
+    title: market.title,
+    change24h: moves[index] ?? 0,
+  }));
   await page.goto("/markets");
   await expect(page.locator(".market-card")).toHaveCount(6);
   await choose(page, "Sort markets", "movers");

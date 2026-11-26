@@ -1,4 +1,4 @@
-# Wildcatter implementation plan
+# Peakcast implementation plan
 
 Status: implementation started, milestone 1. Source: `AI_Prediction_Market_Platform_RFP.pdf`, all five pages, reviewed 2026-11-11.
 
@@ -6,7 +6,7 @@ Status: implementation started, milestone 1. Source: `AI_Prediction_Market_Platf
 
 A binary prediction market where users discover events, buy YES/NO shares, understand precisely how outcomes are determined, and follow evidence. AI assists market drafting and evidence gathering. Developers use the same versioned APIs as the first-party clients. The long-term product combines an off-chain exchange with collateralized on-chain settlement and separately operated fiat services.
 
-Confirmed delivery: responsive web, mobile installable PWA, Windows desktop. Working name: Wildcatter. Initial funds are demo credits. Launch jurisdictions are not specified. A PWA is not an App Store/Play Store native application.
+Confirmed delivery: responsive web, mobile installable PWA, Windows desktop. Working name: Peakcast. Initial funds are demo credits. Launch jurisdictions are not specified. A PWA is not an App Store/Play Store native application.
 
 ## Requirements and delivery map
 

@@ -123,18 +123,18 @@ function widget(market: Market, values: number[], link: string): string {
   });
   return [
     '<main class="card">',
-    `<header class="row"><span><span class="brand">Wildcatter</span> · Demo credits</span><span class="status">${escapeHtml(statusLabel(market))}</span></header>`,
+    `<header class="row"><span><span class="brand">Peakcast</span> · Demo credits</span><span class="status">${escapeHtml(statusLabel(market))}</span></header>`,
     `<h1 title="${title}">${title}</h1>`,
     `<div class="figures"><p class="probability"><strong>${percent(market.probability)}</strong><span>chance of YES</span></p>${changeLine(market.change24h)}`,
     `<svg class="spark" viewBox="0 0 120 40" preserveAspectRatio="none" role="img" aria-label="YES probability after each demo trade"><polyline points="${sparkline(values)}"/></svg></div>`,
     `<footer class="row"><span>${market.status === "open" ? "Closes" : "Deadline"} <time datetime="${escapeHtml(market.closesAt)}">${deadline}</time></span>`,
-    `<a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">Forecast on Wildcatter<span aria-hidden="true"> →</span></a></footer>`,
+    `<a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">Forecast on Peakcast<span aria-hidden="true"> →</span></a></footer>`,
     "</main>",
   ].join("");
 }
 
 const missing =
-  '<main class="card missing"><p class="brand">Wildcatter</p><h1>Market not found</h1><p>This forecast is not available.</p></main>';
+  '<main class="card missing"><p class="brand">Peakcast</p><h1>Market not found</h1><p>This forecast is not available.</p></main>';
 
 const page = (theme: Theme, title: string, body: string) =>
   `<!doctype html><html lang="en" data-theme="${theme}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${escapeHtml(title)}</title><style>${style}</style></head><body>${body}</body></html>`;
@@ -164,7 +164,7 @@ function ownMarketId(link: string, origin: string): string {
       : undefined;
   if (!id)
     throw new DomainError(
-      "Use a market link from this Wildcatter server, such as /markets/{id}.",
+      "Use a market link from this Peakcast server, such as /markets/{id}.",
     );
   return id;
 }
@@ -175,7 +175,7 @@ const iframe = (
   width: number,
   height: number,
 ) =>
-  `<iframe src="${escapeHtml(`${origin}/embed/markets/${encodeURIComponent(market.id)}`)}" width="${width}" height="${height}" title="${escapeHtml(`Wildcatter forecast: ${market.title}`)}" loading="lazy" sandbox="allow-popups allow-popups-to-escape-sandbox" style="border:0;border-radius:12px;max-width:100%"></iframe>`;
+  `<iframe src="${escapeHtml(`${origin}/embed/markets/${encodeURIComponent(market.id)}`)}" width="${width}" height="${height}" title="${escapeHtml(`Peakcast forecast: ${market.title}`)}" loading="lazy" sandbox="allow-popups allow-popups-to-escape-sandbox" style="border:0;border-radius:12px;max-width:100%"></iframe>`;
 
 /** The SPA shell with link-preview tags for a market page; undefined for any other path. */
 export function marketShell(
@@ -190,11 +190,11 @@ export function marketShell(
   const url = marketUrl(origin, market.id);
   const title = escapeHtml(market.title);
   const description = escapeHtml(
-    `${percent(market.probability)} chance of YES · ${statusLabel(market)} · Demo-credit forecast on Wildcatter`,
+    `${percent(market.probability)} chance of YES · ${statusLabel(market)} · Demo-credit forecast on Peakcast`,
   );
   const tags = [
     '<meta property="og:type" content="website">',
-    '<meta property="og:site_name" content="Wildcatter">',
+    '<meta property="og:site_name" content="Peakcast">',
     `<meta property="og:title" content="${title}">`,
     `<meta property="og:description" content="${description}">`,
     `<meta property="og:url" content="${escapeHtml(url)}">`,
@@ -236,7 +236,7 @@ export function registerEmbeds(
       const html = market
         ? page(
             theme,
-            `${market.title} · Wildcatter`,
+            `${market.title} · Peakcast`,
             widget(
               market,
               [
@@ -246,7 +246,7 @@ export function registerEmbeds(
               marketUrl(ownOrigin(request), market.id),
             ),
           )
-        : page(theme, "Market not found · Wildcatter", missing);
+        : page(theme, "Market not found · Peakcast", missing);
       return reply
         .code(market ? 200 : 404)
         .type("text/html; charset=utf-8")
@@ -284,7 +284,7 @@ export function registerEmbeds(
       return {
         version: "1.0",
         type: "rich",
-        provider_name: "Wildcatter",
+        provider_name: "Peakcast",
         provider_url: origin,
         title: market.title,
         html: iframe(origin, market, width, height),

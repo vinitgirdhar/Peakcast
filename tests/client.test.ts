@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { WildcatterClient, ApiError } from "../shared/client.js";
+import { PeakcastClient, ApiError } from "../shared/client.js";
 
 test("SDK turns non-JSON gateway failures into useful status-preserving API errors", async () => {
   const originalFetch = globalThis.fetch;
@@ -11,7 +11,7 @@ test("SDK turns non-JSON gateway failures into useful status-preserving API erro
     });
   try {
     await assert.rejects(
-      new WildcatterClient("http://localhost").markets(),
+      new PeakcastClient("http://localhost").markets(),
       (error) =>
         error instanceof ApiError &&
         error.status === 503 &&
@@ -30,7 +30,7 @@ test("SDK encodes oEmbed lookups and sends size limits only when given", async (
     return Response.json({ type: "rich" });
   };
   try {
-    const api = new WildcatterClient("http://localhost");
+    const api = new PeakcastClient("http://localhost");
     const link = "https://example.com/markets/a b?x=1&y=2";
     assert.equal((await api.oembed(link)).type, "rich");
     await api.oembed(link, 320, 180);
@@ -57,7 +57,7 @@ test("SDK workspace methods send the documented method, path and body", async ()
   const wid = "1b4e28ba-2fa1-11d2-883f-0016d3cca427";
   const token = "a".repeat(64);
   try {
-    const api = new WildcatterClient("http://localhost", "account-token");
+    const api = new PeakcastClient("http://localhost", "account-token");
     await api.workspaces();
     await api.createWorkspace("Guild", "Ozzie");
     await api.workspace(wid);
@@ -104,100 +104,6 @@ test("SDK workspace methods send the documented method, path and body", async ()
         { category: "Science", workspaceId: wid },
       ],
     ]);
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-});
-
-test("SDK passes the provider separately from the validated draft and keeps authorization in headers", async () => {
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = async (url, init) => {
-    assert.equal(
-      String(url),
-      "http://localhost/api/v1/drafts/generate?provider=groq",
-    );
-    assert.equal(
-      new Headers(init?.headers).get("X-AI-Access-Token"),
-      "workspace-test-token",
-    );
-    assert.equal(
-      new Headers(init?.headers).get("Authorization"),
-      "Bearer account-test-token",
-    );
-    assert.deepEqual(JSON.parse(String(init?.body)), {
-      question: "Request fixture",
-    });
-    return Response.json({ mode: "groq" });
-  };
-  try {
-    const { mode } = await new WildcatterClient(
-      "http://localhost",
-      "account-test-token",
-    ).generateDraft(
-      { question: "Request fixture" } as Parameters<
-        WildcatterClient["generateDraft"]
-      >[0],
-      "workspace-test-token",
-      "groq",
-    );
-    assert.equal(mode, "groq");
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-});
-
-test("SDK sends an advisory critique request with the AI access header", async () => {
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = async (url, init) => {
-    assert.equal(
-      String(url),
-      "http://localhost/api/v1/drafts/critique?provider=gemini",
-    );
-    assert.equal(init?.method, "POST");
-    assert.equal(
-      new Headers(init?.headers).get("X-AI-Access-Token"),
-      "workspace-test-token",
-    );
-    return Response.json({ provider: "gemini", summary: "", findings: [] });
-  };
-  try {
-    const critique = await new WildcatterClient(
-      "http://localhost",
-      "account-test-token",
-    ).critiqueDraft(
-      { question: "Request fixture" } as Parameters<
-        WildcatterClient["critiqueDraft"]
-      >[0],
-      "workspace-test-token",
-      "gemini",
-    );
-    assert.equal(critique.provider, "gemini");
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
-});
-
-test("SDK asks for a market explainer with the AI access header and no body", async () => {
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = async (url, init) => {
-    assert.equal(
-      String(url),
-      "http://localhost/api/v1/markets/fed%2Frate/explain?provider=groq",
-    );
-    assert.equal(init?.method, "POST");
-    assert.equal(init?.body, undefined);
-    assert.equal(
-      new Headers(init?.headers).get("X-AI-Access-Token"),
-      "workspace-test-token",
-    );
-    return Response.json({ provider: "groq", summary: "Plain words." });
-  };
-  try {
-    const explained = await new WildcatterClient(
-      "http://localhost",
-      "account-test-token",
-    ).explainMarket("fed/rate", "workspace-test-token", "groq");
-    assert.equal(explained.summary, "Plain words.");
   } finally {
     globalThis.fetch = originalFetch;
   }

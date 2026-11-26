@@ -1,55 +1,52 @@
-# Backend implementation guide
+# Data and engine guide
 
-Status: working **local demo backend**, not the decentralized production exchange described in the RFP. The browser/PWA and Windows renderer call HTTP APIs; balances and positions are not client-side simulations.
+Status: the Store, pricing, orders and resolution run **inside each app** (web, Android, Windows) on SQLite compiled to WebAssembly. The same code also runs as an optional Fastify server, used by the integration tests. This is a practice app, not the decentralized production exchange described in the RFP.
 
 ## Entry points and ownership
 
-| File                                   | Responsibility                                                                                                                          |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `server/index.ts`                      | Load server environment, build application, bind loopback and close on termination                                                      |
-| `server/app.ts`                        | Fastify routes, bearer authorization, input/response schemas, origin rules, limits, error responses, OpenAPI and static client delivery |
-| `server/database.ts`                   | SQLite tables, account isolation, transactional execution, positions, trade history and private drafts                                  |
-| `server/resolution.ts`                 | Outcome proposal, challenge window, bonded disputes, operator rulings, payouts and creator liquidity return                             |
-| `server/orders.ts`                     | Limit orders: placement, cancellation and matching against the AMM after each trade                                                     |
-| `server/community.ts`                  | Market comments (with the side each commenter holds) and per-account watchlist                                                          |
-| `server/notifications.ts`              | Per-account notification inbox; written by orders, resolution and comments in the same transaction as the event where one exists        |
-| `server/engagement.ts`                 | Daily bonus with streak (derived from `daily_bonus` ledger rows) and portfolio performance stats                                        |
-| `server/calibration.ts`                | Brier score, crowd-baseline skill and calibration buckets (pure functions) over read-only queries of resolved markets' trades           |
-| `server/workspaces.ts`                 | Teams: the `marketActor` gate for every market route, membership and roles, wallets, invites and member rulings                         |
-| `server/workspace-routes.ts`           | The `/api/v1/workspaces` routes; not registered when `buildApp({ teams: false })` (the Windows app)                                     |
-| `server/amm.ts`                        | One LMSR quote implementation used by quotes and executions                                                                             |
-| `server/ai.ts`                         | Optional provider call, strict structured output, protected source/deadline checks and output validation; advisory draft critique       |
-| `server/explain.ts`                    | AI market explainer: quoted-data prompt, schema-checked output, 30-minute per-process cache invalidated by a 5-point move               |
-| `server/schemas.ts`                    | Runtime input/output contracts and generated error schemas                                                                              |
-| `server/fixtures.ts`                   | Twelve illustrative scenarios and initial probabilities; no live event feed                                                             |
-| `shared/types.ts` / `shared/client.ts` | Client-facing types and the SDK used by the web UI                                                                                      |
-| `shared/lint.ts`                       | Rule linter shared by Draft studio and launch gate; word lists, patterns and agency lag table in `shared/lint-data.ts`; no network      |
-| `shared/explain.ts`                    | Plain-language market facts (odds, move, activity, time left, resolution, rule check) for the market page; pure functions, no AI        |
-| `desktop/main.mjs`                     | Sandboxed renderer plus a separately persisted local API instance                                                                       |
+| File                                                 | Responsibility                                                                                                                       |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/local/index.ts`                                 | Starts the on-device engine before the UI, routes the app's `/api/` fetches to it, saves the database to IndexedDB after each change |
+| `src/local/engine.ts`                                | Builds the engine: the Store on sql.js plus the shared routes; teams, share links and operator rulings are off                       |
+| `src/local/router.ts`                                | The slice of Fastify the routes use: matching, TypeBox validation, response cleaning and the server's error messages                 |
+| `src/local/sqlite.ts`                                | The `node:sqlite` `DatabaseSync` API on sql.js (WebAssembly)                                                                         |
+| `src/local/node-crypto.ts`, `src/local/node-fs.ts`   | Browser stand-ins for the Node built-ins the shared code imports; the SHA-256 is checked against `node:crypto` in tests              |
+| `server/routes.ts`                                   | Every `/api/v1` route: authorization, schemas and handlers; registered by both the app engine and the Node server                    |
+| `server/app.ts`, `server/index.ts`                   | Optional Node server: Fastify, security headers, rate limits, OpenAPI, embeds and static files                                       |
+| `server/database.ts`                                 | SQLite tables, account isolation, transactional execution, positions, trade history and private drafts                               |
+| `server/drafts.ts`                                   | Draft validation: schema, public HTTPS source, future deadline                                                                       |
+| `server/resolution.ts`                               | Outcome proposal, challenge window, bonded disputes, operator rulings, payouts and creator liquidity return                          |
+| `server/orders.ts`                                   | Limit orders: placement, cancellation and matching against the AMM after each trade                                                  |
+| `server/community.ts`                                | Market comments (with the side each commenter holds) and per-account watchlist                                                       |
+| `server/notifications.ts`                            | Per-account notification inbox, written in the same transaction as the event where one exists                                        |
+| `server/engagement.ts`                               | Daily bonus with streak and portfolio performance stats                                                                              |
+| `server/calibration.ts`                              | Brier score, crowd-baseline skill and calibration buckets                                                                            |
+| `server/workspaces.ts`, `server/workspace-routes.ts` | Teams; registered only by the Node server                                                                                            |
+| `server/amm.ts`                                      | One LMSR quote implementation used by quotes and executions                                                                          |
+| `server/schemas.ts`                                  | Runtime input and output contracts                                                                                                   |
+| `server/fixtures.ts`                                 | Twelve illustrative scenarios and initial probabilities; no live event feed                                                          |
+| `shared/types.ts`, `shared/client.ts`                | Client-facing types and the SDK used by the UI                                                                                       |
+| `shared/lint.ts`, `shared/explain.ts`                | Rule linter and plain-language market facts; pure functions                                                                          |
+| `desktop/main.mjs`                                   | Electron shell serving `dist/` from `app://peakcast`                                                                                 |
+| `android/MainActivity.java`                          | WebView shell serving the bundled `dist/` from `https://appassets.androidplatform.net`                                               |
 
 ```mermaid
 flowchart LR
-  Browser[Web and mobile PWA] -->|HTTP /api/v1| API[Fastify API]
-  API --> Auth[Hashed demo credentials]
-  API --> Quotes[LMSR quotes and execution]
-  API --> Drafts[Private drafts]
-  Auth --> DB[(SQLite)]
-  Quotes -->|Atomic transaction| DB
-  Drafts --> DB
-  Drafts -. Optional configured provider .-> AI[OpenAI Responses API]
-  Desktop[Windows renderer] -->|Same API contracts| Local[Bundled local Fastify instance]
-  Local --> LocalDB[(Separate desktop SQLite)]
+  UI[Shared React UI] -->|fetch /api/v1| Local[On-device engine]
+  Local --> Routes[server/routes.ts]
+  Routes --> Store[Store, AMM, orders, resolution]
+  Store --> DB[(SQLite in WebAssembly)]
+  DB -->|after every change| IDB[(IndexedDB)]
+  Tests[Integration tests] --> Fastify[Optional Fastify server] --> Routes
 ```
 
 ## Startup and persistence
 
-The web database defaults to `data/wildcatter.sqlite`; `DATABASE_PATH` overrides it. Startup creates missing tables and inserts sample markets only when there are no markets. It never resets an existing account or trade history. WAL mode, foreign keys and a busy timeout are enabled.
+On launch, `startOnDeviceApi()` loads the SQLite WebAssembly module and the saved database bytes from IndexedDB (database `peakcast`, store `files`), then renders the UI. A new device starts with an empty database: tables are created and the twelve sample markets inserted. Startup never resets an existing account or trade history.
 
-The desktop store lives under Electron's application-data directory, normally `%APPDATA%/wildcatter/wildcatter.sqlite`, and binds port 43127. Browser and desktop demo accounts are separate local stores. Shared hosted identity and cross-device portfolio synchronization are future work.
+Every request that changes data is saved before its response reaches the UI: the engine exports the whole database and writes it to IndexedDB, one save at a time, so closing the app right after a trade cannot lose it. The 15-second automatic settlement sweep saves the same way. The app asks the browser for persistent storage so the data is not evicted under storage pressure; clearing site data or uninstalling the app erases it. Accounts expire after 30 days without use, and using the app renews the expiry.
 
-Before rebuilding a running local production server, stop it and restart after `npm run build`: the static routes are registered for the built asset filenames at startup. Do not delete the database to refresh the frontend.
-
-For backup, stop the owning API/app cleanly before copying the SQLite database and any remaining `-wal`/`-shm` sidecars together. The hosted Render service instead streams its database to Cloudflare R2 with Litestream when the `LITESTREAM_*` variables are set; see [README deployment](../README.md#deployment). To restore a copy elsewhere: `litestream restore -o copy.sqlite "$LITESTREAM_REPLICA_URL"` with the same credentials in the environment. Production migrations are not implemented. Never copy only a live `.sqlite` file and assume all committed WAL writes are included.
+The optional Node server keeps its database in `data/peakcast.sqlite` (`DATABASE_PATH` overrides it) with WAL mode, foreign keys and a busy timeout. Stop it before copying the database together with any `-wal`/`-shm` sidecars. Production migrations are not implemented.
 
 ## Quote-to-trade path
 
@@ -71,8 +68,7 @@ The UI caps a buy's optional 1% adverse-price allowance at the available balance
 - Browser demo credentials are stored in localStorage so the SDK and Copy API Token control can access them. This is a documented demo shortcut; production needs a deliberate identity/session and developer-key design. A strict script CSP and React text escaping reduce, but do not eliminate, XSS risk.
 - SQL uses bound parameters. JSON bodies are limited to 16 KiB. Input types, allowed fields, enums and ranges are validated before execution.
 - Hosts default to `127.0.0.1`/`localhost`. An optional `PUBLIC_ORIGIN` on the web server allows one exact HTTPS preview host, with a matching HTTPS origin; it does not enable arbitrary CORS or change the desktop app. API responses use `Cache-Control: no-store`. This is not regulatory country geofencing.
-- The default per-IP API limit is 300/minute, session creation 10/minute, AI generation 3/minute. Rate limits run in memory and are not shared between processes.
-- Provider keys stay on the server. AI generation needs both a demo credential and the extra AI access secret. Generic provider errors do not reveal upstream details.
+- On the optional Node server, the default per-IP API limit is 300/minute and session creation 10/minute. Rate limits run in memory and are not shared between processes.
 
 ## Workspaces: wallets and the gate
 
@@ -83,18 +79,8 @@ Teams adds three tables (`workspaces`, `workspace_members`, `workspace_invites`)
 - **Filters.** `Store.markets()`, `Store.leaderboard()` and the accuracy board take a `workspaceId` that defaults to `null`, and filter with `workspace_id IS ?`, which matches NULL correctly. Public lists, `marketCount`, the public leaderboard and the forecaster board therefore see public markets and person accounts only; the workspace variants see one workspace. The inbox reads the person's own rows plus those of their active wallets, so removing a member hides private notifications immediately.
 - **Tests.** `tests/isolation.test.ts` reads the OpenAPI document and calls every market- and workspace-scoped route as an outsider and anonymously, asserting the response equals the one for an unknown id; a new route missing from its table fails the test. It also scans every public read for private ids, titles, workspace and member names, and checks that wallets cannot authenticate.
 
-## AI lifecycle
-
-Manual save works without provider credentials. Optional AI receives only the submitted draft JSON and an instruction to treat it as untrusted data. It refines rules through structured output; the server rejects incomplete/refused/malformed output, missing fields, and changed designated source or deadline. Invalid generated data returns 502 rather than blaming the user's valid input with a 400.
-
-The automated tests exercise the real SDK/provider adapter against mocked HTTP responses. They do not prove a paid model's availability, accuracy, current event knowledge, data rights or factual verification. No news is fetched. No model can publish a market, trade or settle a position.
-
 ## Verification and production gaps
 
-`npm run verify` builds the shipped code and checks it over real loopback HTTP with the SDK and a disposable database. Browser journeys use the compiled backend with disposable data and no live AI credentials. Rate-limit behavior is tested separately with limits enabled.
+`npm run verify` builds the shipped code and checks it over real loopback HTTP with the SDK and a disposable database. Browser journeys run the built web app with its on-device engine and disposable browser storage. Rate-limit behavior is tested separately with limits enabled.
 
 See [API reference](API.md), [review checklist](ACCEPTANCE.md), [automation](AUTOMATION.md), and [RFP status](RFP_STATUS.md). Production gaps include a double-entry ledger, order reservations/CLOB, on-chain collateral/tokens, reconciliation/finality, oracle disputes/payouts, wallet identity, fiat/KYC integrations, scoped/revocable production keys, backups/migrations and measured capacity/security audits.
-
-## Multiple AI providers
-
-`server/ai.ts` owns Gemini REST, Groq OpenAI-compatible chat, and the optional OpenAI Responses integration. `GET /api/v1/capabilities` exposes configured provider IDs, labels and model names without keys. The generate route accepts a validated `provider` query parameter, requires account bearer plus workspace access token, and records the provider on the saved JSON draft. No database migration is required for historical `openai`/`manual` drafts. No automatic provider fallback, tool execution or source retrieval occurs. HTTP credentials stay in headers to fixed HTTPS endpoints; bounded output and timeouts limit each request. Backend setup lives in the ignored `.env`; packaged Electron archives exclude `.env` and use their own runtime environment.

@@ -3,7 +3,8 @@ import { TERMS_VERSION } from "../shared/legal.js";
 import type { Account } from "../shared/types.js";
 
 // ponytail: real money is a licensing decision, not a code path; see docs/plans/onboarding-playground-playstore.md.
-export const realMoneyAvailable = () => process.env.REAL_MONEY_ENABLED === "1";
+export const realMoneyAvailable = () =>
+  globalThis.process?.env.REAL_MONEY_ENABLED === "1";
 
 interface ProfileRow {
   display_name: string | null;
@@ -40,7 +41,7 @@ export function completeOnboarding(
   if (!input.acceptTerms)
     throw new DomainError("Accept the Terms and Privacy Policy to continue.");
   if (!input.confirmAdult)
-    throw new DomainError("Wildcatter is only for people aged 18 or over.");
+    throw new DomainError("Peakcast is only for people aged 18 or over.");
   const now = new Date().toISOString();
   store.db
     .prepare(
@@ -74,7 +75,9 @@ export function deleteAccount(store: Store, accountId: string) {
   const now = new Date().toISOString();
   store.transaction(() => {
     for (const table of ["drafts", "comments", "watchlist", "notifications"])
-      store.db.prepare(`DELETE FROM ${table} WHERE account_id=?`).run(accountId);
+      store.db
+        .prepare(`DELETE FROM ${table} WHERE account_id=?`)
+        .run(accountId);
     store.db
       .prepare(
         "UPDATE orders SET status='cancelled',note='Account deleted',closed_at=? WHERE account_id=? AND status='open'",

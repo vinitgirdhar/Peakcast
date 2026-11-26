@@ -1,15 +1,14 @@
 import { choose } from "./select.js";
-import { test, expect } from "./fixtures.js";
+import { test, expect, api, mockApi, clearApiMock } from "./fixtures.js";
 
 test("all discovery filters, sorts and navigation controls work", async ({
   page,
-  isMobile,
 }) => {
   test.setTimeout(60000);
   await page.goto("/markets");
   await expect(page.locator(".market-card")).toHaveCount(6);
-  const response = await page.request.get("/api/v1/markets");
-  const markets = (await response.json()).items as {
+  const markets = (await api<{ items: unknown[] }>(page, "/markets")).body
+    .items as {
     title: string;
     category: string;
     probability: number;
@@ -61,7 +60,7 @@ test("all discovery filters, sorts and navigation controls work", async ({
     .getByRole("button", { name: "Draft a market", exact: true })
     .click();
   await expect(page.locator(".page h1")).toHaveText("Draft studio");
-  await page.getByRole("button", { name: "Wildcatter home" }).click();
+  await page.getByRole("button", { name: "Peakcast home" }).click();
   await expect(page.locator(".page h1")).toHaveText("Markets");
   await page.locator(".balance-button").click();
   await expect(page.locator(".page h1")).toHaveText("Your portfolio");
@@ -96,37 +95,23 @@ test("all discovery filters, sorts and navigation controls work", async ({
   await popup.close();
   await page.getByRole("button", { name: "All markets", exact: true }).click();
   await page.getByRole("button", { name: "About this app" }).click();
-  await expect(page.locator(".page h1")).toHaveText("App & integrations");
-  const schema = await page.request.get("/api/v1/openapi.json");
-  expect(schema.status()).toBe(200);
-  expect((await schema.json()).paths["/api/v1/trades"]).toBeTruthy();
-  if (!isMobile) {
-    await page
-      .getByRole("button", { name: "Read platform documentation" })
-      .click();
-    await page
-      .getByRole("button", { name: "App & integrations", exact: true })
-      .click();
-    await expect(page.locator(".page h1")).toHaveText("App & integrations");
-  }
+  await expect(page.locator(".page h1")).toHaveText("About Peakcast");
 });
 
 test("a buy can spend the available balance without requiring an unaffordable slippage buffer", async ({
   page,
 }) => {
-  await page.route("**/api/v1/quotes", (route) =>
-    route.fulfill({
-      json: {
-        marketId: "fed-rate",
-        outcome: "YES",
-        action: "buy",
-        shares: 10000,
-        amountMicros: 4_999_000_000,
-        averagePrice: 0.4999,
-        priceAfter: 0.4999,
-      },
-    }),
-  );
+  await mockApi(page, "/api/v1/quotes", {
+    json: {
+      marketId: "fed-rate",
+      outcome: "YES",
+      action: "buy",
+      shares: 10000,
+      amountMicros: 4_999_000_000,
+      averagePrice: 0.4999,
+      priceAfter: 0.4999,
+    },
+  });
   await page.goto("/markets/fed-rate");
   await page.getByLabel("Number of shares").fill("10000");
   await expect(
@@ -137,18 +122,13 @@ test("a buy can spend the available balance without requiring an unaffordable sl
 test("failed quotes can be refreshed directly without changing the order", async ({
   page,
 }) => {
-  let fail = true;
-  await page.route("**/api/v1/quotes", async (route) => {
-    if (fail)
-      await route.fulfill({
-        status: 503,
-        json: { message: "Temporary quote failure." },
-      });
-    else await route.continue();
+  await mockApi(page, "/api/v1/quotes", {
+    status: 503,
+    json: { message: "Temporary quote failure." },
   });
   await page.goto("/markets/fed-rate");
   await expect(page.getByText("Temporary quote failure.")).toBeVisible();
-  fail = false;
+  await clearApiMock(page, "/api/v1/quotes");
   await page
     .getByRole("button", { name: "Refresh quote", exact: true })
     .click();

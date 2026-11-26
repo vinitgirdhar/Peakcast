@@ -1,4 +1,4 @@
-package com.wildcatter.app;
+package com.bay2peak.peakcast;
 
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
@@ -9,29 +9,52 @@ import android.graphics.Insets;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.HapticFeedbackConstants;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.webkit.JavascriptInterface;
-import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.window.OnBackInvokedDispatcher;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 
+/**
+ * Peakcast runs entirely on the phone: the web app ships inside the APK (assets/app)
+ * and is served from a reserved local origin, so nothing is fetched from a server.
+ */
 public class MainActivity extends Activity {
- private static final String ORIGIN = "__ORIGIN__";
- private static final String START_ORIGIN = "__START_ORIGIN__";
+ /** Android's reserved host for app-bundled content; requests to it never leave the device. */
+ private static final String ORIGIN = "https://appassets.androidplatform.net";
  private static final int SAVE_FILE = 1;
+ private static final Map<String, String> TYPES = new HashMap<>();
+ static {
+  TYPES.put("html", "text/html");
+  TYPES.put("js", "text/javascript");
+  TYPES.put("css", "text/css");
+  TYPES.put("wasm", "application/wasm");
+  TYPES.put("json", "application/json");
+  TYPES.put("webmanifest", "application/manifest+json");
+  TYPES.put("svg", "image/svg+xml");
+  TYPES.put("png", "image/png");
+  TYPES.put("ico", "image/x-icon");
+  TYPES.put("woff2", "font/woff2");
+  TYPES.put("mp4", "video/mp4");
+  TYPES.put("webm", "video/webm");
+  TYPES.put("jpg", "image/jpeg");
+  TYPES.put("webp", "image/webp");
+ }
  private WebView web;
  private String pendingFile;
-
- private String startUrl() {
-  return START_ORIGIN.isEmpty() ? ORIGIN + "/markets" : START_ORIGIN + "/?app=1";
- }
 
  private boolean night() {
   return (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
@@ -66,13 +89,20 @@ public class MainActivity extends Activity {
 
   WebSettings settings = web.getSettings();
   settings.setJavaScriptEnabled(true);
+  // IndexedDB and localStorage hold the user's on-device data.
   settings.setDomStorageEnabled(true);
   settings.setAllowFileAccess(false);
   settings.setAllowContentAccess(false);
   settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-  // Only the app's own origin ever loads here; other links open the browser.
-  web.addJavascriptInterface(new Bridge(), "WildcatterAndroid");
+  web.addJavascriptInterface(new Bridge(), "PeakcastAndroid");
   web.setWebViewClient(new WebViewClient() {
+   @Override
+   public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+    Uri uri = request.getUrl();
+    if (!ORIGIN.equals(uri.getScheme() + "://" + uri.getAuthority())) return null;
+    return asset(uri.getPath());
+   }
+
    @Override
    public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
     Uri uri = request.getUrl();
@@ -80,38 +110,47 @@ public class MainActivity extends Activity {
      if (request.hasGesture()) open(new Intent(Intent.ACTION_SENDTO, uri));
      return true;
     }
-    if (!"https".equals(uri.getScheme())) return true;
-    String origin = uri.getScheme() + "://" + uri.getAuthority();
-    if (ORIGIN.equals(origin) || START_ORIGIN.equals(origin)) return false;
-    if (request.hasGesture()) open(new Intent(Intent.ACTION_VIEW, uri));
+    if (ORIGIN.equals(uri.getScheme() + "://" + uri.getAuthority())) return false;
+    // Market sources and evidence open in the phone's browser, only when tapped.
+    if ("https".equals(uri.getScheme()) && request.hasGesture()) open(new Intent(Intent.ACTION_VIEW, uri));
     return true;
    }
-
-   @Override
-   public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
-    if (request.isForMainFrame()) view.loadDataWithBaseURL(null, offlinePage(), "text/html", "utf-8", null);
-   }
-  });
-  web.setDownloadListener((url, userAgent, disposition, mime, length) -> {
-   if (url.startsWith(ORIGIN + "/downloads/")) open(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
   });
 
   if (Build.VERSION.SDK_INT >= 33) {
    getOnBackInvokedDispatcher().registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::goBack);
   }
-  if (state == null) web.loadUrl(startUrl());
-  else web.restoreState(state);
+  // After Android ends the app in the background, reopen the page the user was
+  // on. WebView.restoreState() would leave a blank black screen with bundled pages.
+  String last = state == null ? null : state.getString("url");
+  web.loadUrl(last != null && last.startsWith(ORIGIN + "/") ? last : ORIGIN + "/markets");
  }
 
- private String offlinePage() {
-  String ink = night() ? "#f5f5f7" : "#202124";
-  String canvas = night() ? "#000" : "#f7f8fa";
-  return "<!doctype html><meta name=viewport content='width=device-width,initial-scale=1'>"
-   + "<body style='margin:0;min-height:100vh;display:grid;place-items:center;font-family:sans-serif;background:" + canvas + ";color:" + ink + "'>"
-   + "<main style='text-align:center;padding:24px'><h1 style='font-size:22px'>You're offline</h1>"
-   + "<p style='opacity:.7'>Check your connection, then try again.</p>"
-   + "<a href='" + startUrl() + "' style='display:inline-block;margin-top:12px;padding:12px 22px;border-radius:12px;background:" + ink + ";color:" + canvas + ";text-decoration:none'>Retry</a>"
-   + "</main></body>";
+ /** A bundled file, or the app shell for client-side routes such as /markets/fed-rate. */
+ private WebResourceResponse asset(String path) {
+  String file = path == null || path.equals("/") ? "index.html" : path.substring(1);
+  if (file.contains("..")) return notFound();
+  int dot = file.lastIndexOf('.');
+  boolean route = dot < file.lastIndexOf('/') + 1;
+  if (route) file = "index.html";
+  String type = TYPES.get(dot < 0 || route ? "html" : file.substring(dot + 1));
+  try {
+   InputStream body = getAssets().open("app/" + file);
+   WebResourceResponse response = new WebResourceResponse(type == null ? "application/octet-stream" : type, "utf-8", body);
+   Map<String, String> headers = new HashMap<>();
+   headers.put("Cache-Control", "no-cache");
+   headers.put("X-Content-Type-Options", "nosniff");
+   response.setResponseHeaders(headers);
+   return response;
+  } catch (IOException missing) {
+   return notFound();
+  }
+ }
+
+ private WebResourceResponse notFound() {
+  WebResourceResponse response = new WebResourceResponse("text/plain", "utf-8", new ByteArrayInputStream(new byte[0]));
+  response.setStatusCodeAndReasonPhrase(404, "Not Found");
+  return response;
  }
 
  private void open(Intent intent) {
@@ -135,12 +174,29 @@ public class MainActivity extends Activity {
 
  @Override
  public void onSaveInstanceState(Bundle state) {
-  web.saveState(state);
+  state.putString("url", web.getUrl());
   super.onSaveInstanceState(state);
  }
 
  /** Saves exported files (the CSV statement) where the user chooses. */
  private class Bridge {
+  /** Touch feedback from src/haptics.ts; follows the phone's haptics setting. */
+  @JavascriptInterface
+  public void haptic(String kind) {
+   int feedback;
+   if (Build.VERSION.SDK_INT >= 30) {
+    switch (kind) {
+     case "success": feedback = HapticFeedbackConstants.CONFIRM; break;
+     case "warning": feedback = HapticFeedbackConstants.REJECT; break;
+     case "impact": feedback = HapticFeedbackConstants.CONTEXT_CLICK; break;
+     default: feedback = HapticFeedbackConstants.CLOCK_TICK;
+    }
+   } else {
+    feedback = "selection".equals(kind) ? HapticFeedbackConstants.CLOCK_TICK : HapticFeedbackConstants.VIRTUAL_KEY;
+   }
+   runOnUiThread(() -> web.performHapticFeedback(feedback));
+  }
+
   @JavascriptInterface
   public void saveFile(String name, String mimeType, String text) {
    runOnUiThread(() -> {
@@ -171,7 +227,7 @@ public class MainActivity extends Activity {
   if (resultCode != RESULT_OK || data == null || data.getData() == null) return;
   try (OutputStream out = getContentResolver().openOutputStream(data.getData())) {
    if (out != null) out.write(text.getBytes(StandardCharsets.UTF_8));
-  } catch (Exception error) {
+  } catch (IOException error) {
    web.evaluateJavascript("alert('The statement could not be saved.')", null);
   }
  }

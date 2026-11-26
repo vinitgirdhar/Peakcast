@@ -9,10 +9,9 @@ import {
   ShieldCheck,
   Wallet,
 } from "lucide-react";
-import { ApiError, WildcatterClient } from "../../shared/client.js";
+import { ApiError, PeakcastClient } from "../../shared/client.js";
 import type {
   Action,
-  Capabilities,
   HistoryPoint,
   Market,
   Outcome,
@@ -38,6 +37,7 @@ import {
 } from "./MarketExtras.js";
 import { SharePanel } from "./Share.js";
 import { AnimatedNumber } from "../motion.js";
+import { haptic } from "../haptics.js";
 import { RuleCheckLine } from "./RuleCheck.js";
 import { ExplainPanel } from "./Explain.js";
 import { motion } from "motion/react";
@@ -54,20 +54,18 @@ export function MarketDetail({
   view,
   onView,
   shareOrigin,
-  capabilities = null,
   workspaceName,
   onRule,
 }: {
   market: Market;
   portfolio: Portfolio | null;
-  client: WildcatterClient;
+  client: PeakcastClient;
   onBack: () => void;
   onTrade: () => Promise<void>;
   onNotice: (text: string) => void;
   view: "forecast" | "rules";
   onView: (view: "forecast" | "rules") => void;
   shareOrigin: string | null;
-  capabilities?: Capabilities | null;
   /** Set for a private market, opened from its workspace. */
   workspaceName?: string;
   /** A workspace owner, admin or resolver's ruling; see ResolutionPanel. */
@@ -197,6 +195,8 @@ export function MarketDetail({
   async function submit(event: FormEvent) {
     event.preventDefault();
     if ((!currentQuote && !unconfirmed) || busy) return;
+    // No press buzz: the on-device fill lands within milliseconds, and its
+    // success (or warning) tap is the feedback; two in a row feels mushy.
     setBusy(true);
     setTradeError("");
     const input = retry.current?.input ?? {
@@ -211,6 +211,7 @@ export function MarketDetail({
       const fill = await client.trade(input, retry.current!.key);
       retry.current = null;
       setUnconfirmed(false);
+      haptic("success");
       onNotice(
         `${fill.action === "buy" ? "Bought" : "Sold"} ${fill.shares} ${fill.outcome} shares for ${formatCredits(fill.amountMicros)} demo credits.`,
       );
@@ -223,6 +224,7 @@ export function MarketDetail({
         );
       }
     } catch (error) {
+      haptic("warning");
       if (error instanceof ApiError && error.status < 500) {
         retry.current = null;
         setUnconfirmed(false);
@@ -362,9 +364,13 @@ export function MarketDetail({
                 <button
                   className="mobile-trade-link"
                   onClick={() =>
-                    document
-                      .getElementById("trade-panel")
-                      ?.scrollIntoView({ block: "start" })
+                    document.getElementById("trade-panel")?.scrollIntoView({
+                      block: "start",
+                      behavior: matchMedia("(prefers-reduced-motion: reduce)")
+                        .matches
+                        ? "auto"
+                        : "smooth",
+                    })
                   }
                 >
                   Trade <ArrowRight size={16} />
@@ -511,6 +517,7 @@ export function MarketDetail({
                     aria-pressed={action === item}
                     className={action === item ? "selected" : ""}
                     onClick={() => {
+                      if (action !== item) haptic("selection");
                       setAction(item);
                       setTradeError("");
                     }}
@@ -538,6 +545,7 @@ export function MarketDetail({
                     aria-pressed={outcome === side}
                     className={`${side.toLowerCase()} ${outcome === side ? "selected" : ""}`}
                     onClick={() => {
+                      if (outcome !== side) haptic("selection");
                       setOutcome(side);
                       setTradeError("");
                     }}
@@ -718,12 +726,7 @@ export function MarketDetail({
           // Secondary panels follow the trade panel in source order, so on a
           // phone the trade form sits right under the chart.
           <div className="detail-secondary">
-            <ExplainPanel
-              key={market.id}
-              market={market}
-              client={client}
-              capabilities={capabilities}
-            />
+            <ExplainPanel key={market.id} market={market} />
             <ResolutionPanel
               market={market}
               isCreator={

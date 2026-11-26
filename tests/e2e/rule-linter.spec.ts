@@ -1,34 +1,8 @@
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
-import { test, expect, type Page, onboard } from "./fixtures.js";
-import { buildApp } from "../../server/app.js";
+import { test, expect, type Page } from "./fixtures.js";
 
-// ponytail: this journey launches a market, so it runs against its own
-// in-memory server and leaves the shared server's market counts alone.
-test.use({ onboarded: false });
-test.beforeEach(async ({ page }) => {
-  await onboard(page, origin);
-});
-let server: Awaited<ReturnType<typeof buildApp>>;
-let origin = "";
-test.beforeAll(async () => {
-  for (const key of [
-    "OPENAI_API_KEY",
-    "GEMINI_API_KEY",
-    "GROQ_API_KEY",
-    "AI_ACCESS_TOKEN",
-    "AI_DEFAULT_PROVIDER",
-  ])
-    delete process.env[key];
-  process.env.AI_SETTINGS_DIR = mkdtempSync(join(tmpdir(), "wildcatter-e2e-"));
-  server = await buildApp({ databasePath: ":memory:", rateLimiting: false });
-  origin = await server.listen({ host: "127.0.0.1", port: 0 });
-});
-test.afterAll(async () => {
-  await server?.close();
-});
+// Each test has its own browser storage, so launching a market here never
+// changes the market counts another test sees.
 
 const audit = async (page: Page, selector: string) =>
   expect(
@@ -55,14 +29,14 @@ async function saveDraft(page: Page, yesRule: string) {
       "If BSE does not publish the close by 2027-04-07 23:59 IST, resolves INVALID.",
     );
   await page.getByRole("button", { name: "Save private draft" }).click();
-  await expect(page.getByRole("status")).toContainText("Manual draft saved");
+  await expect(page.getByRole("status")).toContainText("Draft saved privately");
 }
 
 test("the studio rule check blocks, warns and publishes what it found", async ({
   page,
 }) => {
   test.setTimeout(60_000);
-  await page.goto(`${origin}/studio`);
+  await page.goto("/studio");
   const panel = page.getByRole("region", { name: "Rule check" });
   const question = page.getByLabel("The question");
 
@@ -133,7 +107,7 @@ test("the studio rule check blocks, warns and publishes what it found", async ({
 });
 
 test("a saved draft can be edited as a new draft", async ({ page }) => {
-  await page.goto(`${origin}/studio`);
+  await page.goto("/studio");
   await saveDraft(
     page,
     "Resolves YES if, in the creator's opinion, the Sensex closes strong.",

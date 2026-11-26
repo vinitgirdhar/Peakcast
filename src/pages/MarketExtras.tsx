@@ -14,7 +14,7 @@ import {
   Timer,
 } from "lucide-react";
 import { Select } from "../Select.js";
-import { WildcatterClient } from "../../shared/client.js";
+import { PeakcastClient } from "../../shared/client.js";
 import type {
   Action,
   Market,
@@ -25,11 +25,12 @@ import type {
 } from "../../shared/types.js";
 import { EmptyState, SkeletonRows, errorMessage, percent } from "../ui.js";
 import { Collapse, enterMotion, itemMotion, listMotion } from "../motion.js";
+import { haptic } from "../haptics.js";
 
 interface ExtrasProps {
   market: Market;
   portfolio: Portfolio | null;
-  client: WildcatterClient;
+  client: PeakcastClient;
   onChange: () => Promise<void>;
   onNotice: (text: string) => void;
 }
@@ -157,12 +158,13 @@ export function WatchButton({
     <button
       className="back-button watch-button"
       aria-pressed={watching}
-      onClick={() =>
+      onClick={() => {
+        haptic("selection");
         void client
           .setWatching(market.id, !watching)
           .then(onChange)
-          .catch((error) => onNotice(errorMessage(error)))
-      }
+          .catch((error) => onNotice(errorMessage(error)));
+      }}
     >
       <Star size={15} fill={watching ? "currentColor" : "none"} />
       {watching ? "Watching" : "Watch"}

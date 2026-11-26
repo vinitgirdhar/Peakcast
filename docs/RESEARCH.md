@@ -1,6 +1,6 @@
 # Research and technical assessment
 
-Reviewed 2026-11-11. Primary sources below inform the architecture; they are not evidence that Wildcatter already implements the referenced systems.
+Reviewed 2026-11-11. Primary sources below inform the architecture; they are not evidence that Peakcast already implements the referenced systems.
 
 1. **Existing exchange reference.** [Polymarket trading quickstart](https://docs.polymarket.com/trading/quickstart) distinguishes order placement, asynchronous on-chain settlement and position reads. Its current docs also distinguish protocol versions. Conclusion: adopt the separation of matching and settlement; do not copy stale SDK assumptions or claim an off-chain fill is final on-chain.
 2. **Conditional tokens.** [Gnosis conditional-token contracts](https://github.com/gnosis/conditional-tokens-contracts) provide a reference implementation for outcome-based collateral/token accounting. Conclusion: evaluate reuse and licensing instead of inventing a token standard; integration and audits remain necessary.

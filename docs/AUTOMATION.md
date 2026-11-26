@@ -48,7 +48,7 @@ npm run desktop:package
 npm run test:desktop
 ```
 
-`review:ui` expects the local production web server on port 3001 and checks five screens at desktop/mobile sizes. The Windows smoke test checks two packaged launches, backend availability, refraction, renderer isolation and the same session after restart. Close any already-running Wildcatter desktop instance before that check; a single-instance lock intentionally prevents duplicate desktop servers.
+`review:ui` expects the local production web server on port 3001 and checks five screens at desktop/mobile sizes. The Windows smoke test checks two packaged launches, backend availability, refraction, renderer isolation and the same session after restart. Close any already-running Peakcast desktop instance before that check; a single-instance lock intentionally prevents duplicate desktop servers.
 
 The Windows bundle must be rebuilt after source changes. Keep its entire folder together. Signing, installer/update distribution and physical-phone PWA installation are separate acceptance work.
 

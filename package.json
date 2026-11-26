@@ -1,22 +1,19 @@
 {
-  "name": "wildcatter",
-  "version": "1.1.1",
+  "name": "peakcast",
+  "version": "2.0.0",
   "private": true,
-  "description": "AI-assisted prediction market development platform. Demo credits only.",
+  "description": "Prediction market practice app that runs entirely on your device. Demo credits only.",
   "type": "module",
   "main": "desktop/main.mjs",
   "engines": {
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "concurrently -k -n api,web \"npm:dev:api\" \"npm:dev:web\"",
-    "dev:api": "tsx watch --env-file-if-exists=.env server/index.ts",
-    "dev:web": "vite --host 127.0.0.1",
+    "dev": "vite --host 127.0.0.1",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --import ./tests/setup.ts --test --test-concurrency=1 --experimental-test-coverage --test-coverage-include=server/** --test-coverage-include=shared/** --test-coverage-lines=80 --test-coverage-branches=80 --test-coverage-functions=80 tests/*.test.ts",
     "test:e2e": "playwright test",
     "build": "npm run typecheck && vite build && tsc -p tsconfig.server.json",
-    "start": "node --env-file-if-exists=.env dist-server/server/index.js",
     "desktop": "node scripts/start-desktop.mjs",
     "desktop:package": "npm run build && node scripts/package-desktop.mjs",
     "check": "npm run test && npm run build",
@@ -25,7 +22,9 @@
     "test:desktop": "node scripts/smoke-desktop.mjs",
     "test:api": "node scripts/check-api.mjs",
     "verify": "node scripts/verify.mjs",
-    "docs:check": "node scripts/check-docs.mjs"
+    "docs:check": "node scripts/check-docs.mjs",
+    "build:web": "vite build",
+    "serve": "node --env-file-if-exists=.env dist-server/server/index.js"
   },
   "dependencies": {
     "@fastify/helmet": "^13.0.2",
@@ -38,9 +37,9 @@
     "fastify": "^5.12.8",
     "lucide-react": "^0.468.0",
     "motion": "^14.12.0",
-    "openai": "^7.55.0",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "sql.js": "^1.17.0"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
@@ -49,8 +48,8 @@
     "@types/node": "^22.15.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@types/sql.js": "^1.16.1",
     "@vitejs/plugin-react": "^6.0.0",
-    "concurrently": "^9.1.2",
     "electron": "^45.3.0",
     "esbuild": "^0.28.2",
     "prettier": "^3.9.10",

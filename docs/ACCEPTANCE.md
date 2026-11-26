@@ -26,7 +26,7 @@ Use this alongside the running app and [RFP status](RFP_STATUS.md). â€œVerifiedâ
 | AI status/mode/access-token/refine control         | Unconfigured mode is labeled; configured mode submits an extra secret  | Capabilities and optional Generate Draft API                                | Configured UI endpoint and provider responses mocked; live paid inference not run            |
 | Copy demo API token                                | Copy only the current demo credential or show permission error         | Browser clipboard API                                                       | Success/denial tested using a clipboard stub; OS clipboard not overwritten by tests          |
 | API reference / OpenAPI JSON                       | Load usable routes, request/response schemas and auth                  | Backend-generated Swagger/OpenAPI                                           | `platform.spec.ts`, `security.test.ts`, HTTP SDK                                             |
-| Install Wildcatter                                 | Offer a prompt only when the browser exposes one; handle failure       | PWA browser API                                                             | Prompt success/failure simulated; physical installation not tested                           |
+| Install Peakcast                                   | Offer a prompt only when the browser exposes one; handle failure       | PWA browser API                                                             | Prompt success/failure simulated; physical installation not tested                           |
 | Error Retry / unknown page recovery                | Recover from startup failure and unknown routes                        | Actual API retry and SPA history                                            | `developer-controls.spec.ts`                                                                 |
 
 ## Mobile structure
@@ -48,7 +48,7 @@ Use this alongside the running app and [RFP status](RFP_STATUS.md). â€œVerifiedâ
 6. Save an example draft, switch to Saved drafts, open its disclosure and reload. Check that it stays private to the same demo account. AI should remain labeled unconfigured until valid server credentials exist.
 7. Open the API reference, create a separate demo token and call the portfolio endpoint. It must not show the first account's holdings.
 8. Resize to a phone width. Use the bottom dock on phones, a drawer on intermediate screens and a persistent sidebar on wide desktop screens. Check Escape, focus containment, focus restoration and closing the drawer when resizing to desktop. Enable reduced motion and check readable focus/pressed/disabled states. Hidden scrollbars must preserve scrolling.
-9. Run `npm run desktop:package` and `npm run test:desktop` with other Wildcatter desktop instances closed. Review the Windows app; its demo store is intentionally separate from the web store.
+9. Run `npm run desktop:package` and `npm run test:desktop` with other Peakcast desktop instances closed. Review the Windows app; its demo store is intentionally separate from the web store.
 
 ## Acceptance boundaries
 

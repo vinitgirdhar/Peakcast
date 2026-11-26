@@ -29,7 +29,7 @@ export const draftInput = (question: string) => ({
 
 export async function teamsApp(options: BuildOptions = {}) {
   const path = joinPath(
-    mkdtempSync(joinPath(tmpdir(), "wildcatter-teams-")),
+    mkdtempSync(joinPath(tmpdir(), "peakcast-teams-")),
     "teams.sqlite",
   );
   const app = await buildApp({

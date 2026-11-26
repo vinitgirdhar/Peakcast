@@ -16,7 +16,7 @@ const hostile = `<img src=x onerror=alert(1)> "quoted" & 'single' $'`;
 const strictCsp =
   "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'none';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' 'unsafe-inline';connect-src 'self'";
 const indexHtml =
-  "<!doctype html><html><head><title>Wildcatter</title></head><body></body></html>";
+  "<!doctype html><html><head><title>Peakcast</title></head><body></body></html>";
 
 const get = (app: App, url: string, headers: Record<string, string> = {}) =>
   app.inject({ url, headers: { host, ...headers } });
@@ -24,7 +24,7 @@ const oembed = (app: App, url: string, extra = "") =>
   get(app, `/api/v1/oembed?url=${encodeURIComponent(url)}${extra}`);
 
 function staticRoot() {
-  const root = mkdtempSync(join(tmpdir(), "wildcatter-embed-"));
+  const root = mkdtempSync(join(tmpdir(), "peakcast-embed-"));
   writeFileSync(join(root, "index.html"), indexHtml);
   return root;
 }
@@ -229,7 +229,7 @@ test("oEmbed returns a lazy iframe for this server's own market links", async ()
       {
         version: "1.0",
         type: "rich",
-        provider_name: "Wildcatter",
+        provider_name: "Peakcast",
         provider_url: origin,
         title: market.title,
         width: 480,
@@ -239,7 +239,7 @@ test("oEmbed returns a lazy iframe for this server's own market links", async ()
     assert.match(
       body.html,
       new RegExp(
-        `^<iframe src="${origin}/embed/markets/fed-rate" width="480" height="200" title="Wildcatter forecast: [^"]+" loading="lazy"`,
+        `^<iframe src="${origin}/embed/markets/fed-rate" width="480" height="200" title="Peakcast forecast: [^"]+" loading="lazy"`,
       ),
     );
     const sized = (

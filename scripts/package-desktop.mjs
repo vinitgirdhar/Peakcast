@@ -7,13 +7,14 @@ import { resolve } from "node:path";
 const exclusions = [
   // Allowlist: only these top-level entries ship, so stray folders (video
   // renders, reports, worktrees) can never bloat the app.
-  /^\/(?!(?:dist|dist-server|desktop|node_modules)(?:\/|$)|package\.json$)/,
+  // The app runs in the window from dist/; main.mjs needs only Electron itself.
+  /^\/(?!(?:dist|desktop)(?:\/|$)|package\.json$)/,
   /\.pdf$/i,
   /^\/\.env($|\.)/,
   /^\/\.(git|claude)(\/|$)/,
 ];
 for (const path of [
-  "/data/wildcatter.sqlite",
+  "/data/peakcast.sqlite",
   "/.env",
   "/.env.example",
   "/AI_Prediction_Market_Platform_RFP.pdf",
@@ -21,17 +22,14 @@ for (const path of [
   "/.claude/launch.json",
   "/brag-output-2026-11-16-192506/render.mp4",
   "/index.html",
+  "/node_modules/fastify/package.json",
+  "/dist-server/server/app.js",
 ])
   assert.ok(
     exclusions.some((pattern) => pattern.test(path)),
     `Packaging must exclude ${path}`,
   );
-for (const path of [
-  "/dist/index.html",
-  "/dist-server/server/app.js",
-  "/desktop/main.mjs",
-  "/package.json",
-])
+for (const path of ["/dist/index.html", "/desktop/main.mjs", "/package.json"])
   assert.ok(
     !exclusions.some((pattern) => pattern.test(path)),
     `Packaging must include ${path}`,
@@ -55,7 +53,7 @@ if (existsSync(localArchive)) {
 
 const paths = await packager({
   dir: ".",
-  name: "Wildcatter",
+  name: "Peakcast",
   icon: resolve("public/icon.ico"),
   platform: "win32",
   arch: "x64",

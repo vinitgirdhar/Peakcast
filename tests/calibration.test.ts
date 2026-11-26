@@ -13,7 +13,7 @@ import {
   scoreForecasts,
   type ResolvedTrade,
 } from "../server/calibration.js";
-import { WildcatterClient } from "../shared/client.js";
+import { PeakcastClient } from "../shared/client.js";
 import type {
   Calibration,
   Leaderboard,
@@ -334,7 +334,7 @@ test("calibration scores own resolved YES/NO markets and the accuracy board rank
 });
 
 test("accuracy board and calibration responses never contain account ids", async (t) => {
-  const dir = mkdtempSync(join(tmpdir(), "wildcatter-calibration-"));
+  const dir = mkdtempSync(join(tmpdir(), "peakcast-calibration-"));
   const path = join(dir, "privacy.sqlite");
   const s = await resolvedScenario(t, path);
   try {
@@ -370,8 +370,8 @@ test("the SDK reads calibration and the accuracy board over HTTP", async () => {
   try {
     await app.listen({ port: 0, host: "127.0.0.1" });
     const base = `http://127.0.0.1:${(app.server.address() as AddressInfo).port}`;
-    const { token } = await new WildcatterClient(base).createSession();
-    const api = new WildcatterClient(base, token);
+    const { token } = await new PeakcastClient(base).createSession();
+    const api = new PeakcastClient(base, token);
     const mine = await api.calibration();
     assert.equal(mine.brier, null);
     assert.equal(mine.buckets.length, 10);

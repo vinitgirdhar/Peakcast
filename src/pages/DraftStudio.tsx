@@ -1,29 +1,20 @@
 import { Select } from "../Select.js";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import {
-  ArrowRight,
-  ChevronDown,
-  Pencil,
-  Rocket,
-  Sparkles,
-  Trash2,
-} from "lucide-react";
-import { WildcatterClient } from "../../shared/client.js";
+import { ArrowRight, ChevronDown, Pencil, Rocket, Trash2 } from "lucide-react";
+import { PeakcastClient } from "../../shared/client.js";
 import type {
-  AIProvider,
-  AIProviderInfo,
   Category,
   Draft,
-  DraftCritique,
   DraftInput,
   Market,
   Workspace,
 } from "../../shared/types.js";
 import { lintDraft, type LintField } from "../../shared/lint.js";
 import { errorMessage } from "../ui.js";
+import { haptic } from "../haptics.js";
+import { isAndroidApp } from "../platform.js";
 import { motion } from "motion/react";
 import {
-  CritiqueResult,
   LaunchReview,
   launchReady,
   RuleBadge,
@@ -62,11 +53,7 @@ const PUBLIC = "public";
 const isoClosing = (local: string) =>
   Number.isNaN(Date.parse(local)) ? "" : new Date(local).toISOString();
 export function DraftStudio({
-  managed = false,
   client,
-  configured,
-  providers,
-  defaultProvider,
   example,
   onNotice,
   onLaunched,
@@ -79,11 +66,7 @@ export function DraftStudio({
   teams?: boolean;
   /** Preselected launch target: a workspace id, or PUBLIC. */
   launchTo?: string;
-  managed?: boolean;
-  client: WildcatterClient;
-  configured: boolean;
-  providers: AIProviderInfo[];
-  defaultProvider: AIProvider | null;
+  client: PeakcastClient;
   example?: Market;
   onNotice: (text: string) => void;
   onLaunched: (market: Market) => void;
@@ -96,14 +79,8 @@ export function DraftStudio({
   const [busy, setBusy] = useState(false);
   const [category, setCategory] = useState<Category>("World");
   const [error, setError] = useState("");
-  const [accessToken, setAccessToken] = useState("");
-  const [mode, setMode] = useState<"manual" | "ai">("manual");
-  const [provider, setProvider] = useState<AIProvider>(
-    defaultProvider ?? "groq",
-  );
   // Acknowledged launch checks, keyed "<draft id>:reviewed" / ":opened".
   const [checked, setChecked] = useState<Set<string>>(new Set());
-  const [critique, setCritique] = useState<DraftCritique | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [target, setTarget] = useState(launchTo);
   const targetName = workspaces.find((item) => item.id === target)?.name;
@@ -139,7 +116,6 @@ export function DraftStudio({
       noRule: source.noRule,
       invalidRule: source.invalidRule,
     });
-    setCritique(null);
   }
 
   function fillExample() {
@@ -154,41 +130,22 @@ export function DraftStudio({
     });
   }
 
-  async function askCritique() {
-    setBusy(true);
-    setError("");
-    try {
-      setCritique(
-        await client.critiqueDraft(
-          { ...input, closesAt: isoClosing(closingLocal) },
-          accessToken,
-          provider,
-        ),
-      );
-    } catch (error) {
-      setError(errorMessage(error));
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setError("");
     try {
       const body = { ...input, closesAt: new Date(closingLocal).toISOString() };
-      const saved =
-        mode === "manual"
-          ? await client.saveDraft(body)
-          : await client.generateDraft(body, accessToken, provider);
+      const saved = await client.saveDraft(body);
       setDrafts((previous) => [saved, ...previous]);
+      haptic("success");
       onNotice(
-        mode === "manual"
-          ? "Manual draft saved privately. No market was published."
-          : "AI-assisted draft saved. Review the rules before any publication.",
+        isAndroidApp
+          ? "Draft saved privately. Find it under + › Saved drafts."
+          : "Draft saved privately. No market was published.",
       );
     } catch (error) {
+      haptic("warning");
       setError(errorMessage(error));
     } finally {
       setBusy(false);
@@ -207,6 +164,7 @@ export function DraftStudio({
         ),
       );
     } catch (error) {
+      haptic("warning");
       setError(errorMessage(error));
     } finally {
       setBusy(false);
@@ -251,40 +209,46 @@ export function DraftStudio({
     <div className="page">
       <div className="page-heading">
         <div>
-          <h1>{view === "drafts" ? "Saved drafts" : "Draft studio"}</h1>
+          <h1>
+            {view === "drafts"
+              ? "Saved drafts"
+              : isAndroidApp
+                ? "New draft"
+                : "Draft studio"}
+            {view === "drafts" && isAndroidApp && (
+              <span className="count-pill">{drafts.length}</span>
+            )}
+          </h1>
           <p>
             {view === "drafts"
               ? "Your private forecasting questions."
               : "Start with a clear, measurable question."}
           </p>
         </div>
-        <span className={`system-pill ${configured ? "enabled" : ""}`}>
-          <Sparkles size={14} />
-          {configured
-            ? `${providers.filter((item) => item.configured).length} AI providers`
-            : "AI not connected"}
-        </span>
       </div>
-      <nav className="view-tabs" aria-label="Studio views">
-        <button
-          aria-current={view === "create" ? "page" : undefined}
-          onClick={() => onView("create")}
-        >
-          {view === "create" && (
-            <motion.span className="tab-selection" layoutId="studio-view" />
-          )}
-          New draft
-        </button>
-        <button
-          aria-current={view === "drafts" ? "page" : undefined}
-          onClick={() => onView("drafts")}
-        >
-          {view === "drafts" && (
-            <motion.span className="tab-selection" layoutId="studio-view" />
-          )}
-          Saved drafts <span className="count-pill">{drafts.length}</span>
-        </button>
-      </nav>
+      {/* The Android app switches between these from the dock's + sheet. */}
+      {!isAndroidApp && (
+        <nav className="view-tabs" aria-label="Studio views">
+          <button
+            aria-current={view === "create" ? "page" : undefined}
+            onClick={() => onView("create")}
+          >
+            {view === "create" && (
+              <motion.span className="tab-selection" layoutId="studio-view" />
+            )}
+            New draft
+          </button>
+          <button
+            aria-current={view === "drafts" ? "page" : undefined}
+            onClick={() => onView("drafts")}
+          >
+            {view === "drafts" && (
+              <motion.span className="tab-selection" layoutId="studio-view" />
+            )}
+            Saved drafts <span className="count-pill">{drafts.length}</span>
+          </button>
+        </nav>
+      )}
       <div className="studio-layout">
         {view === "create" && (
           <section className="draft-form-panel">
@@ -298,90 +262,6 @@ export function DraftStudio({
               Drafts stay private. Review your source before saving.
             </p>
             <form onSubmit={(event) => void save(event)}>
-              {configured && (
-                <div className="draft-ai-controls">
-                  <div className="form-two-columns">
-                    <div>
-                      <label className="form-label" htmlFor="draft-mode">
-                        Drafting mode
-                      </label>
-                      <Select
-                        id="draft-mode"
-                        label="Drafting mode"
-                        value={mode}
-                        disabled={busy}
-                        onChange={(value) => setMode(value as "manual" | "ai")}
-                        options={[
-                          { value: "manual", label: "Write my own rules" },
-                          { value: "ai", label: "Refine with AI" },
-                        ]}
-                      />
-                    </div>
-                    {mode === "ai" && (
-                      <div>
-                        <label className="form-label" htmlFor="ai-provider">
-                          AI provider
-                        </label>
-                        <Select
-                          id="ai-provider"
-                          label="AI provider"
-                          value={provider}
-                          disabled={busy}
-                          onChange={(value) => {
-                            setProvider(value as AIProvider);
-                            setError("");
-                          }}
-                          options={providers.map((item) => ({
-                            value: item.id,
-                            label:
-                              item.label +
-                              (item.configured ? "" : " — not configured"),
-                            disabled: !item.configured,
-                          }))}
-                        />
-                      </div>
-                    )}
-                  </div>
-                  {mode === "ai" && (
-                    <>
-                      {!managed && (
-                        <>
-                          <label className="form-label" htmlFor="ai-token">
-                            AI access token
-                          </label>
-                          <input
-                            className="text-input"
-                            id="ai-token"
-                            disabled={busy}
-                            type="password"
-                            minLength={16}
-                            maxLength={256}
-                            autoComplete="off"
-                            required
-                            value={accessToken}
-                            onChange={(event) =>
-                              setAccessToken(event.target.value)
-                            }
-                          />
-                        </>
-                      )}
-                      <p className="fine-print">
-                        Use your workspace access token, not a provider API key.
-                        Only the selected provider receives this draft; usage
-                        may incur charges.
-                      </p>
-                      <button
-                        type="button"
-                        className="secondary-button"
-                        disabled={busy || (!managed && accessToken.length < 16)}
-                        onClick={() => void askCritique()}
-                      >
-                        <Sparkles size={14} /> Ask AI for a critique
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
               <label className="form-label" htmlFor="draft-question">
                 The question
               </label>
@@ -470,7 +350,6 @@ export function DraftStudio({
                   document.getElementById(FIELD_IDS[field])?.focus()
                 }
               />
-              {critique && <CritiqueResult critique={critique} />}
               {error && (
                 <p role="alert" className="form-error">
                   {error}
@@ -481,13 +360,7 @@ export function DraftStudio({
                 type="submit"
                 disabled={busy}
               >
-                {busy
-                  ? mode === "ai"
-                    ? `Refining with ${providers.find((item) => item.id === provider)?.label ?? "AI"}…`
-                    : "Saving draft…"
-                  : mode === "manual"
-                    ? "Save private draft"
-                    : "Refine and save with AI"}
+                {busy ? "Saving draft…" : "Save private draft"}
                 <ArrowRight size={16} />
               </button>
             </form>
@@ -511,7 +384,7 @@ export function DraftStudio({
                     <span className="small-pill">
                       {draft.mode === "manual"
                         ? "Manual draft"
-                        : `${providers.find((item) => item.id === draft.mode)?.label ?? "AI-assisted"} draft`}
+                        : "AI-assisted draft"}
                     </span>
                     <p>
                       <strong>Primary source:</strong> {draft.sourceName}
@@ -539,10 +412,8 @@ export function DraftStudio({
                       id={draft.id}
                       report={reports.get(draft.id)!}
                       sourceUrl={draft.sourceUrl}
-                      managed={managed}
                       checked={checked}
                       onToggle={toggle}
-                      onNotice={onNotice}
                     />
                     <div className="draft-launch">
                       {workspaces.length > 0 && (

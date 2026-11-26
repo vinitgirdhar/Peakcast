@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
+import { isAndroidApp } from "./platform.js";
 export type Theme = "light" | "dark" | "system";
 export function currentTheme(): Theme {
-  const value = localStorage.getItem("wildcatter.theme");
-  // Light is the default; following the system is an explicit choice in Settings.
-  return value === "dark" || value === "system" ? value : "light";
+  const value = localStorage.getItem("peakcast.theme");
+  if (value === "dark" || value === "light" || value === "system") return value;
+  // The Android app follows the phone, like its launch screen; the website
+  // defaults to light. Either can be changed in Settings.
+  return isAndroidApp ? "system" : "light";
 }
 export function applyTheme() {
   const value = currentTheme();
@@ -20,15 +23,15 @@ export function useTheme() {
   const [theme, update] = useState(currentTheme);
   useEffect(() => {
     const sync = () => update(currentTheme());
-    window.addEventListener("wildcatter-theme", sync);
-    return () => window.removeEventListener("wildcatter-theme", sync);
+    window.addEventListener("peakcast-theme", sync);
+    return () => window.removeEventListener("peakcast-theme", sync);
   }, []);
   return {
     theme,
     setTheme: (value: Theme) => {
-      localStorage.setItem("wildcatter.theme", value);
+      localStorage.setItem("peakcast.theme", value);
       applyTheme();
-      window.dispatchEvent(new Event("wildcatter-theme"));
+      window.dispatchEvent(new Event("peakcast-theme"));
     },
   };
 }

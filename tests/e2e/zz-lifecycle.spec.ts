@@ -1,9 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { test, expect } from "./fixtures.js";
-import { choose } from "./select.js";
+import { test, expect, api } from "./fixtures.js";
 
-// Must match OPERATOR_TOKEN in tests/e2e/server.mjs.
-const OPERATOR = "e2e-operator-test-token";
 const draft = {
   question: "Will the lifecycle journey resolve before 2028?",
   sourceName: "Official source",
@@ -16,83 +13,79 @@ const draft = {
   invalidRule: "If the source is missing or incomplete, hold for human review.",
 };
 
-test("a launched market is proposed, disputed, ruled by the operator and ranked", async ({
+// Two accounts share this browser's on-device data, as two people would share
+// one phone. The apps have no operator, so a disputed market waits there.
+test("a launched market is traded, discussed, proposed, disputed and ranked", async ({
   page,
-  request,
-}, testInfo) => {
-  // ponytail: this journey adds a market to the shared in-memory server, so it
-  // runs once, in the last project, after every count-sensitive spec. Give it
-  // its own server if more journeys like it are added.
-  test.skip(testInfo.project.name !== "mobile-webkit");
+}) => {
   test.setTimeout(60000);
-  const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
-  // An account that has finished onboarding, as a returning player's is.
   const session = async () => {
-    const token = (await (await request.post("/api/v1/sessions")).json())
-      .token as string;
-    await request.put("/api/v1/account", {
-      headers: auth(token),
+    const token = (
+      await api<{ token: string }>(page, "/sessions", { method: "POST" })
+    ).body.token;
+    await api(page, "/account", {
+      method: "PUT",
+      token,
       data: { displayName: "Player", acceptTerms: true, confirmAdult: true },
     });
     return token;
   };
   const creator = await session();
   const trader = await session();
-  const saved = await (
-    await request.post("/api/v1/drafts", {
-      headers: auth(creator),
-      data: draft,
-    })
-  ).json();
-  const market = await (
-    await request.post(`/api/v1/drafts/${saved.id}/launch`, {
-      headers: auth(creator),
+  const saved = (
+    await api<{ id: string }>(page, "/drafts", { token: creator, data: draft })
+  ).body;
+  const market = (
+    await api<{ id: string }>(page, `/drafts/${saved.id}/launch`, {
+      token: creator,
       data: { category: "Science" },
     })
-  ).json();
+  ).body;
   const order = {
     marketId: market.id,
     outcome: "YES",
     action: "buy",
     shares: 20,
   };
-  const quote = await (
-    await request.post("/api/v1/quotes", { data: order })
-  ).json();
-  const fill = await request.post("/api/v1/trades", {
-    headers: { ...auth(trader), "Idempotency-Key": randomUUID() },
+  const quote = (
+    await api<{ amountMicros: number }>(page, "/quotes", { data: order })
+  ).body;
+  const fill = await api(page, "/trades", {
+    token: trader,
+    headers: { "Idempotency-Key": randomUUID() },
     data: { ...order, limitMicros: quote.amountMicros },
   });
-  expect(fill.status()).toBe(201);
+  expect(fill.status).toBe(201);
 
   const openAs = async (token: string) => {
-    await page.goto("/markets");
-    // Wait for the app to store its own session first, or it overwrites ours.
-    await expect(page.locator(".market-card").first()).toBeVisible();
     await page.evaluate(
-      (value) => localStorage.setItem("wildcatter.demo.token.v1", value),
+      (value) => localStorage.setItem("peakcast.token.v1", value),
       token,
     );
     await page.goto(`/markets/${market.id}`);
   };
 
   await openAs(creator);
+  // Phones start these secondary panels collapsed; open them when they are.
+  const open = async (name: RegExp) => {
+    const toggle = page.getByRole("button", { name });
+    if ((await toggle.getAttribute("aria-expanded")) === "false")
+      await toggle.click();
+  };
   await expect(
     page.getByRole("region", { name: "Recent trades" }),
   ).toContainText("bought 20 shares");
-  // Watch, discuss and rest a limit order before the market is resolved.
   await page.getByRole("button", { name: "Watch", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Watching", exact: true }),
   ).toBeVisible();
-  // Phones start these secondary panels collapsed; this journey runs on a phone.
-  await page.getByRole("button", { name: /^Discussion/ }).click();
+  await open(/^Discussion/);
   await page.getByLabel("Share your reasoning").fill("Source reports Friday.");
   await page.getByRole("button", { name: "Post comment" }).click();
   await expect(page.getByRole("region", { name: "Discussion" })).toContainText(
     "Source reports Friday.",
   );
-  await page.getByRole("button", { name: /^Limit order/ }).click();
+  await open(/^Limit order/);
   await page.getByLabel("Max price (¢)").fill("5");
   await page.getByRole("button", { name: "Place limit order" }).click();
   const orders = page.getByRole("list", { name: "Your open orders" });
@@ -110,20 +103,14 @@ test("a launched market is proposed, disputed, ruled by the operator and ranked"
     page.getByText("Disputed. Payouts wait for an operator ruling."),
   ).toBeVisible();
 
-  await page.getByText("Operator ruling", { exact: true }).click();
-  await choose(page, "Final outcome", "NO");
-  await page.getByLabel("Operator token").fill("wrong-operator-token-value");
-  await page.getByRole("button", { name: "Issue final ruling" }).click();
-  await expect(page.getByText("Operator token is invalid.")).toBeVisible();
-  await page.getByLabel("Operator token").fill(OPERATOR);
-  await page.getByRole("button", { name: "Issue final ruling" }).click();
-  await expect(page.getByText("Final outcome: NO")).toBeVisible();
-
   await page.goto("/leaderboard");
   await expect(
     page.getByRole("heading", { name: "Leaderboard" }),
   ).toBeVisible();
   await expect(page.locator(".rank-you")).toContainText("You");
+  // The sample players created markets too; this journey adds one creator.
   await page.getByRole("button", { name: "Top creators" }).click();
-  await expect(page.locator(".rank-list li")).toHaveCount(1);
+  await expect(
+    page.locator(".rank-list li").filter({ hasText: "Player" }),
+  ).toHaveCount(1);
 });

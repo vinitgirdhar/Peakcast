@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, Layers3 } from "lucide-react";
 import {
   moveLabel,
@@ -41,23 +41,45 @@ export function ChangeChip({ change }: { change: number }) {
     </span>
   );
 }
+/** The Peakcast app icon: a price line that becomes a peak, dotted on to a rising sun. */
 export function BrandMark() {
+  const id = useId().replace(/:/g, "");
   return (
     <svg
+      className="brand-mark"
       width="32"
       height="32"
       viewBox="0 0 32 32"
       fill="none"
       aria-hidden="true"
     >
-      <rect width="32" height="32" rx="9" fill="currentColor" />
+      <defs>
+        <linearGradient id={`${id}-bg`} x1="0" y1="0" x2="0.35" y2="1">
+          <stop offset="0" stopColor="#6A8DFF" />
+          <stop offset="0.55" stopColor="#4B4BE8" />
+          <stop offset="1" stopColor="#2E1FAE" />
+        </linearGradient>
+        <radialGradient id={`${id}-sun`} cx="0.38" cy="0.32" r="0.75">
+          <stop offset="0" stopColor="#FFF1C2" />
+          <stop offset="0.5" stopColor="#FFC94D" />
+          <stop offset="1" stopColor="#FF8A3D" />
+        </radialGradient>
+      </defs>
+      <rect width="32" height="32" rx="8.5" fill={`url(#${id}-bg)`} />
       <path
-        d="m6 11 4.5 12L16 9l5.5 14L26 11"
-        stroke="var(--on-selected, white)"
-        strokeWidth="2.6"
-        strokeLinejoin="round"
+        d="M6.25 22.25 11.6 16.3l2.85 2.45 5.55-7"
+        stroke="white"
+        strokeWidth="2.4"
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
+      <path
+        d="M6.25 22.25 11.6 16.3l2.85 2.45 5.55-7 6.2 12h-19.95Z"
+        fill="white"
+        fillOpacity="0.22"
+      />
+      <circle cx="22" cy="10.4" r="0.85" fill="white" fillOpacity="0.85" />
+      <circle cx="25.9" cy="7.6" r="2.3" fill={`url(#${id}-sun)`} />
     </svg>
   );
 }

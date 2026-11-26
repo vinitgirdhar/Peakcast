@@ -1,4 +1,4 @@
-# Wildcatter interface
+# Peakcast interface
 
 Revised on November 16, 2026 around the supplied monochrome financial-workspace reference. The shared React interface serves the web, installable PWA, Windows Electron app, and Android WebView. White surfaces, slim navigation, generous spacing, black selected states and restrained outcome colors carry through every screen.
 

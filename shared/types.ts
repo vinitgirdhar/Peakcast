@@ -12,13 +12,6 @@ export interface MarketResolution {
   disputed: boolean;
   resolvedAt?: string;
 }
-export type AIProvider = "gemini" | "groq" | "openai" | "ollama";
-export interface AIProviderInfo {
-  id: AIProvider;
-  label: string;
-  model: string;
-  configured: boolean;
-}
 export type Category =
   "Economy" | "Technology" | "Crypto" | "Science" | "Climate" | "World";
 export interface MarketDefinition {
@@ -297,51 +290,16 @@ export interface DraftInput {
   noRule: string;
   invalidRule: string;
 }
-/** Advisory AI review of a draft; never saved and never blocks a launch. */
-export interface DraftCritique {
-  provider: AIProvider;
-  summary: string;
-  findings: {
-    field: keyof DraftInput;
-    severity: "warn" | "info";
-    message: string;
-    suggestion: string;
-    /** Verbatim (case-insensitive) text from `field`. */
-    quote: string;
-  }[];
-}
-/**
- * AI-written explainer of one market, from its own text and numbers only.
- * Advisory and not financial advice; plain text, never HTML.
- */
-export interface MarketExplanation {
-  provider: AIProvider;
-  generatedAt: string;
-  /** YES probability when generated; a move over 5 points regenerates it. */
-  probability: number;
-  summary: string;
-  /** At most 5. */
-  drivers: string[];
-  /** At most 3 each. */
-  wouldMoveUp: string[];
-  wouldMoveDown: string[];
-  /** May be empty. */
-  baseRateNote: string;
-  caveats: string[];
-}
 export interface Draft extends DraftInput {
   id: string;
   createdAt: string;
-  mode: "manual" | AIProvider;
+  /** Drafts saved before AI was removed may name a provider. */
+  mode: string;
   status: "draft";
   reviewNotes: string[];
 }
 export interface Capabilities {
   mode: "demo";
-  aiConfigured: boolean;
-  aiAccessManaged?: boolean;
-  aiProviders: AIProviderInfo[];
-  defaultAIProvider: AIProvider | null;
   marketCount: number;
   version: string;
   /**
@@ -356,7 +314,7 @@ export interface Capabilities {
 export interface OEmbed {
   version: "1.0";
   type: "rich";
-  provider_name: "Wildcatter";
+  provider_name: "Peakcast";
   provider_url: string;
   title: string;
   html: string;

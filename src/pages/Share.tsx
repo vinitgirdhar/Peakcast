@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
-import { WildcatterClient } from "../../shared/client.js";
+import { PeakcastClient } from "../../shared/client.js";
 import type { Market } from "../../shared/types.js";
 import { Collapse } from "../motion.js";
 import { errorMessage } from "../ui.js";
@@ -23,7 +23,7 @@ export function SharePanel({
   open: boolean;
   id: string;
   market: Market;
-  client: WildcatterClient;
+  client: PeakcastClient;
   /** Null on the desktop app, whose loopback server nobody else can reach. */
   shareOrigin: string | null;
 }) {
@@ -40,7 +40,7 @@ export function SharePanel({
           <ShareFields market={market} client={client} origin={shareOrigin} />
         ) : (
           <p className="panel-hint">
-            Links and embeds come from the hosted Wildcatter app; this desktop
+            Links and embeds come from the hosted Peakcast app; this desktop
             workspace runs only on this computer.
           </p>
         )}
@@ -66,7 +66,7 @@ function ShareFields({
   origin,
 }: {
   market: Market;
-  client: WildcatterClient;
+  client: PeakcastClient;
   origin: string;
 }) {
   const id = useId();

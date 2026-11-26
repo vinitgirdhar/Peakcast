@@ -1,0 +1,31 @@
+.app-info {
+  margin: 12px 0 0;
+  display: grid;
+}
+.app-info > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+}
+.app-info dt {
+  color: var(--muted);
+}
+.app-info dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 560;
+  font-variant-numeric: tabular-nums;
+}
+.app-info-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin: 16px 0 8px;
+}
+.app-info-links a {
+  color: inherit;
+  font-weight: 560;
+  text-underline-offset: 3px;
+}

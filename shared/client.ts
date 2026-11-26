@@ -6,9 +6,7 @@ import type {
   Category,
   CreatedInvite,
   Draft,
-  DraftCritique,
   DraftInput,
-  AIProvider,
   HistoryPoint,
   Inbox,
   InviteInput,
@@ -17,7 +15,6 @@ import type {
   LimitOrder,
   Market,
   MarketComment,
-  MarketExplanation,
   MarketTrade,
   OEmbed,
   Portfolio,
@@ -42,7 +39,7 @@ export class ApiError extends Error {
 }
 
 /** The web client and third-party builders use this same versioned API. */
-export class WildcatterClient {
+export class PeakcastClient {
   constructor(
     private baseUrl = "",
     private token?: string,
@@ -242,46 +239,6 @@ export class WildcatterClient {
       body: JSON.stringify({ category, ...(workspaceId && { workspaceId }) }),
     });
   }
-  generateDraft(
-    input: DraftInput,
-    aiAccessToken: string,
-    provider?: AIProvider,
-  ) {
-    return this.request<Draft>(
-      `/drafts/generate${provider ? `?provider=${encodeURIComponent(provider)}` : ""}`,
-      {
-        method: "POST",
-        headers: { "X-AI-Access-Token": aiAccessToken },
-        body: JSON.stringify(input),
-      },
-    );
-  }
-  /**
-   * AI explainer of a market's price; advisory, not advice. Cached on the
-   * server for 30 minutes unless YES moves more than 5 points.
-   */
-  explainMarket(id: string, aiAccessToken: string, provider?: AIProvider) {
-    return this.request<MarketExplanation>(
-      `/markets/${encodeURIComponent(id)}/explain${provider ? `?provider=${encodeURIComponent(provider)}` : ""}`,
-      { method: "POST", headers: { "X-AI-Access-Token": aiAccessToken } },
-    );
-  }
-  /** Advisory only: nothing is saved and the draft is not changed. */
-  critiqueDraft(
-    input: DraftInput,
-    aiAccessToken: string,
-    provider?: AIProvider,
-  ) {
-    return this.request<DraftCritique>(
-      `/drafts/critique${provider ? `?provider=${encodeURIComponent(provider)}` : ""}`,
-      {
-        method: "POST",
-        headers: { "X-AI-Access-Token": aiAccessToken },
-        body: JSON.stringify(input),
-      },
-    );
-  }
-
   // Teams. Every call needs a bearer token; a workspace the caller is not an
   // active member of answers 404, exactly like an unknown id.
   private workspacePath(id: string, rest = "") {

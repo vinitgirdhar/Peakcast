@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { buildApp } from "../server/app.js";
-import { ApiError, WildcatterClient } from "../shared/client.js";
+import { ApiError, PeakcastClient } from "../shared/client.js";
 
 const CREDIT = 1_000_000;
 const DAY = 86_400_000;
@@ -366,7 +366,7 @@ test("portfolio stats count trades, volume, resolved markets, wins, fees and pay
 
 test("engagement responses never contain account ids", async (t) => {
   const advance = freezeClock(t, "2026-03-01T12:00:00.000Z");
-  const dir = mkdtempSync(join(tmpdir(), "wildcatter-engagement-"));
+  const dir = mkdtempSync(join(tmpdir(), "peakcast-engagement-"));
   const path = join(dir, "privacy.sqlite");
   const { app, session, post, get, buy, inbox, creator, market } =
     await setup(path);
@@ -412,8 +412,8 @@ test("the SDK claims the bonus and reads and clears notifications over HTTP", as
   try {
     await app.listen({ port: 0, host: "127.0.0.1" });
     const base = `http://127.0.0.1:${(app.server.address() as AddressInfo).port}`;
-    const { token } = await new WildcatterClient(base).createSession();
-    const api = new WildcatterClient(base, token);
+    const { token } = await new PeakcastClient(base).createSession();
+    const api = new PeakcastClient(base, token);
     const claim = await api.claimBonus();
     assert.equal(claim.amountMicros, 50 * CREDIT);
     assert.equal(claim.bonus.available, false);

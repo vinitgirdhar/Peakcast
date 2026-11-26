@@ -2,6 +2,7 @@ import { buildApp } from "./app.js";
 
 const app = await buildApp({
   logger: true,
+  demoActivity: true,
   // Render sets RENDER_EXTERNAL_URL to the service's own HTTPS origin.
   publicOrigin: process.env.PUBLIC_ORIGIN ?? process.env.RENDER_EXTERNAL_URL,
 });

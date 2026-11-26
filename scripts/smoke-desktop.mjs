@@ -4,23 +4,14 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import assert from "node:assert/strict";
 
-const executablePath = resolve("release/Wildcatter-win32-x64/Wildcatter.exe");
+const executablePath = resolve("release/Peakcast-win32-x64/Peakcast.exe");
 assert.ok(existsSync(executablePath), "Run npm run desktop:package first");
 mkdirSync("output/screenshots", { recursive: true });
 let token;
 const desktopEnvironment = { ...process.env };
-const profile = mkdtempSync(join(tmpdir(), "wildcatter-desktop-smoke-"));
+const profile = mkdtempSync(join(tmpdir(), "peakcast-desktop-smoke-"));
 const mainErrorLog = join(profile, "main-errors.log");
-desktopEnvironment.AI_SETTINGS_DIR = join(profile, "providers");
-for (const key of [
-  "ELECTRON_RUN_AS_NODE",
-  "OPENAI_API_KEY",
-  "GEMINI_API_KEY",
-  "GROQ_API_KEY",
-  "AI_ACCESS_TOKEN",
-  "OLLAMA_ENABLED",
-])
-  delete desktopEnvironment[key];
+delete desktopEnvironment.ELECTRON_RUN_AS_NODE;
 for (let launch = 0; launch < 2; launch++) {
   const electron = await _electron.launch({
     executablePath,
@@ -54,7 +45,7 @@ for (let launch = 0; launch < 2; launch++) {
     }
     await page.locator(".page h1").waitFor();
     const current = await page.evaluate(() =>
-      localStorage.getItem("wildcatter.demo.token.v1"),
+      localStorage.getItem("peakcast.token.v1"),
     );
     assert.ok(current, "Desktop initialized its demo account");
     if (launch === 0) token = current;
@@ -62,7 +53,7 @@ for (let launch = 0; launch < 2; launch++) {
       assert.equal(
         current,
         token,
-        "Desktop session survives restart on its stable origin",
+        "Desktop data survives restart on its stable app:// origin",
       );
     const preferences = await electron.evaluate(({ BrowserWindow }) => {
       const preferences =
@@ -84,10 +75,11 @@ for (let launch = 0; launch < 2; launch++) {
       (await fetch("/api/v1/capabilities")).json(),
     );
     assert.equal(api.mode, "demo");
+    assert.ok(page.url().startsWith("app://peakcast/"), page.url());
     for (const [label, heading] of [
       [/^Portfolio$/, "Your portfolio"],
       [/^Draft studio/, "Draft studio"],
-      [/^Developers$/, "Developer tools"],
+      [/^Settings$/, "Settings"],
       [/^Markets$/, "Markets"],
     ]) {
       await page
@@ -106,8 +98,7 @@ for (let launch = 0; launch < 2; launch++) {
       const marketId = await page.evaluate(async () => {
         const headers = {
           "Content-Type": "application/json",
-          Authorization:
-            "Bearer " + localStorage.getItem("wildcatter.demo.token.v1"),
+          Authorization: "Bearer " + localStorage.getItem("peakcast.token.v1"),
         };
         const post = async (url, body) => {
           const response = await fetch("/api/v1" + url, {
@@ -140,7 +131,7 @@ for (let launch = 0; launch < 2; launch++) {
         });
         return market.id;
       });
-      const origin = new URL(page.url()).origin;
+      const origin = "app://peakcast";
       await page.goto(`${origin}/markets/${marketId}/rules`);
       await page.locator(".rules-section a").click();
       await page.waitForFunction(() => document.readyState === "complete");
@@ -208,5 +199,5 @@ for (let launch = 0; launch < 2; launch++) {
   );
 }
 console.log(
-  "Windows desktop passed: isolated packaged launch, navigation, local API, renderer isolation, creator source/evidence links, blocked unsafe links and session persistence across restart.",
+  "Windows desktop passed: isolated packaged launch, navigation, on-device API, renderer isolation, creator source/evidence links, blocked unsafe links and session persistence across restart.",
 );

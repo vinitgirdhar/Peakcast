@@ -29,14 +29,26 @@ test("new accounts start with 5,000 practice credits and zero P&L", async () => 
 test("onboarding records consent and requires both confirmations", async () => {
   const { app, headers } = await setup();
   try {
-    const before = (await app.inject({ url: "/api/v1/account", headers })).json();
+    const before = (
+      await app.inject({ url: "/api/v1/account", headers })
+    ).json();
     assert.equal(before.termsAcceptedAt, null);
     assert.equal(before.playground, true);
     const put = (body: object) =>
-      app.inject({ method: "PUT", url: "/api/v1/account", headers, payload: body });
+      app.inject({
+        method: "PUT",
+        url: "/api/v1/account",
+        headers,
+        payload: body,
+      });
     assert.equal(
-      (await put({ displayName: "Ada", acceptTerms: true, confirmAdult: false }))
-        .statusCode,
+      (
+        await put({
+          displayName: "Ada",
+          acceptTerms: true,
+          confirmAdult: false,
+        })
+      ).statusCode,
       400,
     );
     assert.equal(
@@ -128,7 +140,11 @@ test("deleting a workspace owner hands the workspace on and removes their name",
       token: pending,
       displayName: "Late",
     });
-    assert.notEqual(join.statusCode, 201, "the deleted owner's invite is revoked");
+    assert.notEqual(
+      join.statusCode,
+      201,
+      "the deleted owner's invite is revoked",
+    );
   } finally {
     await t.close();
   }

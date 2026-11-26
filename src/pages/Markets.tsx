@@ -1,5 +1,5 @@
 import { Select } from "../Select.js";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   ArrowUpRight,
@@ -31,6 +31,11 @@ const categories = [
 ];
 import { motion } from "motion/react";
 import { ease, itemMotion, listMotion } from "../motion.js";
+import { haptic } from "../haptics.js";
+import { isAndroidApp } from "../platform.js";
+
+// ponytail: module flag, so the card cascade plays once per app launch, not on every tab return.
+let gridShown = false;
 
 export function MarketExplorer({
   markets,
@@ -79,6 +84,10 @@ export function MarketExplorer({
     0,
   );
   const trades = markets.reduce((total, market) => total + market.trades, 0);
+  const [stagger] = useState(() => !gridShown);
+  useEffect(() => {
+    if (markets.length) gridShown = true;
+  }, [markets.length]);
   const pages = Math.max(1, Math.ceil(ordered.length / 6));
   const currentPage = Math.min(page, pages);
   return (
@@ -89,14 +98,18 @@ export function MarketExplorer({
             <h1>Markets</h1>
             <p>Explore what happens next.</p>
           </div>
-          <button className="primary-button" onClick={onStudio}>
-            <Plus size={17} /> Draft a market
-          </button>
+          {/* The Android app drafts from the dock's + button instead. */}
+          {!isAndroidApp && (
+            <button className="primary-button" onClick={onStudio}>
+              <Plus size={17} /> Draft a market
+            </button>
+          )}
         </div>
       )}
 
       <div className="overview-row">
-        {featured && (
+        {/* The Android app opens straight into the list, like a native finance app. */}
+        {featured && !isAndroidApp && (
           <button className="featured-market" onClick={() => onOpen(featured)}>
             <div className="feature-content">
               <span className="feature-kicker">
@@ -210,6 +223,7 @@ export function MarketExplorer({
             className={category === item ? "selected" : ""}
             aria-pressed={category === item}
             onClick={(event) => {
+              if (category !== item) haptic("selection");
               setCategory(item);
               setPage(1);
               event.currentTarget.scrollIntoView({
@@ -233,7 +247,8 @@ export function MarketExplorer({
       {ordered.length ? (
         <motion.div
           className="market-grid"
-          variants={listMotion}
+          // Later visits fade the cards together; filtering still animates new cards in.
+          variants={stagger ? listMotion : undefined}
           initial="hidden"
           animate="show"
         >

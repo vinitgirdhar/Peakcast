@@ -5694,7 +5694,7 @@
   }
 }
 
-/* Wildcatter for Teams. Unlayered, like design.css and share.css, so its few
+/* Peakcast for Teams. Unlayered, like design.css and share.css, so its few
    overrides (danger actions, member rows) are not outranked by those rules. */
 .page-heading h1 .small-pill {
   margin-left: 6px;

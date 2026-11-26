@@ -1,11 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  CircleCheck,
-  Copy,
-  ExternalLink,
-  Sparkles,
-  TriangleAlert,
-} from "lucide-react";
+import { CircleCheck, ExternalLink, TriangleAlert } from "lucide-react";
 import {
   blockingReason,
   lintDraft,
@@ -14,11 +8,7 @@ import {
   type LintReport,
 } from "../../shared/lint.js";
 import { CHECK_TITLES } from "../../shared/lint-data.js";
-import type {
-  DraftCritique,
-  DraftInput,
-  RuleCheck,
-} from "../../shared/types.js";
+import type { DraftInput, RuleCheck } from "../../shared/types.js";
 
 const FIELD_LABELS: Record<LintField, string> = {
   question: "Question",
@@ -137,18 +127,14 @@ export function LaunchReview({
   id,
   report,
   sourceUrl,
-  managed,
   checked,
   onToggle,
-  onNotice,
 }: {
   id: string;
   report: LintReport;
   sourceUrl: string;
-  managed: boolean;
   checked: Set<string>;
   onToggle: (key: string) => void;
-  onNotice: (text: string) => void;
 }) {
   const blocked = blockingReason(report);
   const warnings = count(report, "warn");
@@ -161,27 +147,9 @@ export function LaunchReview({
         warnings > 0 && (
           <>
             <p className="fine-print">
-              {managed ? (
-                <button
-                  type="button"
-                  className="text-button"
-                  onClick={() =>
-                    void navigator.clipboard.writeText(sourceUrl).then(
-                      () => onNotice("Source link copied."),
-                      () =>
-                        onNotice(
-                          "Clipboard access is unavailable. Copy the source URL above.",
-                        ),
-                    )
-                  }
-                >
-                  <Copy size={13} /> Copy source link
-                </button>
-              ) : (
-                <a href={sourceUrl} target="_blank" rel="noopener noreferrer">
-                  Open the source <ExternalLink size={12} />
-                </a>
-              )}
+              <a href={sourceUrl} target="_blank" rel="noopener noreferrer">
+                Open the source <ExternalLink size={12} />
+              </a>
             </p>
             {[
               [
@@ -220,32 +188,6 @@ export const launchReady = (
   !blockingReason(report) &&
   (!count(report, "warn") ||
     (checked.has(`${id}:reviewed`) && checked.has(`${id}:opened`)));
-
-export function CritiqueResult({ critique }: { critique: DraftCritique }) {
-  return (
-    <section className="critique" aria-labelledby="critique-title">
-      <h3 id="critique-title">
-        <Sparkles size={14} /> AI suggestion, advisory
-      </h3>
-      <p className="fine-print">
-        {critique.summary ||
-          (critique.findings.length ? "" : "No further ambiguity found.")}
-      </p>
-      <ul>
-        {critique.findings.map((item, index) => (
-          <li key={`${item.field}-${index}`}>
-            <strong>
-              {FIELD_LABELS[item.field]}
-              <mark>{item.quote}</mark>
-            </strong>
-            <span>{item.message}</span>
-            <span className="fine-print">Suggestion: {item.suggestion}</span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
 
 /** The rule-check line on a launched market's rules view. */
 export function RuleCheckLine({ check }: { check?: RuleCheck }) {

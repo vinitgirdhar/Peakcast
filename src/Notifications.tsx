@@ -13,7 +13,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import type { WildcatterClient } from "../shared/client.js";
+import type { PeakcastClient } from "../shared/client.js";
 import type { Inbox, NotificationKind } from "../shared/types.js";
 import { EmptyState, SkeletonRows, date, errorMessage } from "./ui.js";
 import { ease, itemMotion, listMotion } from "./motion.js";
@@ -39,7 +39,7 @@ export function timeAgo(iso: string, now = Date.now()): string {
 }
 
 interface BellProps {
-  client: WildcatterClient;
+  client: PeakcastClient;
   /** Null until the first refresh returns. */
   inbox: Inbox | null;
   onInbox: (inbox: Inbox) => void;

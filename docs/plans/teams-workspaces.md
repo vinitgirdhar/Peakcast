@@ -1,4 +1,4 @@
-# Wildcatter for Teams: workspace foundation
+# Peakcast for Teams: workspace foundation
 
 **Recommendation.** Add workspaces on top of the existing account model without rewriting trading. Each membership gets its own **wallet**: an ordinary row in `accounts` tagged with `workspace_id`. Everything that already takes an account id then works unchanged and stays isolated, including `Store.trade`, `Store.credit`, `Store.portfolio`, `placeOrder`, `payOut` and `notify`. Private markets get `markets.workspace_id`. One gate, `marketActor()` in a new `server/workspaces.ts`, decides for every market route whether the caller may see the market and which account acts on it. Public markets keep `workspace_id = NULL` and behave exactly as they do today. Teams is a hosted feature, so the Windows app hides it.
 
@@ -268,7 +268,7 @@ export interface WorkspaceInvite { id: string; role: "member" | "resolver"; expi
 export interface InvitePreview { workspaceName: string; role: "member" | "resolver"; expiresAt: string }
 // Market += workspaceId?: string;  InboxNotification += workspaceId?: string;  Capabilities += teams: boolean
 
-// shared/client.ts (WildcatterClient)
+// shared/client.ts (PeakcastClient)
 workspaces(): Promise<{ items: Workspace[] }>;
 createWorkspace(name: string, displayName: string): Promise<Workspace>;
 workspace(id: string): Promise<WorkspaceDetail>;

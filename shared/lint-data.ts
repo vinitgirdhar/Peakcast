@@ -260,7 +260,7 @@ export const NAMED_ALTERNATIVES =
 export const OPEN_SOURCES =
   /\band\/or\b|\bany\s+(?:(?:major|reputable|credible|mainstream|reliable|national|international)\s+)?(?:news\s+)?(?:outlets?|media|publications?|newspapers?|websites?|sources?|news)\b|\b(?:news|media|press)\s+reports?\b|\b(?:multiple|several|other)\s+(?:sources|outlets)\b/i;
 export const SELF_REFERENCE =
-  /\b(?:this market(?:['’]s)?|wildcatter|trading volume|(?:the\s+)?market(?:['’]s)?\s+(?:probability|odds))\b/i;
+  /\b(?:this market(?:['’]s)?|peakcast|trading volume|(?:the\s+)?market(?:['’]s)?\s+(?:probability|odds))\b/i;
 export const SUBJECTIVE_JUDGE =
   /\bin\s+(?:the\s+)?(?:market\s+)?(?:creator['’]?s?['’]?|our|my|organi[sz]er['’]?s)\s+(?:sole\s+|own\s+)?(?:opinion|judge?ment|view|assessment)\b|\bat\s+(?:the|my|our)\s+(?:sole\s+)?discretion\b|\bas\s+(?:determined|decided|judged)\s+by\s+(?:the\s+)?(?:market\s+)?creator\b|\b(?:i|we)\s*(?:will|shall|['’]ll)\s+(?:decide|determine|judge)\b|\bthe\s+(?:market\s+)?creator\s+(?:decides|determines|judges)\b/i;
 export const BINARY_START =

@@ -14,9 +14,9 @@ Status: plan for batch 2, written 2026-11-22 against `main` at `4a021de`. Prices
 | Area            | Current behaviour (code)                                                                                                                                                                                                                |
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Identity        | `POST /sessions` → `Store.createSession` inserts an `accounts` row (`id`, `token_hash`, `balance_micros`, `expires_at` +30 days). One bearer per account, with no email and no recovery.                                                |
-| Browser storage | The token is kept in `localStorage["wildcatter.demo.token.v1"]` (`src/App.tsx`). On a 401, the app silently creates a **new** account. `docs/BACKEND.md` calls localStorage a documented demo shortcut.                                 |
+| Browser storage | The token is kept in `localStorage["peakcast.token.v1"]` (`src/App.tsx`). On a 401, the app silently creates a **new** account. `docs/BACKEND.md` calls localStorage a documented demo shortcut.                                        |
 | Hosted storage  | `render.yaml` uses `plan: free`. The SQLite file and `data/providers/*.json` (AI provider overrides from `server/provider-settings.ts`) sit on an ephemeral filesystem and are lost on deploy, restart or the 15-minute idle spin-down. |
-| Desktop         | `desktop/main.mjs` runs its own Fastify instance on `127.0.0.1:43127` with `%APPDATA%/wildcatter/wildcatter.sqlite`. It never talks to the hosted API.                                                                                  |
+| Desktop         | `desktop/main.mjs` runs its own Fastify instance on `127.0.0.1:43127` with `%APPDATA%/peakcast/peakcast.sqlite`. It never talks to the hosted API.                                                                                      |
 | Android         | `android/MainActivity.java` is a plain `WebView` on the hosted origin. Off-origin links open the system browser.                                                                                                                        |
 | SQLite usage    | `node:sqlite` `DatabaseSync`, WAL, `busy_timeout=5000`, and `BEGIN IMMEDIATE` in `Store.transaction`, `trade` and `launchDraft`. These serialise every writer, which is what keeps LMSR state consistent.                               |
 
@@ -36,13 +36,13 @@ Status: plan for batch 2, written 2026-11-22 against `main` at `4a021de`. Prices
 
 - **`render.yaml`, API service:**
   - `plan: 0.5c-512mb` (the plan id in Render's current Blueprint spec; the pricing page lists it as "Less than 1 CPU, 512 MB, $7/month").
-  - `disk: {name: wildcatter-data, mountPath: /var/data, sizeGB: 1}`.
-  - Environment: `DATABASE_PATH=/var/data/wildcatter.sqlite`, `AI_SETTINGS_DIR=/var/data/providers`, and the Litestream R2 variables with `sync: false`.
+  - `disk: {name: peakcast-data, mountPath: /var/data, sizeGB: 1}`.
+  - Environment: `DATABASE_PATH=/var/data/peakcast.sqlite`, `AI_SETTINGS_DIR=/var/data/providers`, and the Litestream R2 variables with `sync: false`.
   - Leave the static welcome site on its free plan.
 - **Litestream v0.5.18** (released 2026-11-03). The build step downloads `litestream-0.5.18-linux-x86_64.tar.gz` and verifies it against the release's `checksums.txt` before unpacking into `./bin` (gitignored).
 - **Start command:** `./bin/litestream replicate -config litestream.yml -restore-if-db-not-exists -exec "node dist-server/server/index.js"`. Litestream runs the server as a child and exits with it. If the disk is ever lost, the next boot restores from R2.
 - **`litestream.yml`:**
-  - one database, `/var/data/wildcatter.sqlite`;
+  - one database, `/var/data/peakcast.sqlite`;
   - one S3 replica pointing at the R2 endpoint `<ACCOUNT_ID>.r2.cloudflarestorage.com`, region `auto` (Litestream auto-detects R2 settings);
   - a snapshot interval of `1h`, so restores stay short;
   - credentials from environment variables.

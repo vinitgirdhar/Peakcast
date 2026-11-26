@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { ExternalLink, Gavel } from "lucide-react";
 import { Select } from "../Select.js";
-import { WildcatterClient } from "../../shared/client.js";
+import { PeakcastClient } from "../../shared/client.js";
 import type { Market, ResolutionOutcome } from "../../shared/types.js";
 import { errorMessage } from "../ui.js";
 import { DetailPanel } from "./MarketExtras.js";
@@ -22,7 +22,7 @@ export function ResolutionPanel({
 }: {
   market: Market;
   isCreator: boolean;
-  client: WildcatterClient;
+  client: PeakcastClient;
   onChange: () => Promise<void>;
   onNotice: (text: string) => void;
   /** Private markets only: a workspace owner, admin or resolver rules here. */

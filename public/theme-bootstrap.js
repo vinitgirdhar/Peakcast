@@ -1,6 +1,11 @@
 (() => {
   try {
-    const preference = localStorage.getItem("wildcatter.theme");
+    // Same default as src/theme.ts: the Android app follows the phone.
+    const preference =
+      localStorage.getItem("peakcast.theme") ||
+      (location.hostname === "appassets.androidplatform.net"
+        ? "system"
+        : "light");
     const dark =
       preference === "dark" ||
       (preference === "system" &&

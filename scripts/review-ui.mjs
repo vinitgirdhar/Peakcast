@@ -19,7 +19,7 @@ try {
         reducedMotion: "reduce",
       });
       await context.addInitScript(
-        (value) => localStorage.setItem("wildcatter.theme", value),
+        (value) => localStorage.setItem("peakcast.theme", value),
         theme,
       );
       const page = await context.newPage();

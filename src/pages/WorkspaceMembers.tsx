@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { Copy, Link2, UserRound } from "lucide-react";
 import { Select } from "../Select.js";
-import { WildcatterClient } from "../../shared/client.js";
+import { PeakcastClient } from "../../shared/client.js";
 import type {
   InviteRole,
   WorkspaceDetail,
@@ -46,7 +46,7 @@ function inviteStatus(invite: WorkspaceInvite): string {
 }
 
 interface MembersProps {
-  client: WildcatterClient;
+  client: PeakcastClient;
   workspace: WorkspaceDetail;
   shareOrigin: string | null;
   /** Reloads the workspace after a change. */
@@ -267,7 +267,7 @@ function InvitesPanel({
   shareOrigin,
   onNotice,
 }: {
-  client: WildcatterClient;
+  client: PeakcastClient;
   workspaceId: string;
   shareOrigin: string | null;
   onNotice: (text: string) => void;
@@ -498,7 +498,7 @@ function RenameForm({
   onChanged,
   onNotice,
 }: {
-  client: WildcatterClient;
+  client: PeakcastClient;
   workspace: WorkspaceDetail;
   onChanged: () => Promise<void>;
   onNotice: (text: string) => void;

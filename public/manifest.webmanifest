@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Wildcatter",
-  "short_name": "Wildcatter",
+  "name": "Peakcast",
+  "short_name": "Peakcast",
   "description": "Prediction markets and forecasting. Demo credits only.",
   "start_url": "/",
   "scope": "/",

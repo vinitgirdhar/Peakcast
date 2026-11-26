@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures.js";
+import { test, expect, mockApi } from "./fixtures.js";
 import AxeBuilder from "@axe-core/playwright";
 
 test("landing reveals and animated selections keep content available with reduced motion", async ({
@@ -8,12 +8,12 @@ test("landing reveals and animated selections keep content available with reduce
   await expect(
     page.getByRole("heading", { name: /Turn your view/ }),
   ).toBeVisible();
-  const platforms = page.getByRole("region", { name: "Get Wildcatter" });
+  const platforms = page.getByRole("region", { name: "Get Peakcast" });
   await platforms.scrollIntoViewIfNeeded();
   await expect(platforms).toHaveCSS("opacity", "1");
   await expect(
     page.getByRole("link", { name: "Download desktop app" }),
-  ).toHaveAttribute("href", "/downloads/Wildcatter-Windows.zip");
+  ).toHaveAttribute("href", "/downloads/Peakcast-Windows.zip");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.reload();
   await expect(platforms).toHaveCSS("opacity", "1");
@@ -23,6 +23,7 @@ test("landing reveals and animated selections keep content available with reduce
     page.locator(".category-tabs .selected .tab-selection"),
   ).toHaveCount(1);
   await expect(page.locator(".market-card .category-label")).toHaveText([
+    "Technology",
     "Technology",
   ]);
   await expect(page.locator(".probability-track > span").first()).toHaveCSS(
@@ -35,21 +36,15 @@ test("market pulse totals actual activity and upcoming deadlines exclude closed 
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.route("**/api/v1/markets?**", async (route) => {
-    const response = await route.fetch();
-    const body = await response.json();
-    body.items = body.items
-      .slice(0, 4)
-      .map((market: object, index: number) => ({
+  await mockApi(page, "/api/v1/markets?", {
+    transform: `body.items = body.items.slice(0, 4).map((market, index) => ({
         ...market,
         status: index === 1 ? "closed" : "open",
-        closesAt: new Date(
-          Date.now() + (index === 3 ? -1 : index === 2 ? 1 : 2) * 86_400_000,
-        ).toISOString(),
+        closesAt: new Date(Date.now() + (index === 3 ? -1 : index === 2 ? 1 : 2) * 86400000).toISOString(),
         trades: index + 1,
-        volumeMicros: (index + 1) * 1_000_000,
+        volumeMicros: (index + 1) * 1000000,
       }));
-    await route.fulfill({ json: body });
+      return body;`,
   });
   await page.goto("/markets");
   await expect(page.locator(".market-pulse strong")).toHaveText([
@@ -72,7 +67,7 @@ test("hero downloads are visible immediately and hidden scrollbars preserve page
   page,
 }) => {
   await page.goto("/");
-  const hero = page.getByRole("region", { name: "Get Wildcatter" });
+  const hero = page.getByRole("region", { name: "Get Peakcast" });
   for (const name of ["Download desktop app", "Download for Android"]) {
     const link = hero.getByRole("link", { name });
     await expect(link).toBeInViewport();
@@ -98,11 +93,8 @@ test("hero downloads are visible immediately and hidden scrollbars preserve page
 test("featured probability stays inside its card across narrow and intermediate widths", async ({
   page,
 }) => {
-  await page.route("**/api/v1/markets?**", async (route) => {
-    const response = await route.fetch();
-    const body = await response.json();
-    body.items[0].probability = 1;
-    await route.fulfill({ json: body });
+  await mockApi(page, "/api/v1/markets?", {
+    transform: "body.items[0].probability = 1; return body;",
   });
   await page.goto("/markets");
   await expect(page.locator(".feature-probability")).toContainText("100%");

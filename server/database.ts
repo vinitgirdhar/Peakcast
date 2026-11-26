@@ -95,10 +95,18 @@ export const hashToken = (token: string) =>
 
 export class Store {
   readonly db: DatabaseSync;
+  /**
+   * Show players by display name instead of an anonymous alias. On for the
+   * on-device apps, where every account lives on the user's own device; off on
+   * a shared server, where display names stay private to workspaces.
+   */
+  showDisplayNames = false;
 
-  constructor(path: string) {
-    if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
-    this.db = new DatabaseSync(path);
+  /** `database` is the on-device SQLite (src/local/sqlite.ts); a path opens node:sqlite. */
+  constructor(path: string, database?: DatabaseSync) {
+    if (!database && path !== ":memory:")
+      mkdirSync(dirname(path), { recursive: true });
+    this.db = database ?? new DatabaseSync(path);
     this.db.exec(`
       PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;
       CREATE TABLE IF NOT EXISTS markets (id TEXT PRIMARY KEY, definition TEXT NOT NULL, q_yes REAL NOT NULL, q_no REAL NOT NULL, liquidity REAL NOT NULL, volume_micros INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL);
@@ -139,7 +147,11 @@ export class Store {
       ["markets", "workspace_id", "TEXT REFERENCES workspaces(id)"],
       ["accounts", "workspace_id", "TEXT REFERENCES workspaces(id)"],
       // Accounts created before onboarding started with 10,000 credits.
-      ["accounts", "starting_micros", `INTEGER NOT NULL DEFAULT ${10_000 * MICRO}`],
+      [
+        "accounts",
+        "starting_micros",
+        `INTEGER NOT NULL DEFAULT ${10_000 * MICRO}`,
+      ],
       ["accounts", "display_name", "TEXT"],
       ["accounts", "terms_version", "TEXT"],
       ["accounts", "terms_accepted_at", "TEXT"],
@@ -210,6 +222,12 @@ export class Store {
         .get(hashToken(token)) as AccountRow | undefined);
     if (!account || account.expires_at <= new Date().toISOString())
       throw new DomainError("Start a demo session to continue.", 401);
+    // Sliding 30 days: an account in use never expires, an abandoned one does.
+    // Renewed at most once a day so reads do not write every time.
+    if (Date.parse(account.expires_at) < Date.now() + 29 * DAY_MS)
+      this.db
+        .prepare("UPDATE accounts SET expires_at=? WHERE id=?")
+        .run(new Date(Date.now() + 30 * DAY_MS).toISOString(), account.id);
     return account;
   }
 
@@ -592,6 +610,14 @@ export class Store {
       return member.display_name.startsWith(FORMER_MEMBER)
         ? FORMER_MEMBER.trim()
         : member.display_name;
+    if (this.showDisplayNames) {
+      const account = this.db
+        .prepare(
+          "SELECT display_name FROM accounts WHERE id=? AND deleted_at IS NULL",
+        )
+        .get(accountId) as { display_name: string | null } | undefined;
+      if (account?.display_name) return account.display_name;
+    }
     return (
       "Trader " +
       createHash("sha256")

@@ -2,10 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowUpRight,
-  BookOpen,
   Check,
   CircleHelp,
-  Code2,
   LayoutGrid,
   Menu,
   Settings as SettingsIcon,
@@ -15,7 +13,7 @@ import {
   Wallet,
   X,
 } from "lucide-react";
-import { ApiError, WildcatterClient } from "../shared/client.js";
+import { ApiError, PeakcastClient } from "../shared/client.js";
 import type {
   Account,
   Capabilities,
@@ -24,13 +22,16 @@ import type {
   Portfolio,
 } from "../shared/types.js";
 import { NotificationBell } from "./Notifications.js";
+import { MobileDock } from "./Dock.js";
+import { haptic } from "./haptics.js";
+import { isAndroidApp } from "./platform.js";
 import { BrandMark, EmptyState, errorMessage, formatCredits } from "./ui.js";
 import { AnimatedNumber, ease } from "./motion.js";
 import { MarketExplorer } from "./pages/Markets.js";
 import { MarketDetail } from "./pages/MarketDetail.js";
 import { PortfolioView } from "./pages/Portfolio.js";
 import { DraftStudio } from "./pages/DraftStudio.js";
-import { Developers } from "./pages/Developers.js";
+import { About } from "./pages/About.js";
 import { LeaderboardView } from "./pages/Leaderboard.js";
 import { Settings } from "./pages/Settings.js";
 import { Landing } from "./pages/Landing.js";
@@ -41,12 +42,12 @@ import { JoinWorkspace } from "./pages/JoinWorkspace.js";
 import { Onboarding, type OnboardingInput } from "./pages/Onboarding.js";
 import { Legal, legalPaths } from "./pages/Legal.js";
 import { TERMS_VERSION } from "../shared/legal.js";
+// About lives inside Settings (its "About this app" section links to /about).
 const navItems = [
   { path: "/markets", label: "Markets", icon: LayoutGrid },
   { path: "/portfolio", label: "Portfolio", icon: Wallet },
   { path: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { path: "/studio", label: "Draft studio", icon: Sparkles },
-  { path: "/developers", label: "Developers", icon: Code2 },
   { path: "/settings", label: "Settings", icon: SettingsIcon },
 ];
 // Shown only where the server offers workspaces (not in the Windows app).
@@ -55,15 +56,20 @@ const teamsNavItems = [
   { path: "/teams", label: "Teams", icon: Users },
   ...navItems.slice(4),
 ];
-// The phone dock holds six destinations: Teams takes the Developers slot there.
-const teamsDockItems = teamsNavItems.filter(
-  (item) => item.path !== "/developers",
-);
+// Phone tabs: the raised + in the middle replaces Draft studio (and Teams).
+const dockItems = navItems.filter((item) => item.path !== "/studio");
 const workspaceRoute =
   /^\/teams\/([0-9a-f-]{36})(?:\/(leaderboard|members)|\/markets\/([^/]+)(\/rules)?)?$/;
-const storageKey = "wildcatter.demo.token.v1";
+const storageKey = "peakcast.token.v1";
+/** Same breakpoint as the phone layout in styles.css (bottom dock, no sidebar). */
+const phoneQuery = "(max-width:760px), (pointer:coarse) and (max-width:1024px)";
 export function App() {
-  const [path, setPath] = useState(location.pathname);
+  const [path, setPath] = useState(() => {
+    // The Android app has no landing page: it opens on the markets.
+    if (isAndroidApp && ["/", "/welcome"].includes(location.pathname))
+      history.replaceState(history.state, "", "/markets");
+    return location.pathname;
+  });
   const [token, setToken] = useState(
     () => localStorage.getItem(storageKey) ?? "",
   );
@@ -81,16 +87,16 @@ export function App() {
   // Workspace that Draft studio should launch to when opened from that workspace.
   const [launchTo, setLaunchTo] = useState<string | undefined>();
   // "new": no account yet; "consent": an older account that never accepted the terms.
-  const [onboarding, setOnboarding] = useState<"new" | "consent" | null>(
-    null,
-  );
+  const [onboarding, setOnboarding] = useState<"new" | "consent" | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const menuTrigger = useRef<HTMLButtonElement>(null);
   const [install, setInstall] = useState<
     (Event & { prompt: () => Promise<void> }) | null
   >(null);
-  const client = new WildcatterClient("", token);
+  const client = new PeakcastClient("", token);
   function navigate(next: string, launchWorkspace?: string) {
+    if (isAndroidApp && (next === "/" || next === "/welcome"))
+      next = "/markets";
     history.pushState({}, "", next);
     setPath(next);
     setMenu(false);
@@ -98,7 +104,7 @@ export function App() {
     scrollTo(0, 0);
   }
   async function refresh(current = token) {
-    const api = new WildcatterClient("", current);
+    const api = new PeakcastClient("", current);
     const [m, p, c, n] = await Promise.all([
       api.markets(),
       api.portfolio(),
@@ -138,7 +144,7 @@ export function App() {
         let account: Account | null = null;
         if (current) {
           try {
-            account = await new WildcatterClient("", current).account();
+            account = await new PeakcastClient("", current).account();
           } catch (e) {
             if (!(e instanceof ApiError) || e.status !== 401) throw e;
             current = "";
@@ -221,9 +227,7 @@ export function App() {
     else dialog.current.close();
     const previous = document.body.style.overflow;
     if (menu) document.body.style.overflow = "hidden";
-    const mobile = matchMedia(
-      "(max-width:760px), (pointer:coarse) and (max-width:1024px)",
-    );
+    const mobile = matchMedia(phoneQuery);
     const desktop = matchMedia("(min-width:1100px)");
     const close = () => {
       if (mobile.matches || desktop.matches) setMenu(false);
@@ -236,6 +240,39 @@ export function App() {
       desktop.removeEventListener("change", close);
     };
   }, [menu]);
+  // Plain links to in-app pages (Settings → About, Terms, Help) open without a reload.
+  useEffect(() => {
+    const onClick = (event: MouseEvent) => {
+      const link = (event.target as Element | null)?.closest?.("a");
+      if (
+        !link ||
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey ||
+        link.target ||
+        link.hasAttribute("download") ||
+        link.origin !== location.origin
+      )
+        return;
+      const next = link.pathname;
+      if (next !== "/about" && !legalPaths[next]) return;
+      event.preventDefault();
+      navigate(next);
+    };
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, []);
+  // Phone header stays pinned; a hairline shadow appears once content scrolls under it.
+  const topbar = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const onScroll = () =>
+      topbar.current?.toggleAttribute("data-scrolled", scrollY > 4);
+    addEventListener("scroll", onScroll, { passive: true });
+    return () => removeEventListener("scroll", onScroll);
+  }, []);
   async function installApp() {
     if (install) {
       try {
@@ -255,12 +292,9 @@ export function App() {
   const marketId = route?.[1];
   const selected = markets.find((m) => m.id === marketId);
   const studio = path === "/studio" || path === "/studio/drafts";
-  const developers = [
-    "/developers",
-    "/developers/api",
-    "/developers/setup",
-  ].includes(path);
-  const landing = path === "/" || path === "/welcome";
+  const about = path === "/about";
+  // The marketing landing page is for the website; the Android app opens on markets.
+  const landing = !isAndroidApp && (path === "/" || path === "/welcome");
   const teams = capabilities?.teams ?? false;
   const nav = teams ? teamsNavItems : navItems;
   const team = teams ? workspaceRoute.exec(path) : null;
@@ -270,8 +304,8 @@ export function App() {
     ? "Markets"
     : studio
       ? "Draft studio"
-      : developers
-        ? "Developers"
+      : about
+        ? "Settings"
         : teamsPage
           ? "Teams"
           : (nav.find((n) => n.path === path)?.label ?? "Page not found");
@@ -279,11 +313,11 @@ export function App() {
     let current = token;
     // Reuse an account a failed earlier attempt already created.
     if (!current) {
-      current = (await new WildcatterClient().createSession()).token;
+      current = (await new PeakcastClient().createSession()).token;
       localStorage.setItem(storageKey, current);
       setToken(current);
     }
-    await new WildcatterClient("", current).completeOnboarding(input);
+    await new PeakcastClient("", current).completeOnboarding(input);
     await refresh(current);
     setOnboarding(null);
   }
@@ -296,6 +330,29 @@ export function App() {
     navigate("/");
     setNotice("Your account was deleted.");
   }
+  const routeKey = team
+    ? `/teams/${team[1]}`
+    : marketId
+      ? `/markets/${marketId}`
+      : studio
+        ? "/studio"
+        : path;
+  // Phones push deeper pages in from the right and pop back from the left;
+  // React's "adjust state while rendering" pattern keeps the direction StrictMode-safe.
+  // About opens from Settings, so it pushes like a page inside it.
+  const depth = routeKey === "/about" ? 3 : routeKey.split("/").length;
+  const [lastRoute, setLastRoute] = useState({ key: routeKey, depth, dir: 0 });
+  if (lastRoute.key !== routeKey)
+    setLastRoute({
+      key: routeKey,
+      depth,
+      dir: Math.sign(depth - lastRoute.depth),
+    });
+  const phone = matchMedia(phoneQuery).matches;
+  const routeEnter =
+    phone && lastRoute.dir
+      ? { opacity: 0, x: lastRoute.dir * 28 }
+      : { opacity: 0, y: 6 };
   const legal = legalPaths[path];
   if (legal)
     return (
@@ -311,9 +368,16 @@ export function App() {
         <Toast notice={notice} onDismiss={() => setNotice("")} />
       </>
     );
+  // First child of each fragment below, so it survives the switch to onboarding and fades out.
+  const boot = (
+    <AnimatePresence>
+      {!ready && <BackendStartup key="boot" warming={warming} />}
+    </AnimatePresence>
+  );
   if (ready && onboarding && !landing)
     return (
       <>
+        {boot}
         <Onboarding
           key={onboarding}
           consentOnly={onboarding === "consent"}
@@ -334,478 +398,421 @@ export function App() {
       </>
     );
   return (
-    <div className="app-shell">
-      <a className="skip-link" href="#main">
-        Skip to content
-      </a>
-      <aside className="desktop-sidebar" aria-label="Workspace">
-        <button
-          className="brand"
-          aria-label="Wildcatter home"
-          onClick={() => navigate("/markets")}
-        >
-          <BrandMark />
-          <span>wildcatter.</span>
-        </button>
-        <span className="workspace-label">Your workspace</span>
-        <nav aria-label="Main navigation">
-          {nav.map(({ path: p, label, icon: Icon }) => (
-            <button
-              key={p}
-              className={`nav-item ${section === label ? "active" : ""}`}
-              aria-current={section === label ? "page" : undefined}
-              onClick={() => navigate(p)}
-            >
-              {section === label && (
-                <motion.span
-                  className="nav-active-bg"
-                  layoutId="desktop-selection"
-                  transition={{ duration: 0.28, ease }}
-                />
-              )}
-              <Icon size={18} />
-              <span>{label}</span>
-            </button>
-          ))}
-        </nav>
-        <div className="sidebar-bottom">
-          <button
-            className="nav-item"
-            onClick={() => navigate("/developers/setup")}
-          >
-            <CircleHelp size={18} />
-            App & integrations
-          </button>
-          <div className="profile">
-            <span className="status-dot" />
-            <div>
-              <strong>Practice. Learn. Forecast.</strong>
-              <span>Demo credits. Real curiosity.</span>
-            </div>
-          </div>
-        </div>
-      </aside>
-      <dialog
-        ref={dialog}
-        className="navigation-drawer"
-        aria-label="Workspace menu"
-        onClose={() => {
-          setMenu(false);
-          menuTrigger.current?.focus({ preventScroll: true });
-        }}
-        onClick={(event) => {
-          if (event.target === event.currentTarget) setMenu(false);
-        }}
-        onKeyDown={(event) => {
-          if (event.key !== "Tab") return;
-          const controls = event.currentTarget.querySelectorAll<HTMLElement>(
-            "button:not(:disabled),a[href]",
-          );
-          const first = controls[0],
-            last = controls[controls.length - 1];
-          if (event.shiftKey && document.activeElement === first) {
-            event.preventDefault();
-            last?.focus();
-          } else if (!event.shiftKey && document.activeElement === last) {
-            event.preventDefault();
-            first?.focus();
-          }
-        }}
-      >
-        <aside
-          id="main-navigation"
-          className="sidebar"
-          aria-label="Main navigation"
-        >
-          <button
-            className="icon-button close-navigation"
-            aria-label="Close navigation"
-            onClick={() => setMenu(false)}
-          >
-            <X size={18} />
-          </button>
+    <>
+      {boot}
+      <div className="app-shell">
+        <a className="skip-link" href="#main">
+          Skip to content
+        </a>
+        <aside className="desktop-sidebar" aria-label="Workspace">
           <button
             className="brand"
-            aria-label="Wildcatter home"
+            aria-label="Peakcast home"
             onClick={() => navigate("/markets")}
           >
             <BrandMark />
-            <span>
-              wildcatter<span className="brand-dot">.</span>
-            </span>
+            <span>peakcast.</span>
           </button>
-          <div className="workspace-label">Workspace</div>
-          <div className="navigation-material">
-            <nav>
-              {nav.map(({ path: p, label, icon: Icon }, index) => (
-                <button
-                  key={p}
-                  className={`nav-item ${section === label ? "active" : ""}`}
-                  aria-current={section === label ? "page" : undefined}
-                  onClick={() => navigate(p)}
-                >
-                  {section === label && (
-                    <motion.span
-                      className="nav-active-bg"
-                      layoutId="sidebar-selection"
-                      transition={{ duration: 0.22, ease }}
-                    />
-                  )}
-                  <span className={`nav-icon nav-icon-${index}`}>
-                    <Icon size={18} />
-                  </span>
-                  <span>{label}</span>
-                </button>
-              ))}
-            </nav>
-          </div>
+          <span className="workspace-label">Your workspace</span>
+          <nav aria-label="Main navigation">
+            {nav.map(({ path: p, label, icon: Icon }) => (
+              <button
+                key={p}
+                className={`nav-item ${section === label ? "active" : ""}`}
+                aria-current={section === label ? "page" : undefined}
+                onClick={() => navigate(p)}
+              >
+                {section === label && (
+                  <motion.span
+                    className="nav-active-bg"
+                    layoutId="desktop-selection"
+                    transition={{ duration: 0.28, ease }}
+                  />
+                )}
+                <Icon size={18} />
+                <span>{label}</span>
+              </button>
+            ))}
+          </nav>
           <div className="sidebar-bottom">
-            <button
-              className="nav-item subdued"
-              onClick={() => navigate("/developers/setup")}
-            >
-              <BookOpen size={18} />
-              App & integrations
-            </button>
             <div className="profile">
               <span className="status-dot" />
               <div>
-                <strong>Demo credits</strong>
-                <span>No real-money trading</span>
+                <strong>Practice. Learn. Forecast.</strong>
+                <span>Demo credits. Real curiosity.</span>
               </div>
             </div>
           </div>
         </aside>
-      </dialog>
-      <div className="main-shell">
-        <header className="topbar">
-          <div className="breadcrumb">
+        <dialog
+          ref={dialog}
+          className="navigation-drawer"
+          aria-label="Workspace menu"
+          onClose={() => {
+            setMenu(false);
+            menuTrigger.current?.focus({ preventScroll: true });
+          }}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setMenu(false);
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== "Tab") return;
+            const controls = event.currentTarget.querySelectorAll<HTMLElement>(
+              "button:not(:disabled),a[href]",
+            );
+            const first = controls[0],
+              last = controls[controls.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+              event.preventDefault();
+              last?.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+              event.preventDefault();
+              first?.focus();
+            }
+          }}
+        >
+          <aside
+            id="main-navigation"
+            className="sidebar"
+            aria-label="Main navigation"
+          >
             <button
-              className="icon-button desktop-menu"
-              ref={menuTrigger}
-              aria-label="Open navigation"
-              aria-expanded={menu}
-              aria-controls="main-navigation"
-              onClick={() => setMenu(!menu)}
+              className="icon-button close-navigation"
+              aria-label="Close navigation"
+              onClick={() => setMenu(false)}
             >
-              <Menu size={20} />
+              <X size={18} />
             </button>
             <button
-              className="mobile-brand"
-              aria-label="Wildcatter home"
+              className="brand"
+              aria-label="Peakcast home"
               onClick={() => navigate("/markets")}
             >
               <BrandMark />
-              <span>wildcatter.</span>
-            </button>
-            <strong>{section}</strong>
-          </div>
-          <div className="top-actions">
-            <span className="environment">
-              <span className="status-dot" />
-              Demo environment
-            </span>
-            <button
-              className="balance-button"
-              onClick={() => navigate("/portfolio")}
-            >
-              <span className="balance-icon">
-                <Wallet size={16} />
-                {portfolio?.bonus.available && (
-                  <span className="bonus-dot" aria-hidden="true" />
-                )}
-              </span>
               <span>
-                {portfolio ? (
-                  <AnimatedNumber
-                    value={portfolio.balanceMicros}
-                    format={formatCredits}
-                  />
-                ) : (
-                  "—"
-                )}{" "}
-                <small>credits</small>
-                {portfolio?.bonus.available && (
-                  <span className="sr-only">(daily bonus ready)</span>
-                )}
+                peakcast<span className="brand-dot">.</span>
               </span>
             </button>
-            <NotificationBell
-              client={client}
-              inbox={inbox}
-              onInbox={setInbox}
-              onOpenMarket={(id, workspaceId) =>
-                navigate(
-                  workspaceId
-                    ? `/teams/${workspaceId}/markets/${id}`
-                    : `/markets/${id}`,
-                )
-              }
-            />
-            <button
-              className="icon-button help-button"
-              aria-label="Read platform documentation"
-              onClick={() => navigate("/developers")}
-            >
-              <CircleHelp size={19} />
-            </button>
-          </div>
-        </header>
-        <main id="main" tabIndex={-1}>
-          {ready && warming && (
-            <div className="backend-connection-notice" role="status">
-              <span className="startup-progress" aria-hidden="true">
-                <span />
-              </span>
-              <p>
-                The server is warming up.{" "}
-                <span>(Please allow a minute or two.)</span>
-              </p>
+            <div className="workspace-label">Workspace</div>
+            <div className="navigation-material">
+              <nav>
+                {nav.map(({ path: p, label, icon: Icon }, index) => (
+                  <button
+                    key={p}
+                    className={`nav-item ${section === label ? "active" : ""}`}
+                    aria-current={section === label ? "page" : undefined}
+                    onClick={() => navigate(p)}
+                  >
+                    {section === label && (
+                      <motion.span
+                        className="nav-active-bg"
+                        layoutId="sidebar-selection"
+                        transition={{ duration: 0.22, ease }}
+                      />
+                    )}
+                    <span className={`nav-icon nav-icon-${index}`}>
+                      <Icon size={18} />
+                    </span>
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </nav>
             </div>
-          )}
-          {error && (
-            <div className="error-banner" role="alert">
-              <span>{error}</span>
+            <div className="sidebar-bottom">
+              <div className="profile">
+                <span className="status-dot" />
+                <div>
+                  <strong>Demo credits</strong>
+                  <span>No real-money trading</span>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </dialog>
+        <div className="main-shell">
+          <header className="topbar" ref={topbar}>
+            <div className="breadcrumb">
               <button
-                onClick={() =>
-                  portfolio
-                    ? void refresh().catch((e) => setError(errorMessage(e)))
-                    : setStartupAttempt((attempt) => attempt + 1)
-                }
+                className="icon-button desktop-menu"
+                ref={menuTrigger}
+                aria-label="Open navigation"
+                aria-expanded={menu}
+                aria-controls="main-navigation"
+                onClick={() => setMenu(!menu)}
               >
-                Retry
+                <Menu size={20} />
               </button>
-            </div>
-          )}
-          {!ready ? (
-            <BackendStartup warming={warming} />
-          ) : error && !portfolio ? (
-            <EmptyState
-              title="Your workspace isn’t ready yet."
-              text="Use Retry above to reconnect. Your current page will stay open."
-            />
-          ) : (
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                className="route-surface"
-                key={
-                  team
-                    ? `/teams/${team[1]}`
-                    : marketId
-                      ? `/markets/${marketId}`
-                      : studio
-                        ? "/studio"
-                        : path
-                }
-                // ponytail: no exit fade, so the new page starts immediately instead of after a blank gap.
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.18, ease }}
+              <button
+                className="mobile-brand"
+                aria-label="Peakcast home"
+                onClick={() => navigate("/markets")}
               >
-                {path === "/markets" && (
-                  <MarketExplorer
-                    markets={markets}
-                    onOpen={(m) => navigate(`/markets/${m.id}`)}
-                    onStudio={() => navigate("/studio")}
-                  />
-                )}{" "}
-                {marketId &&
-                  (selected ? (
-                    <MarketDetail
-                      key={selected.id}
-                      market={selected}
-                      portfolio={portfolio}
-                      client={client}
-                      view={route?.[2] ? "rules" : "forecast"}
-                      onView={(view) =>
-                        navigate(
-                          `/markets/${selected.id}${view === "rules" ? "/rules" : ""}`,
-                        )
-                      }
-                      onBack={() => navigate("/markets")}
-                      onTrade={() => refresh()}
-                      onNotice={setNotice}
-                      shareOrigin={capabilities?.shareOrigin ?? null}
-                      capabilities={capabilities}
+                <BrandMark />
+                <span>peakcast.</span>
+              </button>
+              <strong>{section}</strong>
+            </div>
+            <div className="top-actions">
+              <span className="environment">
+                <span className="status-dot" />
+                Demo environment
+              </span>
+              <button
+                className="balance-button"
+                onClick={() => navigate("/portfolio")}
+              >
+                <span className="balance-icon">
+                  <Wallet size={16} />
+                  {portfolio?.bonus.available && (
+                    <span className="bonus-dot" aria-hidden="true" />
+                  )}
+                </span>
+                <span>
+                  {portfolio ? (
+                    <AnimatedNumber
+                      value={portfolio.balanceMicros}
+                      format={formatCredits}
                     />
                   ) : (
-                    <EmptyState
-                      title="Market not found"
-                      text="This market is not available."
-                      action={
-                        <button
-                          className="primary-button"
-                          onClick={() => navigate("/markets")}
-                        >
-                          Browse markets
-                        </button>
-                      }
+                    "—"
+                  )}{" "}
+                  <small>credits</small>
+                  {portfolio?.bonus.available && (
+                    <span className="sr-only">(daily bonus ready)</span>
+                  )}
+                </span>
+              </button>
+              <NotificationBell
+                client={client}
+                inbox={inbox}
+                onInbox={setInbox}
+                onOpenMarket={(id, workspaceId) =>
+                  navigate(
+                    workspaceId
+                      ? `/teams/${workspaceId}/markets/${id}`
+                      : `/markets/${id}`,
+                  )
+                }
+              />
+              <button
+                className="icon-button help-button"
+                aria-label="Read platform documentation"
+                onClick={() => navigate("/about")}
+              >
+                <CircleHelp size={19} />
+              </button>
+            </div>
+          </header>
+          <main id="main" tabIndex={-1}>
+            {ready && warming && (
+              <div className="backend-connection-notice" role="status">
+                <span className="startup-progress" aria-hidden="true">
+                  <span />
+                </span>
+                <p>Loading your data on this device…</p>
+              </div>
+            )}
+            {error && (
+              <div className="error-banner" role="alert">
+                <span>{error}</span>
+                <button
+                  onClick={() =>
+                    portfolio
+                      ? void refresh().catch((e) => setError(errorMessage(e)))
+                      : setStartupAttempt((attempt) => attempt + 1)
+                  }
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+            {!ready ? null : error && !portfolio ? (
+              <EmptyState
+                title="Your workspace isn’t ready yet."
+                text="Use Retry above to reconnect. Your current page will stay open."
+              />
+            ) : (
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  className="route-surface"
+                  key={routeKey}
+                  // ponytail: no exit fade, so the new page starts immediately instead of after a blank gap.
+                  initial={routeEnter}
+                  animate={{ opacity: 1, x: 0, y: 0 }}
+                  transition={{ duration: phone ? 0.24 : 0.18, ease }}
+                >
+                  {path === "/markets" && (
+                    <MarketExplorer
+                      markets={markets}
+                      onOpen={(m) => navigate(`/markets/${m.id}`)}
+                      onStudio={() => navigate("/studio")}
                     />
-                  ))}
-                {path === "/portfolio" && (
-                  <PortfolioView
-                    portfolio={portfolio}
-                    markets={markets}
-                    onOpen={(id) => navigate(`/markets/${id}`)}
-                    onBrowse={() => navigate("/markets")}
-                    client={client}
-                    onRefresh={() => refresh()}
-                    onNotice={setNotice}
-                  />
-                )}{" "}
-                {path === "/leaderboard" && <LeaderboardView client={client} />}
-                {path === "/settings" && (
-                  <Settings
-                    managed={capabilities?.aiAccessManaged ?? false}
-                    token={token}
-                    providers={capabilities?.aiProviders ?? []}
-                    onRefresh={() => refresh()}
-                    onDeleted={signedOut}
-                  />
-                )}{" "}
-                {studio && (
-                  <DraftStudio
-                    managed={capabilities?.aiAccessManaged ?? false}
-                    client={client}
-                    configured={capabilities?.aiConfigured ?? false}
-                    providers={capabilities?.aiProviders ?? []}
-                    defaultProvider={capabilities?.defaultAIProvider ?? null}
-                    example={markets[0]}
-                    onNotice={setNotice}
-                    onLaunched={(market) => {
-                      setNotice(
-                        market.workspaceId
-                          ? "Private market launched. Only workspace members can see it."
-                          : "Market launched. You earn 1% of every trade.",
-                      );
-                      navigate(
-                        market.workspaceId
-                          ? `/teams/${market.workspaceId}/markets/${market.id}`
-                          : `/markets/${market.id}`,
-                      );
-                      void refresh().catch((e) => setError(errorMessage(e)));
-                    }}
-                    view={path.endsWith("/drafts") ? "drafts" : "create"}
-                    onView={(view) =>
-                      navigate(
-                        view === "drafts" ? "/studio/drafts" : "/studio",
-                        launchTo,
-                      )
-                    }
-                    teams={teams}
-                    launchTo={launchTo}
-                  />
-                )}{" "}
-                {teams && path === "/teams" && (
-                  <Teams
-                    client={client}
-                    onOpen={(id) => navigate(`/teams/${id}`)}
-                    onNotice={setNotice}
-                  />
-                )}
-                {joining && (
-                  <JoinWorkspace
-                    client={client}
-                    onJoined={(workspace) => {
-                      setNotice(`You joined ${workspace.name}.`);
-                      navigate(`/teams/${workspace.id}`);
-                    }}
-                    onTeams={() => navigate("/teams")}
-                  />
-                )}
-                {team && (
-                  <WorkspaceView
-                    client={client}
-                    workspaceId={team[1]}
-                    tab={(team[2] as WorkspaceTab | undefined) ?? "markets"}
-                    marketId={team[3]}
-                    marketView={team[4] ? "rules" : "forecast"}
-                    navigate={navigate}
-                    onNotice={setNotice}
-                    onDraft={() => navigate("/studio", team[1])}
-                    onLeft={() => {
-                      setNotice("You left the workspace.");
-                      navigate("/teams");
-                    }}
-                    shareOrigin={capabilities?.shareOrigin ?? null}
-                  />
-                )}
-                {developers && (
-                  <Developers
-                    token={token}
-                    view={
-                      path.endsWith("/api")
-                        ? "api"
-                        : path.endsWith("/setup")
-                          ? "setup"
-                          : "overview"
-                    }
-                    onView={(view) =>
-                      navigate(
-                        `/developers${view === "overview" ? "" : `/${view}`}`,
-                      )
-                    }
-                    installed={!!install}
-                    onInstall={installApp}
-                  />
-                )}{" "}
-                {!marketId &&
-                  !studio &&
-                  !developers &&
-                  !teamsPage &&
-                  !nav.some((n) => n.path === path) && (
-                    <EmptyState
-                      title="Page not found"
-                      text="Return to the market explorer to keep forecasting."
-                      action={
-                        <button
-                          className="primary-button"
-                          onClick={() => navigate("/markets")}
-                        >
-                          Browse markets
-                        </button>
-                      }
+                  )}{" "}
+                  {marketId &&
+                    (selected ? (
+                      <MarketDetail
+                        key={selected.id}
+                        market={selected}
+                        portfolio={portfolio}
+                        client={client}
+                        view={route?.[2] ? "rules" : "forecast"}
+                        onView={(view) => {
+                          haptic("selection");
+                          navigate(
+                            `/markets/${selected.id}${view === "rules" ? "/rules" : ""}`,
+                          );
+                        }}
+                        onBack={() => navigate("/markets")}
+                        onTrade={() => refresh()}
+                        onNotice={setNotice}
+                        shareOrigin={capabilities?.shareOrigin ?? null}
+                      />
+                    ) : (
+                      <EmptyState
+                        title="Market not found"
+                        text="This market is not available."
+                        action={
+                          <button
+                            className="primary-button"
+                            onClick={() => navigate("/markets")}
+                          >
+                            Browse markets
+                          </button>
+                        }
+                      />
+                    ))}
+                  {path === "/portfolio" && (
+                    <PortfolioView
+                      portfolio={portfolio}
+                      markets={markets}
+                      onOpen={(id) => navigate(`/markets/${id}`)}
+                      onBrowse={() => navigate("/markets")}
+                      client={client}
+                      onRefresh={() => refresh()}
+                      onNotice={setNotice}
+                    />
+                  )}{" "}
+                  {path === "/leaderboard" && (
+                    <LeaderboardView client={client} />
+                  )}
+                  {path === "/settings" && (
+                    <Settings token={token} onDeleted={signedOut} />
+                  )}{" "}
+                  {studio && (
+                    <DraftStudio
+                      client={client}
+                      example={markets[0]}
+                      onNotice={setNotice}
+                      onLaunched={(market) => {
+                        haptic("success");
+                        setNotice(
+                          market.workspaceId
+                            ? "Private market launched. Only workspace members can see it."
+                            : "Market launched. You earn 1% of every trade.",
+                        );
+                        navigate(
+                          market.workspaceId
+                            ? `/teams/${market.workspaceId}/markets/${market.id}`
+                            : `/markets/${market.id}`,
+                        );
+                        void refresh().catch((e) => setError(errorMessage(e)));
+                      }}
+                      view={path.endsWith("/drafts") ? "drafts" : "create"}
+                      onView={(view) => {
+                        haptic("selection");
+                        navigate(
+                          view === "drafts" ? "/studio/drafts" : "/studio",
+                          launchTo,
+                        );
+                      }}
+                      teams={teams}
+                      launchTo={launchTo}
+                    />
+                  )}{" "}
+                  {teams && path === "/teams" && (
+                    <Teams
+                      client={client}
+                      onOpen={(id) => navigate(`/teams/${id}`)}
+                      onNotice={setNotice}
                     />
                   )}
-              </motion.div>
-            </AnimatePresence>
-          )}
-          <footer className="footer">
-            <span>
-              <span className="status-dot" />
-              Demo credits
-            </span>
-            <button onClick={() => navigate("/developers/setup")}>
-              About this app
-              <ArrowUpRight size={14} />
-            </button>
-          </footer>
-        </main>
+                  {joining && (
+                    <JoinWorkspace
+                      client={client}
+                      onJoined={(workspace) => {
+                        setNotice(`You joined ${workspace.name}.`);
+                        navigate(`/teams/${workspace.id}`);
+                      }}
+                      onTeams={() => navigate("/teams")}
+                    />
+                  )}
+                  {team && (
+                    <WorkspaceView
+                      client={client}
+                      workspaceId={team[1]}
+                      tab={(team[2] as WorkspaceTab | undefined) ?? "markets"}
+                      marketId={team[3]}
+                      marketView={team[4] ? "rules" : "forecast"}
+                      navigate={navigate}
+                      onNotice={setNotice}
+                      onDraft={() => navigate("/studio", team[1])}
+                      onLeft={() => {
+                        setNotice("You left the workspace.");
+                        navigate("/teams");
+                      }}
+                      shareOrigin={capabilities?.shareOrigin ?? null}
+                    />
+                  )}
+                  {about && (
+                    <About
+                      canInstall={!!install}
+                      onInstall={installApp}
+                      onBack={() => navigate("/settings")}
+                    />
+                  )}{" "}
+                  {!marketId &&
+                    !studio &&
+                    !about &&
+                    !teamsPage &&
+                    !nav.some((n) => n.path === path) && (
+                      <EmptyState
+                        title="Page not found"
+                        text="Return to the market explorer to keep forecasting."
+                        action={
+                          <button
+                            className="primary-button"
+                            onClick={() => navigate("/markets")}
+                          >
+                            Browse markets
+                          </button>
+                        }
+                      />
+                    )}
+                </motion.div>
+              </AnimatePresence>
+            )}
+            <footer className="footer">
+              <span>
+                <span className="status-dot" />
+                Demo credits
+              </span>
+              <button onClick={() => navigate("/about")}>
+                About this app
+                <ArrowUpRight size={14} />
+              </button>
+            </footer>
+          </main>
+        </div>
+        <MobileDock
+          items={dockItems}
+          section={section}
+          teams={teams}
+          client={client}
+          onNavigate={navigate}
+        />
+        <Toast notice={notice} onDismiss={() => setNotice("")} />
       </div>
-      <nav className="mobile-dock" aria-label="Quick navigation">
-        {(teams ? teamsDockItems : navItems).map(
-          ({ path: p, label, icon: Icon }) => (
-            <button
-              key={p}
-              onClick={() => navigate(p)}
-              aria-current={section === label ? "page" : undefined}
-              className={section === label ? "selected" : ""}
-            >
-              {section === label && (
-                <motion.span
-                  className="dock-selection"
-                  layoutId="dock-selection"
-                  transition={{ duration: 0.22, ease }}
-                />
-              )}
-              <Icon size={21} />
-              <span>{label === "Draft studio" ? "Studio" : label}</span>
-            </button>
-          ),
-        )}
-      </nav>
-      <Toast notice={notice} onDismiss={() => setNotice("")} />
-    </div>
+    </>
   );
 }
 

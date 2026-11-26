@@ -37,9 +37,39 @@ test("legal pages are public and account deletion signs out", async ({
     ["/privacy", "Privacy Policy"],
     ["/help", "Help and questions"],
   ])
-    await page.goto(path).then(() =>
-      expect(page.getByRole("heading", { level: 1 })).toHaveText(heading),
-    );
+    await page
+      .goto(path)
+      .then(() =>
+        expect(page.getByRole("heading", { level: 1 })).toHaveText(heading),
+      );
   await page.goto("/delete-account");
-  await expect(page.getByText(/Open this page in the Wildcatter app/)).toBeVisible();
+  await expect(
+    page.getByText(/Peakcast keeps no data on any server/),
+  ).toBeVisible();
+});
+
+test("the Android app skips the landing page and asks for a name before the intro", async ({
+  page,
+}) => {
+  // ?platform=android shows the Android app's layout (src/platform.ts).
+  await page.goto("/?platform=android");
+  await expect(page).toHaveURL(/\/markets$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Welcome to Peakcast",
+  );
+  const next = page.getByRole("button", { name: "Continue" });
+  await page.getByLabel("Display name").fill("Ada");
+  await page.getByLabel("I am 18 or older.").check();
+  await expect(next).toBeDisabled();
+  await page.getByRole("checkbox", { name: /I agree/ }).check();
+  await next.click();
+  // The outgoing step is still fading out, so look the new heading up by name.
+  await expect(
+    page.getByRole("heading", { name: /Forecast the future/ }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Next" }).click();
+  await page.getByRole("button", { name: "Next" }).click();
+  await page.getByRole("button", { name: "Start with 5,000 credits" }).click();
+  await expect(page.locator(".market-card").first()).toBeVisible();
+  await expect(page.getByText("5,000.00").first()).toBeVisible();
 });

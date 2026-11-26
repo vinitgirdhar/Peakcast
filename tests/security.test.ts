@@ -1,40 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildApp } from "../server/app.js";
-import { resolve } from "node:path";
-
-test("only the public readiness icon permits cross-origin embedding", async () => {
-  const app = await buildApp({
-    databasePath: ":memory:",
-    rateLimiting: false,
-    staticRoot: resolve("public"),
-  });
-  try {
-    const icon = await app.inject("/icon-192.png?__wake=uncached");
-    assert.equal(icon.statusCode, 200);
-    assert.equal(icon.headers["cross-origin-resource-policy"], "cross-origin");
-    assert.equal(icon.headers["access-control-allow-origin"], undefined);
-    for (const url of [
-      "/icon-512.png",
-      "/wake/index.html",
-      "/api/v1/capabilities",
-    ]) {
-      const response = await app.inject(url);
-      assert.equal(response.statusCode, 200);
-      assert.equal(
-        response.headers["cross-origin-resource-policy"],
-        "same-origin",
-      );
-    }
-    const foreign = await app.inject({
-      url: "/api/v1/capabilities",
-      headers: { origin: "https://wildcatter-welcome.onrender.com" },
-    });
-    assert.equal(foreign.statusCode, 403);
-  } finally {
-    await app.close();
-  }
-});
 
 test("HTTPS preview accepts only its configured host and matching origin", async () => {
   const publicOrigin = "https://preview.example";
@@ -137,16 +103,17 @@ test("protected routes require bearer scheme and reject oversized requests witho
   }
 });
 
-test("OpenAPI includes failure contracts and separate AI access authorization", async () => {
+test("OpenAPI includes failure contracts and the operator credential", async () => {
   const app = await buildApp({ databasePath: ":memory:", rateLimiting: false });
   try {
     const spec = (await app.inject("/api/v1/openapi.json")).json();
     assert.ok(spec.paths["/api/v1/trades"].post.responses["409"]);
     assert.ok(spec.paths["/api/v1/portfolio"].get.responses["401"]);
-    assert.ok(spec.paths["/api/v1/drafts/generate"].post.responses["503"]);
+    assert.ok(spec.paths["/api/v1/markets/{id}/ruling"].post.responses["503"]);
+    assert.equal(spec.paths["/api/v1/drafts/generate"], undefined);
     assert.equal(
-      spec.components.securitySchemes.aiAccessToken.name,
-      "X-AI-Access-Token",
+      spec.components.securitySchemes.operatorToken.name,
+      "X-Operator-Token",
     );
   } finally {
     await app.close();

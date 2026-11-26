@@ -1,12 +1,13 @@
 import AxeBuilder from "@axe-core/playwright";
-import { test, expect } from "./fixtures.js";
+import { test, expect, api } from "./fixtures.js";
 
-// Read-only: the shared server runs without AI, so only the facts block shows.
-test("a market explains itself in plain words without AI", async ({
-  page,
-  request,
-}) => {
-  const market = await (await request.get("/api/v1/markets/fed-rate")).json();
+test("a market explains itself in plain words without AI", async ({ page }) => {
+  const market = (
+    await api<{ probability: number; sourceName: string }>(
+      page,
+      "/markets/fed-rate",
+    )
+  ).body;
   await page.goto("/markets/fed-rate");
   const panel = page.getByRole("region", { name: "Explain this market" });
   const toggle = panel.getByRole("button", { name: /Explain this market/ });

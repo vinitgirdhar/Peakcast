@@ -1,12 +1,13 @@
 import { ApiError } from "../shared/client.js";
+import { useState, type CSSProperties } from "react";
+import { motion } from "motion/react";
 import { BrandMark } from "./ui.js";
+import { ease } from "./motion.js";
 
 /** Retry only readiness reads; account creation and trades must never be replayed here. */
 export async function waitForBackend(signal: AbortSignal) {
   const deadline = Date.now() + 180_000;
   while (!signal.aborted && Date.now() < deadline) {
-    if (!navigator.onLine)
-      throw new Error("You’re offline. Reconnect, then try again.");
     const request = new AbortController();
     const abort = () => request.abort();
     signal.addEventListener("abort", abort, { once: true });
@@ -22,7 +23,7 @@ export async function waitForBackend(signal: AbortSignal) {
         throw new ApiError(
           typeof body.message === "string"
             ? body.message
-            : "The server returned an unexpected startup response.",
+            : "The app returned an unexpected startup response.",
           response.status,
         );
       }
@@ -32,7 +33,7 @@ export async function waitForBackend(signal: AbortSignal) {
         ![408, 425, 500, 502, 503, 504].includes(response.status)
       )
         throw new ApiError(
-          "The server could not open this workspace. Please try again.",
+          "Peakcast could not open this workspace. Please try again.",
           response.status,
         );
     } catch (error) {
@@ -60,38 +61,52 @@ export async function waitForBackend(signal: AbortSignal) {
     });
   }
   throw new Error(
-    "The server is taking longer than expected to wake up. Please try again in a moment.",
+    "Peakcast could not open its on-device data. Close the app and open it again.",
   );
 }
 
+// When the boot screen first appeared. main.tsx shows it before the app mounts and
+// App shows it again; the shared clock lets the logo animation continue, not restart.
+let bootStart: number | undefined;
+
+/** Full-screen boot logo; fades out when the app is ready (wrap in AnimatePresence). */
 export function BackendStartup({ warming }: { warming: boolean }) {
+  const [offset] = useState(() => {
+    bootStart ??= performance.now();
+    return bootStart - performance.now();
+  });
   return (
-    <div
-      className="startup-screen"
+    <motion.div
+      className="startup-screen boot-screen"
       role="status"
       aria-live="polite"
       aria-atomic="true"
+      style={{ "--boot-offset": `${offset}ms` } as CSSProperties}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.24, ease }}
     >
-      <div className="startup-mark" aria-hidden="true">
-        <span className="startup-halo" />
-        <span className="startup-halo" />
-        <BrandMark />
+      <div className="boot-logo" aria-hidden="true">
+        <span className="boot-glow" />
+        <span className="boot-floor" />
+        <span className="boot-tile">
+          <BrandMark />
+          <span className="boot-sheen" />
+        </span>
       </div>
-      <span className="startup-brand">wildcatter.</span>
-      <h2>
-        {warming ? "The server is warming up." : "Opening your workspace."}
-      </h2>
-      <p>
-        {warming
-          ? "(Please allow a minute or two. Our free demo server may be waking from inactivity.)"
-          : "Connecting to the demo server…"}
-      </p>
-      <div className="startup-progress" aria-hidden="true">
-        <span />
+      {/* Out of flow, so the logo sits dead centre like the Android launch icon. */}
+      <div className="boot-below">
+        <span className="boot-wordmark" aria-hidden="true">
+          peakcast<span>.</span>
+        </span>
+        <h2 className="sr-only">Opening your workspace.</h2>
+        {/* Only a slow start earns words; a fast one is just the logo. */}
+        <div className="boot-status" hidden={!warming}>
+          <p>Still loading your data on this device…</p>
+          <div className="startup-progress" aria-hidden="true">
+            <span />
+          </div>
+        </div>
       </div>
-      <p className="startup-caption">
-        Your workspace will open automatically when it’s ready.
-      </p>
-    </div>
+    </motion.div>
   );
 }

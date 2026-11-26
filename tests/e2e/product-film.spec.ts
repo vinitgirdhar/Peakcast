@@ -10,7 +10,7 @@ test("product film keeps loading lightweight and supplies captions and credits",
   });
   await page.goto("/");
   const section = page.getByRole("region", {
-    name: "A closer look at Wildcatter.",
+    name: "A closer look at Peakcast.",
   });
   await expect(section).toBeVisible();
   const video = section.locator("video");
@@ -18,7 +18,7 @@ test("product film keeps loading lightweight and supplies captions and credits",
   await expect(video).not.toHaveAttribute("controls");
   await expect(video).not.toHaveAttribute("src");
   await expect(
-    section.getByRole("button", { name: "Play the Wildcatter product film" }),
+    section.getByRole("button", { name: "Play the Peakcast product film" }),
   ).toBeVisible();
   await expect(video).toHaveAttribute("playsinline", "");
   await expect(video).not.toHaveAttribute("autoplay");
@@ -62,7 +62,7 @@ test("product film serves seekable media and decodes in Chromium", async ({
       element.muted = true;
     });
     await page
-      .getByRole("button", { name: "Play the Wildcatter product film" })
+      .getByRole("button", { name: "Play the Peakcast product film" })
       .click();
     await expect(video).toHaveAttribute("controls", "");
     await expect

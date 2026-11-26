@@ -18,7 +18,7 @@ test("appearance persists between Settings, the app and short landing page", asy
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await expect(
     page.getByRole("link", { name: "Download for Android" }),
-  ).toHaveAttribute("href", "/downloads/Wildcatter-Android.apk");
+  ).toHaveAttribute("href", "/downloads/Peakcast-Android.apk");
   await page.getByRole("button", { name: "Continue on the web" }).click();
   await expect(page).toHaveURL(/\/markets$/);
   await expect(page.locator('filter[id^="lg-filter-"]')).toHaveCount(0);
@@ -43,29 +43,4 @@ test("custom dropdown supports mouse and keyboard and categories keep clear spac
   const tabs = await page.locator(".explorer > .category-tabs").boundingBox();
   const cards = await page.locator(".market-grid").boundingBox();
   expect(cards!.y - tabs!.y - tabs!.height).toBeGreaterThanOrEqual(20);
-});
-test("provider editor never receives a saved key and submits workspace authorization", async ({
-  page,
-}) => {
-  let sent = false;
-  await page.route("**/api/v1/settings/providers/openai", async (route) => {
-    sent = true;
-    expect(route.request().headers()["x-ai-access-token"]).toBe(
-      "workspace-test-access",
-    );
-    expect(route.request().postDataJSON().apiKey).toBe("test-new-provider-key");
-    await route.fulfill({ json: { items: [] } });
-  });
-  await page.goto("/settings");
-  await page.getByLabel("Workspace access token").fill("workspace-test-access");
-  await page.getByRole("button", { name: "Add provider", exact: true }).click();
-  await choose(page, "Provider name", "openai");
-  await page
-    .getByLabel("API key", { exact: true })
-    .fill("test-new-provider-key");
-  await page
-    .getByRole("button", { name: "Save provider", exact: true })
-    .click();
-  await expect(page.getByRole("status")).toContainText("Provider saved");
-  expect(sent).toBeTruthy();
 });

@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { ChevronRight, Users } from "lucide-react";
-import { WildcatterClient } from "../../shared/client.js";
+import { PeakcastClient } from "../../shared/client.js";
 import type { Workspace } from "../../shared/types.js";
 import { EmptyState, SkeletonRows, errorMessage } from "../ui.js";
 import { roleLabels } from "./WorkspaceMembers.js";
@@ -11,7 +11,7 @@ export function Teams({
   onOpen,
   onNotice,
 }: {
-  client: WildcatterClient;
+  client: PeakcastClient;
   onOpen: (workspaceId: string) => void;
   onNotice: (text: string) => void;
 }) {

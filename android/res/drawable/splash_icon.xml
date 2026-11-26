@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 12+ launch screen icon: the Peakcast mark (scripts/make-icons.mjs) at
+  1/8 scale inside the 160dp safe circle of the 240dp splash canvas.
+  The squircle settles in, the price line draws itself into a peak, the
+  forecast dots appear in turn and the sun rises. About 0.95 s in total.
+-->
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+ <aapt:attr name="android:drawable">
+  <vector android:width="240dp" android:height="240dp" android:viewportWidth="240" android:viewportHeight="240">
+   <group android:name="mark" android:pivotX="120" android:pivotY="120" android:scaleX="0.82" android:scaleY="0.82">
+    <!-- soft contact shadow for depth -->
+    <path android:fillColor="#1A160C6B"
+        android:pathData="M86,62 h68 a30,30 0 0 1 30,30 v68 a30,30 0 0 1 -30,30 h-68 a30,30 0 0 1 -30,-30 v-68 a30,30 0 0 1 30,-30 z" />
+    <path android:pathData="M86,56 h68 a30,30 0 0 1 30,30 v68 a30,30 0 0 1 -30,30 h-68 a30,30 0 0 1 -30,-30 v-68 a30,30 0 0 1 30,-30 z">
+     <aapt:attr name="android:fillColor">
+      <gradient android:type="linear" android:startX="100" android:startY="56" android:endX="140" android:endY="184">
+       <item android:offset="0" android:color="#FF6A8DFF" />
+       <item android:offset="0.55" android:color="#FF4B4BE8" />
+       <item android:offset="1" android:color="#FF2E1FAE" />
+      </gradient>
+     </aapt:attr>
+    </path>
+    <!-- glassy top-left sheen -->
+    <path android:pathData="M86,56 h68 a30,30 0 0 1 30,30 v68 a30,30 0 0 1 -30,30 h-68 a30,30 0 0 1 -30,-30 v-68 a30,30 0 0 1 30,-30 z">
+     <aapt:attr name="android:fillColor">
+      <gradient android:type="radial" android:centerX="92" android:centerY="66" android:gradientRadius="96">
+       <item android:offset="0" android:color="#61FFFFFF" />
+       <item android:offset="0.6" android:color="#00FFFFFF" />
+      </gradient>
+     </aapt:attr>
+    </path>
+    <!-- mountain mass under the price line -->
+    <path android:name="mass" android:fillAlpha="0" android:fillColor="#40FFFFFF"
+        android:pathData="M81,145 L102.5,121.25 L113.75,131 L136,103 L160.75,151 L81,151 Z" />
+    <!-- the price line that forms the peak -->
+    <path android:name="ridge" android:trimPathEnd="0" android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="8" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M81,145 L102.5,121.25 L113.75,131 L136,103" />
+    <!-- forecast dots -->
+    <path android:name="dot1" android:fillAlpha="0" android:fillColor="#E6FFFFFF"
+        android:pathData="M141.25,97.5 a2.75,2.75 0 1 0 5.5,0 a2.75,2.75 0 1 0 -5.5,0 z" />
+    <path android:name="dot2" android:fillAlpha="0" android:fillColor="#BFFFFFFF"
+        android:pathData="M147.75,93 a2.75,2.75 0 1 0 5.5,0 a2.75,2.75 0 1 0 -5.5,0 z" />
+    <!-- the rising sun -->
+    <group android:name="sun" android:pivotX="159.75" android:pivotY="86.5" android:scaleX="0" android:scaleY="0">
+     <path android:pathData="M151.5,86.5 a8.25,8.25 0 1 0 16.5,0 a8.25,8.25 0 1 0 -16.5,0 z">
+      <aapt:attr name="android:fillColor">
+       <gradient android:type="radial" android:centerX="156.6" android:centerY="83.8" android:gradientRadius="12">
+        <item android:offset="0" android:color="#FFFFF1C2" />
+        <item android:offset="0.5" android:color="#FFFFC94D" />
+        <item android:offset="1" android:color="#FFFF8A3D" />
+       </gradient>
+      </aapt:attr>
+     </path>
+    </group>
+   </group>
+  </vector>
+ </aapt:attr>
+
+ <target android:name="mark">
+  <aapt:attr name="android:animation">
+   <set>
+    <objectAnimator android:propertyName="scaleX" android:valueFrom="0.82" android:valueTo="1" android:duration="420" android:interpolator="@android:interpolator/overshoot" />
+    <objectAnimator android:propertyName="scaleY" android:valueFrom="0.82" android:valueTo="1" android:duration="420" android:interpolator="@android:interpolator/overshoot" />
+   </set>
+  </aapt:attr>
+ </target>
+ <target android:name="mass">
+  <aapt:attr name="android:animation">
+   <objectAnimator android:propertyName="fillAlpha" android:valueFrom="0" android:valueTo="1" android:startOffset="260" android:duration="380" android:interpolator="@android:interpolator/decelerate_cubic" />
+  </aapt:attr>
+ </target>
+ <target android:name="ridge">
+  <aapt:attr name="android:animation">
+   <objectAnimator android:propertyName="trimPathEnd" android:valueFrom="0" android:valueTo="1" android:startOffset="160" android:duration="460" android:interpolator="@android:interpolator/fast_out_slow_in" />
+  </aapt:attr>
+ </target>
+ <target android:name="dot1">
+  <aapt:attr name="android:animation">
+   <objectAnimator android:propertyName="fillAlpha" android:valueFrom="0" android:valueTo="1" android:startOffset="600" android:duration="140" />
+  </aapt:attr>
+ </target>
+ <target android:name="dot2">
+  <aapt:attr name="android:animation">
+   <objectAnimator android:propertyName="fillAlpha" android:valueFrom="0" android:valueTo="1" android:startOffset="680" android:duration="140" />
+  </aapt:attr>
+ </target>
+ <target android:name="sun">
+  <aapt:attr name="android:animation">
+   <set>
+    <objectAnimator android:propertyName="scaleX" android:valueFrom="0" android:valueTo="1" android:startOffset="640" android:duration="300" android:interpolator="@android:interpolator/overshoot" />
+    <objectAnimator android:propertyName="scaleY" android:valueFrom="0" android:valueTo="1" android:startOffset="640" android:duration="300" android:interpolator="@android:interpolator/overshoot" />
+   </set>
+  </aapt:attr>
+ </target>
+</animated-vector>
