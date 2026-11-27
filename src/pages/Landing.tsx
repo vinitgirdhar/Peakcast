@@ -1,11 +1,11 @@
 import {
   ArrowRight,
+  Blocks,
   HardDrive,
   Download,
   LineChart,
   Monitor,
   Moon,
-  ShieldCheck,
   Smartphone,
   Sparkles,
   Sun,
@@ -21,13 +21,13 @@ import { Collapse, itemMotion, listMotion } from "../motion.js";
 const features = [
   {
     icon: LineChart,
-    title: "Instant YES / NO pricing",
-    text: "An automated market maker quotes every trade up front, with a 1% price limit you can see before you confirm.",
+    title: "Clear prices, clear rules",
+    text: "Every trade is quoted up front, and every market names its source, closing time and exactly what resolves YES or NO.",
   },
   {
-    icon: ShieldCheck,
-    title: "Rules you can read",
-    text: "Every market names its primary source, closing time and exactly what resolves YES, NO or sends it to review.",
+    icon: Blocks,
+    title: "Micro apps for practice",
+    text: "A forecast journal that scores your calls, a stake sizer and an evidence updater, all built in.",
   },
   {
     icon: Sparkles,
@@ -278,9 +278,9 @@ export function Landing({
         <details className="product-film-details">
           <summary>About the film & credits</summary>
           <p>
-            Filmed using the actual application and demo credits. Windows has a
-            separate local workspace. Web and Android share hosted market data;
-            the refresh interval is compressed in the demonstration.
+            Filmed using the actual application and demo credits. Each device
+            keeps its own workspace; the refresh interval is compressed in the
+            demonstration.
           </p>
           <p>
             Music: “Happy Beats / Business Moves, Vol. 12” by Sascha Ende,

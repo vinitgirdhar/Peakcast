@@ -12,9 +12,10 @@ const host = "127.0.0.1:3001";
 const origin = `http://${host}`;
 // `$'` also probes String.replace substitution patterns in the page shell.
 const hostile = `<img src=x onerror=alert(1)> "quoted" & 'single' $'`;
-// The CSP every route had before embeds existed; only /embed/* may differ.
+// The CSP every route shares; only /embed/* may differ. 'wasm-unsafe-eval' lets the
+// on-device engine compile sql.js, and still blocks eval().
 const strictCsp =
-  "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'none';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' 'unsafe-inline';connect-src 'self'";
+  "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'none';img-src 'self' data:;object-src 'none';script-src 'self' 'wasm-unsafe-eval';script-src-attr 'none';style-src 'self' 'unsafe-inline';connect-src 'self'";
 const indexHtml =
   "<!doctype html><html><head><title>Peakcast</title></head><body></body></html>";
 
