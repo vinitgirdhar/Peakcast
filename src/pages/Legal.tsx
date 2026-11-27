@@ -1,9 +1,27 @@
 import { useState, type ReactNode } from "react";
-import { ArrowLeft } from "lucide-react";
+import {
+  ArrowLeft,
+  BadgeCheck,
+  ChevronRight,
+  CircleHelp,
+  FileText,
+  Gamepad2,
+  Link2,
+  Mail,
+  MessageSquare,
+  Scale,
+  ShieldCheck,
+  Smartphone,
+  Trash2,
+  TriangleAlert,
+  UserRound,
+  type LucideIcon,
+} from "lucide-react";
 import { BrandMark, errorMessage } from "../ui.js";
 import { TERMS_VERSION } from "../../shared/legal.js";
 import { PeakcastClient } from "../../shared/client.js";
 import "../onboarding.css";
+import "./legal.css";
 
 export type LegalPage = "terms" | "privacy" | "help" | "delete-account";
 export const legalPaths: Record<string, LegalPage> = {
@@ -41,31 +59,135 @@ export function Legal({ page, token, onBack, onDeleted }: LegalProps) {
         </span>
       </header>
       <article className="legal-body">{content}</article>
-      <footer className="legal-footer">
-        <a href="/terms">Terms</a>
-        <a href="/privacy">Privacy</a>
-        <a href="/help">Help</a>
-        <a href="/delete-account">Delete account</a>
-      </footer>
+      <nav className="legal-footer" aria-label="Legal and help">
+        <p className="legal-group-title">More</p>
+        <ul className="legal-links">
+          {footerLinks
+            .filter((link) => link.page !== page)
+            .map(({ href, label, icon: Icon }) => (
+              <li key={href}>
+                <a href={href}>
+                  <span className="legal-icon">
+                    <Icon size={16} />
+                  </span>
+                  <span>{label}</span>
+                  <ChevronRight size={16} className="legal-chevron" />
+                </a>
+              </li>
+            ))}
+        </ul>
+        <p className="legal-copy">© {new Date().getFullYear()} Vinit Girdhar</p>
+      </nav>
     </div>
   );
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+const footerLinks: {
+  page: LegalPage;
+  href: string;
+  label: string;
+  icon: LucideIcon;
+}[] = [
+  { page: "terms", href: "/terms", label: "Terms of Use", icon: FileText },
+  {
+    page: "privacy",
+    href: "/privacy",
+    label: "Privacy Policy",
+    icon: ShieldCheck,
+  },
+  {
+    page: "help",
+    href: "/help",
+    label: "Help and questions",
+    icon: CircleHelp,
+  },
+  {
+    page: "delete-account",
+    href: "/delete-account",
+    label: "Delete account",
+    icon: Trash2,
+  },
+];
+
+/** Large title, the version line and a short plain-language summary. */
+function Intro({ title, summary }: { title: string; summary: string[] }) {
   return (
-    <section>
-      <h2>{title}</h2>
-      {children}
+    <div className="legal-intro">
+      <h1>{title}</h1>
+      <p className="legal-meta">
+        Version {TERMS_VERSION} · Last updated{" "}
+        {new Date(TERMS_VERSION).toLocaleDateString(undefined, {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        })}
+      </p>
+      <div className="legal-summary">
+        <p className="legal-summary-title">In short</p>
+        <ul>
+          {summary.map((line) => (
+            <li key={line}>
+              <BadgeCheck size={16} aria-hidden="true" />
+              <span>{line}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+/** One topic as a card: an icon tile, a heading and its text. */
+function Section({
+  title,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  icon: LucideIcon;
+  children: ReactNode;
+}) {
+  return (
+    <section className="legal-section">
+      <h2>
+        <span className="legal-icon">
+          <Icon size={16} />
+        </span>
+        {title}
+      </h2>
+      <div className="legal-text">{children}</div>
     </section>
+  );
+}
+
+function ContactRow() {
+  return (
+    <a className="legal-contact" href={`mailto:${CONTACT}`}>
+      <span className="legal-icon">
+        <Mail size={16} />
+      </span>
+      <span className="legal-contact-text">
+        <strong>Contact us</strong>
+        <small>{CONTACT}</small>
+      </span>
+      <ChevronRight size={16} className="legal-chevron" />
+    </a>
   );
 }
 
 function Terms() {
   return (
     <>
-      <h1>Terms of Use</h1>
-      <p className="legal-meta">Version {TERMS_VERSION}</p>
-      <Section title="1. What Peakcast is">
+      <Intro
+        title="Terms of Use"
+        summary={[
+          "Peakcast is a forecasting game played with practice credits.",
+          "Credits have no cash value and can never be bought or withdrawn.",
+          "You must be 18 or older to play.",
+          "Your account lives only on your device.",
+        ]}
+      />
+      <Section title="What Peakcast is" icon={Gamepad2}>
         <p>
           Peakcast is a forecasting game. You trade on questions about future
           events using <strong>practice credits</strong>. Practice credits have
@@ -73,13 +195,13 @@ function Terms() {
           cannot be exchanged for money, goods or prizes.
         </p>
       </Section>
-      <Section title="2. Who can use it">
+      <Section title="Who can use it" icon={UserRound}>
         <p>
           You must be at least 18 years old. You confirm this when you create an
           account. Do not use Peakcast where forecasting games are not allowed.
         </p>
       </Section>
-      <Section title="3. Your account">
+      <Section title="Your account" icon={Smartphone}>
         <p>
           Each new account starts with 5,000 practice credits. Keep your device
           secure: anyone with access to your signed-in app can use your account.
@@ -87,45 +209,41 @@ function Terms() {
           <a href="/delete-account">/delete-account</a>.
         </p>
       </Section>
-      <Section title="4. Playground mode">
+      <Section title="Playground mode" icon={ShieldCheck}>
         <p>
           All trading happens in Playground mode with practice credits. Peakcast
           has no real-money trading, no purchases and no prizes of any kind.
         </p>
       </Section>
-      <Section title="5. Markets and resolution">
+      <Section title="Markets and resolution" icon={Scale}>
         <p>
           Prices reflect what players trade, not facts or advice. Markets settle
           by the stated rules: a proposal, a challenge window, and an operator
           ruling if challenged. Rulings are final within the game.
         </p>
       </Section>
-      <Section title="6. Content you post">
+      <Section title="Content you post" icon={MessageSquare}>
         <p>
           Be respectful. Do not post illegal, hateful, harassing or misleading
           content, personal data about others, or spam. We may remove content
           and suspend accounts that break these rules.
         </p>
       </Section>
-      <Section title="7. Your data stays on your device">
+      <Section title="Your data stays on your device" icon={Smartphone}>
         <p>
           Peakcast has no server. Your account and activity are saved only on
           the device you use. We cannot see, recover or restore them; clearing
           the app’s storage or uninstalling it erases them.
         </p>
       </Section>
-      <Section title="8. No advice, no warranty">
+      <Section title="No advice, no warranty" icon={TriangleAlert}>
         <p>
           Nothing in Peakcast is financial, legal or betting advice. The service
           is provided as is and may change or stop. To the extent the law
           allows, we are not liable for indirect losses arising from its use.
         </p>
       </Section>
-      <Section title="9. Contact">
-        <p>
-          Questions: <a href={`mailto:${CONTACT}`}>{CONTACT}</a>
-        </p>
-      </Section>
+      <ContactRow />
     </>
   );
 }
@@ -133,9 +251,16 @@ function Terms() {
 function Privacy() {
   return (
     <>
-      <h1>Privacy Policy</h1>
-      <p className="legal-meta">Version {TERMS_VERSION}</p>
-      <Section title="We collect nothing">
+      <Intro
+        title="Privacy Policy"
+        summary={[
+          "We collect nothing: Peakcast has no server.",
+          "No ads, analytics or tracking.",
+          "Your name and activity stay on this device.",
+          "Delete everything any time from Settings.",
+        ]}
+      />
+      <Section title="We collect nothing" icon={ShieldCheck}>
         <p>
           Peakcast runs entirely on your device and has no server. Nothing you
           do in the app is sent to us or to anyone else, and we cannot see it.
@@ -147,7 +272,7 @@ function Privacy() {
           or tracking.
         </p>
       </Section>
-      <Section title="What stays on your device">
+      <Section title="What stays on your device" icon={Smartphone}>
         <ul>
           <li>The display name you choose.</li>
           <li>
@@ -163,14 +288,14 @@ function Privacy() {
           this device. Other devices and people cannot see them.
         </p>
       </Section>
-      <Section title="Links">
+      <Section title="Links to other sites" icon={Link2}>
         <p>
           Market sources and evidence are links to other websites. They open in
           your browser only when you tap them, and those sites’ own privacy
           policies apply.
         </p>
       </Section>
-      <Section title="Deleting your data">
+      <Section title="Deleting your data" icon={Trash2}>
         <p>
           Delete your account at any time in Settings or at{" "}
           <a href="/delete-account">/delete-account</a>: your display name,
@@ -179,11 +304,7 @@ function Privacy() {
           erases everything.
         </p>
       </Section>
-      <Section title="Contact">
-        <p>
-          <a href={`mailto:${CONTACT}`}>{CONTACT}</a>
-        </p>
-      </Section>
+      <ContactRow />
     </>
   );
 }
@@ -226,7 +347,10 @@ const helpItems = [
 function Help() {
   return (
     <>
-      <h1>Help and questions</h1>
+      <div className="legal-intro">
+        <h1>Help and questions</h1>
+        <p className="legal-meta">Tap a question to see the answer.</p>
+      </div>
       <div className="legal-faq">
         {helpItems.map(([question, answer]) => (
           <details key={question}>
@@ -235,9 +359,8 @@ function Help() {
           </details>
         ))}
       </div>
-      <p>
-        Still stuck? Email <a href={`mailto:${CONTACT}`}>{CONTACT}</a>.
-      </p>
+      <p className="legal-group-title">Still stuck?</p>
+      <ContactRow />
     </>
   );
 }
@@ -265,8 +388,11 @@ function DeleteAccount({
   }
   return (
     <>
-      <h1>Delete your account</h1>
-      <p>
+      <div className="legal-intro">
+        <h1>Delete your account</h1>
+      </div>
+      <p className="legal-warning">
+        <TriangleAlert size={18} aria-hidden="true" />
         Your Peakcast account exists only on the device where you created it; no
         copy is kept on any server. Deleting it removes your display name,
         drafts, comments, watchlist and notifications, cancels open orders and
@@ -295,7 +421,7 @@ function DeleteAccount({
           {error && <p className="form-error">{error}</p>}
         </div>
       ) : (
-        <p>
+        <p className="legal-card-text">
           Peakcast keeps no data on any server, so there is nothing for us to
           delete remotely. Open Peakcast on the phone, computer or browser you
           play on and choose Settings → Account → Delete account. Uninstalling
