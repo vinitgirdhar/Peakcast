@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { CircleHelp } from "lucide-react";
 import { PeakcastClient } from "../../shared/client.js";
 import type { Leaderboard } from "../../shared/types.js";
 import {
@@ -116,10 +117,6 @@ export function LeaderboardView({
           <div>
             <h1>Leaderboard</h1>
             <p>Who reads the future best? Ranked on demo credits.</p>
-            <p className="fine-print">
-              Includes sample players added with the app so you have someone to
-              beat. They are not real people.
-            </p>
           </div>
         </div>
       )}
@@ -201,16 +198,20 @@ export function LeaderboardView({
           </motion.div>
         )}
       </AnimatePresence>
-      <p className="fine-print">
-        Profit is balance plus open positions at the current price, minus the
-        starting credits and any daily bonuses. Creator ranking uses fees
-        earned. Accuracy ranks forecasters with at least 3 markets resolved YES
-        or NO by Brier score: 0 is perfect, always saying 50% scores 0.25, and
-        lower ranks higher.{" "}
-        {load
-          ? "Only this workspace's markets and credits count; members appear by display name."
-          : "Traders appear under an alias."}
-      </p>
+      {/* How the boards rank, folded away so the page ends with the list. */}
+      <details className="review-rule leaderboard-help">
+        <summary>
+          <CircleHelp size={16} /> How rankings work
+        </summary>
+        <p>
+          Traders rank by profit, creators by fees earned, and forecasters with
+          at least 3 markets resolved YES or NO by Brier score (lower is better;
+          0 is perfect).{" "}
+          {load
+            ? "Only this workspace's markets count; members appear by display name."
+            : "Traders appear under an alias. Sample players come with the app so you have someone to beat; they are not real people."}
+        </p>
+      </details>
     </div>
   );
 }

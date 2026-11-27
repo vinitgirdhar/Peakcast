@@ -1,31 +1,146 @@
-import { useEffect, useId, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
-import { Check, Flame, Gift } from "lucide-react";
+import { useEffect, useId, useState, type ReactNode, type Ref } from "react";
+import {
+  AnimatePresence,
+  motion,
+  useIsPresent,
+  useReducedMotion,
+} from "motion/react";
+import { Check, CircleHelp, Flame, Gift } from "lucide-react";
 import { ApiError, PeakcastClient } from "../../shared/client.js";
 import type {
   AccountStats,
   Calibration,
   CalibrationBucket,
   DailyBonus,
+  Portfolio,
 } from "../../shared/types.js";
 import { errorMessage, formatCredits, percent } from "../ui.js";
-import { AnimatedNumber, enterMotion } from "../motion.js";
+import { AnimatedNumber, Collapse, ease, enterMotion } from "../motion.js";
 import { haptic } from "../haptics.js";
 
 const credits = (micros: number) => formatCredits(micros, 0);
 const count = (value: number) => Math.round(value).toLocaleString("en-US");
 const pop = { type: "spring", stiffness: 520, damping: 22 } as const;
+const signedCredits = (micros: number) =>
+  `${micros > 0 ? "+" : ""}${formatCredits(micros)}`;
+
+/**
+ * Holds the bonus card inside AnimatePresence. The card has already turned to
+ * dust (see dust.ts) when it leaves, so the exit only collapses the height and
+ * the summary below glides up instead of jumping.
+ * While leaving it is hidden from assistive tech, so the claimed note in
+ * the summary is the only "Daily bonus" region.
+ */
+export function BonusSlot({
+  children,
+  ref,
+}: {
+  children: ReactNode;
+  ref?: Ref<HTMLDivElement>;
+}) {
+  const present = useIsPresent();
+  const reduce = useReducedMotion();
+  return (
+    <motion.div
+      ref={ref}
+      className="pf-bonus-slot"
+      aria-hidden={present ? undefined : true}
+      inert={!present}
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: "auto", opacity: 1 }}
+      exit={{ height: 0 }}
+      transition={{ duration: reduce ? 0 : 0.32, ease }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/** Wallet-style balance card: one big number, P&L, then cash and invested. */
+export function PortfolioSummary({
+  portfolio,
+  bonus,
+}: {
+  portfolio: Portfolio | null;
+  /** Shown as a one-line note once today's bonus is claimed and its card is gone. */
+  bonus?: DailyBonus;
+}) {
+  const money = (micros: number | undefined, format = formatCredits) =>
+    micros === undefined ? (
+      "—"
+    ) : (
+      <AnimatedNumber value={micros} format={format} />
+    );
+  const pnl = portfolio?.pnlMicros;
+  return (
+    <section className="pf-summary" aria-label="Portfolio summary">
+      <div className="pf-summary-top">
+        <div className="pf-summary-total">
+          <span className="pf-label">
+            Portfolio value <span className="pf-tag">Demo credits</span>
+          </span>
+          <strong className="pf-total">{money(portfolio?.equityMicros)}</strong>
+          <span
+            className={`pf-pnl ${!pnl ? "" : pnl > 0 ? "positive" : "negative"}`}
+          >
+            {money(pnl, signedCredits)}
+            <span className="pf-pnl-label">total profit / loss</span>
+          </span>
+        </div>
+        <dl className="pf-mini">
+          <div>
+            <dt>Available</dt>
+            <dd>{money(portfolio?.balanceMicros)}</dd>
+          </div>
+          <div>
+            <dt>Invested</dt>
+            <dd>{money(portfolio?.investedMicros)}</dd>
+          </div>
+        </dl>
+      </div>
+      <details className="pf-note">
+        <summary>
+          <CircleHelp size={13} aria-hidden="true" /> About valuation
+        </summary>
+        <p>
+          Values use the current market price; the final sell quote includes
+          price impact. Invested is what you paid for open positions.
+        </p>
+      </details>
+      <Collapse open={!!bonus && !bonus.available}>
+        {bonus && (
+          <section className="pf-bonus-note" aria-label="Daily bonus">
+            <Check size={14} aria-hidden="true" />
+            <span>
+              Bonus claimed. Come back tomorrow for{" "}
+              {credits(bonus.nextAmountMicros)} credits.
+            </span>
+            {bonus.streak > 0 && (
+              <span className="pf-tag streak">
+                <Flame size={11} aria-hidden="true" />
+                {bonus.streak}-day streak
+              </span>
+            )}
+          </section>
+        )}
+      </Collapse>
+    </section>
+  );
+}
 
 export function DailyBonusCard({
   bonus,
   client,
   onRefresh,
   onNotice,
+  onClaimed,
 }: {
   bonus: DailyBonus;
   client: PeakcastClient;
   onRefresh: () => Promise<void>;
   onNotice: (text: string) => void;
+  /** After a claim from this card has landed: the page shows the check, then dismisses the card. */
+  onClaimed?: () => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -43,6 +158,7 @@ export function DailyBonusCard({
       haptic("success");
       onNotice(`Daily bonus: +${credits(result.amountMicros)} credits`);
       await onRefresh();
+      onClaimed?.();
     } catch (e) {
       // Claimed elsewhere today (another tab, the API): show the claimed state.
       if (e instanceof ApiError && e.status === 409)
@@ -69,7 +185,7 @@ export function DailyBonusCard({
         animate={{ rotate: 0, scale: 1 }}
         transition={pop}
       >
-        <Gift size={19} />
+        <Gift size={17} />
       </motion.span>
       <div className="bonus-copy">
         <h2>
@@ -84,8 +200,8 @@ export function DailyBonusCard({
         <p>
           {bonus.available
             ? bonus.streak
-              ? "Claim today to keep your streak. Each day in a row adds 10 credits, up to 100."
-              : "Free demo credits every day. Each day in a row adds 10 more, up to 100."
+              ? "Keep your streak: each day in a row adds 10, up to 100."
+              : "Free credits daily. Streaks add 10 a day, up to 100."
             : `Come back tomorrow for ${amount} credits. Resets at 00:00 UTC.`}
         </p>
       </div>
@@ -93,12 +209,11 @@ export function DailyBonusCard({
         {bonus.available ? (
           <motion.button
             key="claim"
-            className="primary-button"
+            className="primary-button pf-claim"
             disabled={busy}
             onClick={() => void claim()}
             exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.15 } }}
           >
-            <Gift size={15} />
             {busy ? "Claiming…" : `Claim ${amount} credits`}
           </motion.button>
         ) : (
@@ -182,11 +297,11 @@ export function PerformanceStats({ stats }: { stats?: AccountStats }) {
     },
   ];
   return (
-    <section className="performance" aria-labelledby={id}>
+    <section className="pf-card performance" aria-labelledby={id}>
       <h2 id={id}>Trading record</h2>
-      <div className="portfolio-stats performance-stats">
+      <div className="pf-stats">
         {tiles.map((tile) => (
-          <div key={tile.key} className={`stat-${tile.key}`}>
+          <div key={tile.key} className={`pf-stat stat-${tile.key}`}>
             <span>{tile.label}</span>
             <strong>{tile.value}</strong>
             <small>{tile.note}</small>
@@ -238,7 +353,7 @@ export function AccuracyCard({
 
   return (
     <motion.section
-      className="performance accuracy"
+      className="pf-card performance accuracy"
       aria-labelledby={id}
       {...enterMotion}
     >
@@ -258,7 +373,7 @@ export function AccuracyCard({
           </button>
         </div>
       ) : (
-        <div className="portfolio-stats accuracy-card">
+        <div className="pf-stats accuracy-card">
           {calibration?.brier == null ? (
             <p className="accuracy-empty" aria-busy={!calibration}>
               {calibration
@@ -282,17 +397,17 @@ function AccuracyFigures({
 }: Calibration & { brier: number }) {
   return (
     <>
-      <div className="stat-brier">
+      <div className="pf-stat stat-brier">
         <span>Brier score</span>
         <strong>{score(brier)}</strong>
         <small>lower is better</small>
       </div>
-      <div className="stat-resolved">
+      <div className="pf-stat stat-resolved">
         <span>Resolved markets</span>
         <strong>{resolvedMarkets}</strong>
         <small>resolved YES or NO</small>
       </div>
-      <div className="stat-skill">
+      <div className="pf-stat stat-skill">
         <span>Skill</span>
         <strong
           className={
@@ -343,7 +458,7 @@ function ReliabilityDiagram({ buckets }: { buckets: CalibrationBucket[] }) {
       <svg
         viewBox="0 0 200 200"
         role="img"
-        aria-label={`Reliability diagram. ${summary}.`}
+        aria-label={`Reliability diagram: forecast across, how often YES happened up; dots on the dashed line are perfectly calibrated. ${summary}.`}
       >
         {[0, 0.5, 1].map((tick) => (
           <g key={tick}>
@@ -391,10 +506,6 @@ function ReliabilityDiagram({ buckets }: { buckets: CalibrationBucket[] }) {
           />
         ))}
       </svg>
-      <figcaption>
-        Forecast (across) against how often YES happened (up). Dots on the
-        dashed line are perfectly calibrated.
-      </figcaption>
     </figure>
   );
 }

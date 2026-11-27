@@ -1,31 +1,231 @@
-.app-info {
-  margin: 12px 0 0;
-  display: grid;
+/* Settings (Settings.tsx, AccountSection.tsx): iOS-style inset grouped lists.
+   Unlayered, but may load before design.css, so selectors here are one notch
+   more specific than the older settings rules they replace. */
+.page.settings-page {
+  max-width: 680px;
+  --row-inset: calc(var(--space-4) + 29px + var(--space-3));
+  --settings-group-bg: var(--surface);
 }
-.app-info > div {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 11px 0;
-  border-bottom: 1px solid var(--border);
+.settings-page > .page-heading {
+  margin-bottom: var(--space-2);
 }
-.app-info dt {
+.settings-section {
+  margin-top: var(--space-6);
+}
+.settings-section > h2 {
+  margin: 0 0 6px;
+  padding: 0 var(--space-4);
   color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
-.app-info dd {
+.settings-group {
+  display: block;
   margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--settings-group-bg);
+}
+.settings-group + .settings-group {
+  margin-top: var(--space-4);
+}
+.settings-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap);
+  padding: 6px var(--space-4);
+  color: var(--ink);
+  font-size: var(--text-base);
+  text-decoration: none;
+}
+/* Hairline separators start after the icon, like iOS. */
+.settings-row + .settings-row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: var(--row-inset);
+  right: 0;
+  border-top: 1px solid var(--border);
+}
+a.settings-row:hover {
+  text-decoration: none;
+  background: var(--subtle);
+}
+a.settings-row:active {
+  background: var(--subtle);
+}
+.settings-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 29px;
+  height: 29px;
+  border-radius: 7px;
+  color: #fff;
+  background: #8e8e93;
+}
+.settings-icon[data-tone="blue"] {
+  background: #0a84ff;
+}
+.settings-icon[data-tone="indigo"] {
+  background: #5e5ce6;
+}
+.settings-icon[data-tone="green"] {
+  background: #30b158;
+}
+.settings-icon[data-tone="orange"] {
+  background: #ff9f0a;
+}
+.settings-icon[data-tone="red"] {
+  background: #ff453a;
+}
+.settings-label {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.settings-value {
+  min-width: 0;
+  margin: 0;
+  color: var(--muted);
   text-align: right;
-  font-weight: 560;
+  overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
 }
-.app-info-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 18px;
-  margin: 16px 0 8px;
+.settings-chevron {
+  flex: none;
+  color: var(--muted);
+  opacity: 0.6;
 }
-.app-info-links a {
-  color: inherit;
-  font-weight: 560;
-  text-underline-offset: 3px;
+.settings-footer {
+  margin: 6px 0 0;
+  padding: 0 var(--space-4);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}
+.settings-footer a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.settings-notice {
+  margin: var(--space-2) var(--space-4) 0;
+}
+.settings-note {
+  padding: var(--space-3) var(--space-4);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+/* Appearance: a segmented control inside its group. */
+.settings-page .appearance-options {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+}
+.settings-page .appearance-options button,
+[data-theme="dark"] .settings-page .appearance-options button {
+  flex: 1;
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border: 0;
+  border-radius: calc(var(--radius-card) - 4px);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  /* Only colour flips here; the pill does the motion. */
+  transition: color 0.2s;
+}
+.settings-page .appearance-options button[aria-pressed="true"],
+[data-theme="dark"] .settings-page .appearance-options button[aria-pressed="true"] {
+  background: transparent;
+  color: var(--ink);
+}
+.settings-page .appearance-selection {
+  background: var(--subtle);
+  box-shadow: inset 0 0 0 1px var(--border);
+  will-change: transform;
+}
+
+/* iOS switch: 51 × 31, green when on. */
+.settings-row .switch {
+  width: 51px;
+  height: 31px;
+}
+.settings-row .switch::after {
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+}
+.settings-row .switch[aria-checked="true"] {
+  background: #34c759;
+}
+.settings-row .switch[aria-checked="false"] {
+  background: #78788029;
+}
+/* The switch keeps its 31px look but answers taps across a 44px box. */
+.settings-row .switch::before {
+  content: "";
+  position: absolute;
+  inset: -7px -4px;
+}
+
+/* Destructive group. */
+.settings-danger .settings-label {
+  color: #ff3b30;
+}
+[data-theme="dark"] .settings-danger .settings-label {
+  color: #ff453a;
+}
+.settings-text-button {
+  min-height: var(--tap);
+  padding: 0 var(--space-2);
+  border: 0;
+  background: none;
+  color: #ff3b30;
+  font-size: var(--text-base);
+  font-weight: 500;
+}
+[data-theme="dark"] .settings-text-button {
+  color: #ff453a;
+}
+.settings-danger .account-confirm {
+  display: flex;
+  gap: var(--space-2);
+}
+.settings-pill {
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: 999px;
+  background: var(--subtle);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.settings-pill.danger-button {
+  background: #ff3b30;
+  color: #fff;
+}
+
+/* Copyright, centred and small at the very bottom. */
+.settings-page > .fine-print:last-child {
+  margin: var(--space-6) 0 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: var(--text-xs);
 }

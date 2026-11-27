@@ -11,6 +11,11 @@
 .onboarding-card {
   width: min(460px, 100%);
   min-height: min(560px, calc(100dvh - 32px));
+  /* Bounded, so the stage below scrolls instead of pushing into the dots. */
+  max-height: calc(
+    100dvh - max(16px, env(safe-area-inset-top)) -
+      max(16px, env(safe-area-inset-bottom))
+  );
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -24,9 +29,29 @@
 .onboarding-top,
 .onboarding-bottom {
   display: flex;
+  flex: none;
   align-items: center;
   justify-content: space-between;
-  min-height: 40px;
+  gap: var(--space-4);
+  min-height: 44px;
+}
+.onboarding-dots {
+  flex: none;
+}
+.onboarding-bottom .primary-button {
+  white-space: nowrap;
+}
+/* The step region: takes the space between top and bottom bars and scrolls
+   when a step is taller (short phones, keyboard open). */
+.onboarding-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .onboarding-brand,
 .legal-brand {
@@ -36,7 +61,7 @@
   font-weight: 650;
 }
 .onboarding-step {
-  flex: 1;
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -98,6 +123,23 @@
   background: var(--canvas);
   color: var(--ink);
   font: inherit;
+}
+.onboarding-form input[aria-invalid="true"] {
+  border-color: #d93a3a;
+  box-shadow: 0 0 0 3px #d93a3a1f;
+}
+.field-hint-slot {
+  margin-top: -8px;
+}
+.onboarding-step .field-hint {
+  margin: 0;
+  overflow: hidden;
+  color: #c93636;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+[data-theme="dark"] .onboarding-step .field-hint {
+  color: #ff8a80;
 }
 .check {
   display: flex;
@@ -200,10 +242,15 @@
 .legal-faq p {
   margin: 0 0 14px;
 }
+.legal-footer a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
 .legal-footer {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 0 16px;
   padding-top: 40px;
   font-size: 0.9rem;
 }
@@ -334,4 +381,16 @@
 .account-confirm {
   display: flex;
   gap: 8px;
+}
+/* 320–360 px phones: room for the dots beside "Start with 5,000 credits". */
+@media (max-width: 360px) {
+  .onboarding-card {
+    padding: 20px;
+  }
+  .onboarding-bottom {
+    gap: var(--space-2);
+  }
+  .onboarding-bottom .primary-button {
+    padding: 0 12px;
+  }
 }

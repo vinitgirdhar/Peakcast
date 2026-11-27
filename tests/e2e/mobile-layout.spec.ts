@@ -72,18 +72,17 @@ test("navigation uses a desktop sidebar, tablet drawer and mobile tab bar", asyn
   }
 });
 
-test("market pages, filtering and separate rules preserve an unfinished order", async ({
+test("one continuous market list, filtering and separate rules preserve an unfinished order", async ({
   page,
 }) => {
   await page.goto("/markets");
   const titles = page.locator(".market-card h3");
-  await expect(titles).toHaveCount(6);
-  const first = await titles.allTextContents();
-  await page.getByRole("button", { name: "Next markets" }).click();
+  // Every market in one list: no "1 of 3" pages and no page-end footer.
+  await expect.poll(() => titles.count()).toBeGreaterThan(6);
   await expect(
     page.getByRole("navigation", { name: "Market pages" }),
-  ).toContainText("2 of 3");
-  expect(await titles.allTextContents()).not.toEqual(first);
+  ).toHaveCount(0);
+  await expect(page.locator("footer.footer")).toHaveCount(0);
   // Two house markets plus one a sample player created (server/demo.ts).
   await page.getByRole("button", { name: "Crypto", exact: true }).click();
   await expect(titles).toHaveCount(3);

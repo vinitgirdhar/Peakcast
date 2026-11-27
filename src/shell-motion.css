@@ -1,5 +1,5 @@
 /* Shell motion: app opening, page switches, dock glass, sidebar hover glass,
-   theme cross-fade (src/App.tsx, Dock.tsx, BackendStartup.tsx).
+   theme cross-fade (src/theme.ts, App.tsx, Dock.tsx, BackendStartup.tsx).
    Unlayered, so it beats styles.css (@layer components); where it meets
    design.css (unlayered, loaded later) its selectors are one notch more specific.
    Only transform, opacity, translate and scale animate. */
@@ -100,18 +100,20 @@ nav.mobile-dock[data-dragging] > .dock-selection {
     animation: shell-dock 0.48s var(--spring, ease-out) 0.16s backwards;
   }
 
-  /* Theme switch: colours cross-fade instead of snapping (App adds the class). */
-  :root.theme-fade,
-  :root.theme-fade *,
-  :root.theme-fade *::before,
-  :root.theme-fade *::after {
-    transition:
-      background-color 0.3s ease,
-      border-color 0.3s ease,
-      color 0.3s ease,
-      fill 0.3s ease,
-      stroke 0.3s ease !important;
-  }
+}
+
+/* Theme switch (theme.ts): one soft cross-fade of two page snapshots via the
+   View Transitions API. Element colour transitions are paused meanwhile so
+   nothing animates twice. Reduced motion never starts the transition. */
+:root.theme-switching *,
+:root.theme-switching *::before,
+:root.theme-switching *::after {
+  transition: none !important;
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.25s;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes shell-fade {

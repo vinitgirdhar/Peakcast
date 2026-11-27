@@ -176,7 +176,7 @@ export function registerApi(
             displayName: Type.String({
               minLength: 2,
               maxLength: 40,
-              pattern: "^[\\p{L}\\p{N} ._'-]+$",
+              pattern: "^[\\p{L}\\p{M} .'-]+$",
             }),
             acceptTerms: Type.Boolean(),
             confirmAdult: Type.Boolean(),

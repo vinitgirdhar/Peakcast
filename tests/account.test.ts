@@ -149,3 +149,21 @@ test("deleting a workspace owner hands the workspace on and removes their name",
     await t.close();
   }
 });
+
+test("display names must be real names", async () => {
+  const { isValidDisplayName } = await import("../shared/names.js");
+  for (const ok of ["Ada", "Ada Lovelace", "Mary-Jane O'Neil", "J. R. Tolkien", "José", "विनीत", "  Ada   Lovelace "])
+    assert.equal(isValidDisplayName(ok), true, ok);
+  for (const bad of ["A", "Ada123", "12345", "<b>", "Ada!!", "-Ada", "Ada--Lee", "a".repeat(41), "   "])
+    assert.equal(isValidDisplayName(bad), false, bad);
+});
+
+test("the live name hint explains what is wrong", async () => {
+  const { displayNameProblem } = await import("../shared/names.js");
+  assert.equal(displayNameProblem(""), null);
+  assert.equal(displayNameProblem("Ada Lovelace"), null);
+  assert.match(displayNameProblem("Ada1")!, /Numbers/);
+  assert.match(displayNameProblem("Ada@")!, /Only letters/);
+  assert.match(displayNameProblem("A")!, /at least 2/);
+  assert.match(displayNameProblem("-Ada")!, /Start your name/);
+});

@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures.js";
+import { test, expect, expectAllMarkets } from "./fixtures.js";
 
 test("explore, filter, buy, reload, inspect the portfolio and sell", async ({
   page,
@@ -21,7 +21,7 @@ test("explore, filter, buy, reload, inspect the portfolio and sell", async ({
     page.getByRole("heading", { name: "No markets match" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Clear filters" }).click();
-  await expect(page.locator(".market-card")).toHaveCount(6);
+  await expectAllMarkets(page);
   await page.locator(".market-card").first().click();
   await page
     .getByRole("button", { name: "Rules & source", exact: true })

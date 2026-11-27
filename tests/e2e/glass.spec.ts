@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures.js";
+import { test, expect, expectAllMarkets } from "./fixtures.js";
 
 test("opaque surfaces, navigation lifecycle and reduced motion keep controls usable", async ({
   page,
@@ -21,7 +21,7 @@ test("opaque surfaces, navigation lifecycle and reduced motion keep controls usa
     await navigation
       .getByRole("button", { name: "Markets", exact: true })
       .click();
-    await expect(page.locator(".market-card")).toHaveCount(6);
+    await expectAllMarkets(page);
   }
   await expect(page.locator('filter[id^="lg-filter-"]')).toHaveCount(0);
   expect(

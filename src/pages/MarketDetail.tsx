@@ -800,7 +800,7 @@ export function MarketDetail({
                 </div>
               )}
               {insufficient && validQuantity && (
-                <p className="form-error">
+                <p className="form-error notice-warning">
                   {action === "buy"
                     ? "Insufficient demo credits for this trade."
                     : "You do not own enough shares."}

@@ -29,9 +29,10 @@ test("the leaderboard has a Most accurate board ranked by Brier score", async ({
       .getByRole("heading", { name: "No forecasters yet" })
       .or(page.locator(".rank-list:not([data-motion-pop-id])")),
   ).toBeVisible();
+  await page.getByText("How rankings work").click();
   await expect(
-    page.locator(".fine-print").filter({ hasText: "Brier" }),
-  ).toContainText("at least 3 markets resolved YES or NO by Brier score");
+    page.getByText(/at least 3 markets resolved YES or NO by Brier score/),
+  ).toBeVisible();
   await expect(page.getByText("They are not real people.")).toBeVisible();
   await expect(page.locator(".rank-you")).toHaveCount(0);
 });

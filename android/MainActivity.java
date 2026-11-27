@@ -267,6 +267,10 @@ public class MainActivity extends Activity {
   // Rasterises just beyond the viewport so fast scrolls and the first frame after
   // returning to the app do not show unpainted tiles.
   settings.setOffscreenPreRaster(true);
+  // The layout is sized for the phone already; the system font scale still
+  // applies for accessibility, but is capped so large defaults do not blow it up.
+  float scale = getResources().getConfiguration().fontScale;
+  settings.setTextZoom(Math.round(Math.max(85f, Math.min(scale * 100f, 115f))));
   // ponytail: text zoom is left at WebView's default, which follows the phone's font size (accessibility).
   web.addJavascriptInterface(new Bridge(), "PeakcastAndroid");
   web.setWebViewClient(new WebViewClient() {

@@ -1,4 +1,5 @@
 import { DomainError, FORMER_MEMBER, type Store } from "./database.js";
+import { isValidDisplayName, normalizeDisplayName } from "../shared/names.js";
 import { TERMS_VERSION } from "../shared/legal.js";
 import type { Account } from "../shared/types.js";
 
@@ -35,9 +36,11 @@ export function completeOnboarding(
   accountId: string,
   input: { displayName: string; acceptTerms: boolean; confirmAdult: boolean },
 ): Account {
-  const displayName = input.displayName.trim().replace(/\s+/g, " ");
-  if (displayName.length < 2)
-    throw new DomainError("Choose a display name of at least 2 characters.");
+  const displayName = normalizeDisplayName(input.displayName);
+  if (!isValidDisplayName(displayName))
+    throw new DomainError(
+      "Use your name: letters only, 2 to 40 characters, like Ada Lovelace.",
+    );
   if (!input.acceptTerms)
     throw new DomainError("Accept the Terms and Privacy Policy to continue.");
   if (!input.confirmAdult)

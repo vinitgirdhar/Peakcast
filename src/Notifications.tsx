@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { disintegrate } from "./dust.js";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -121,6 +122,28 @@ export function NotificationBell({
 
   const items = inbox?.items ?? [];
   const fresh = items.filter((item) => !item.read).length;
+  // Nothing to read: show "all caught up" for a moment, then the panel
+  // dissolves into dust by itself. A pointer or focus inside keeps it open.
+  const empty = open && !loading && !error && inbox !== null && !items.length;
+  const [dusted, setDusted] = useState(false);
+  const [holding, setHolding] = useState(false);
+  useEffect(() => {
+    if (!empty || holding) return;
+    let active = true;
+    const timer = setTimeout(async () => {
+      if (!panel.current) return;
+      setDusted(true);
+      await disintegrate(panel.current);
+      if (active) close(false);
+    }, 1100);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [empty, holding]);
+  useEffect(() => {
+    if (open) setDusted(false);
+  }, [open]);
   return (
     <>
       <button
@@ -178,12 +201,19 @@ export function NotificationBell({
                 style={{ originX: 1, originY: 0 }}
                 initial={{ opacity: 0, y: -8, scale: 0.94 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{
-                  opacity: 0,
-                  y: -6,
-                  scale: 0.97,
-                  transition: { duration: 0.14, ease },
-                }}
+                // After dusting it is already invisible, so it leaves at once.
+                exit={
+                  dusted
+                    ? { opacity: 0, transition: { duration: 0 } }
+                    : {
+                        opacity: 0,
+                        y: -6,
+                        scale: 0.97,
+                        transition: { duration: 0.14, ease },
+                      }
+                }
+                onPointerEnter={() => setHolding(true)}
+                onPointerLeave={() => setHolding(false)}
                 transition={popSpring}
               >
                 <div className="notification-head">

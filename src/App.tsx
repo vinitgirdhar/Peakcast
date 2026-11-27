@@ -1,7 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, type Variants } from "motion/react";
 import {
-  ArrowUpRight,
   Check,
   CircleHelp,
   LayoutGrid,
@@ -314,22 +313,6 @@ export function App() {
     addEventListener("scroll", onScroll, { passive: true });
     return () => removeEventListener("scroll", onScroll);
   }, []);
-  // Theme switches cross-fade colours briefly instead of snapping (shell-motion.css).
-  useEffect(() => {
-    const root = document.documentElement;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const observer = new MutationObserver(() => {
-      root.classList.add("theme-fade");
-      clearTimeout(timer);
-      timer = setTimeout(() => root.classList.remove("theme-fade"), 400);
-    });
-    observer.observe(root, { attributeFilter: ["data-theme"] });
-    return () => {
-      observer.disconnect();
-      clearTimeout(timer);
-      root.classList.remove("theme-fade");
-    };
-  }, []);
   async function installApp() {
     if (install) {
       try {
@@ -542,15 +525,6 @@ export function App() {
               </button>
             ))}
           </nav>
-          <div className="sidebar-bottom">
-            <div className="profile">
-              <span className="status-dot" />
-              <div>
-                <strong>Practice. Learn. Forecast.</strong>
-                <span>Demo credits. Real curiosity.</span>
-              </div>
-            </div>
-          </div>
         </aside>
         <dialog
           ref={dialog}
@@ -625,15 +599,6 @@ export function App() {
                   </button>
                 ))}
               </nav>
-            </div>
-            <div className="sidebar-bottom">
-              <div className="profile">
-                <span className="status-dot" />
-                <div>
-                  <strong>Demo credits</strong>
-                  <span>No real-money trading</span>
-                </div>
-              </div>
             </div>
           </aside>
         </dialog>
@@ -926,16 +891,6 @@ export function App() {
                 </motion.div>
               </AnimatePresence>
             )}
-            <footer className="footer">
-              <span>
-                <span className="status-dot" />
-                Demo credits
-              </span>
-              <button onClick={() => navigate("/about")}>
-                About this app
-                <ArrowUpRight size={14} />
-              </button>
-            </footer>
           </main>
         </div>
         <MobileDock

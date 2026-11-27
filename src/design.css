@@ -12,7 +12,7 @@
   --glass-shadow: 0 4px 24px #16181d04;
   color: var(--ink);
   background: var(--canvas);
-  font-size: 14px;
+  font-size: var(--text-base);
   font-weight: 450;
   letter-spacing: -0.015em;
 }
@@ -87,7 +87,7 @@ button {
 }
 .breadcrumb strong {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 500;
 }
 .top-actions,
@@ -100,7 +100,7 @@ button {
 }
 .environment {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .balance-button,
 [data-theme="dark"] .balance-button {
@@ -109,7 +109,7 @@ button {
   box-shadow: none;
   border-radius: 10px;
   min-height: 44px;
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .balance-button svg,
 [data-theme="dark"] .balance-button svg {
@@ -117,7 +117,7 @@ button {
 }
 .balance-button small {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .icon-button,
 [data-theme="dark"] .icon-button {
@@ -137,20 +137,20 @@ button {
   margin-bottom: 32px;
 }
 .page-heading h1 {
-  font-size: 34px;
+  font-size: var(--text-4xl);
   letter-spacing: -1.3px;
   font-weight: 650;
   margin-bottom: 9px;
 }
 .page-heading p {
-  font-size: 14px;
+  font-size: var(--text-base);
   color: var(--muted);
 }
 .primary-button,
 .secondary-button {
   border-radius: 10px;
   min-height: 44px;
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 550;
   padding: 12px 18px;
   box-shadow: none;
@@ -173,7 +173,7 @@ button {
   background: var(--selected);
   border: 1px solid var(--selected);
   border-radius: 10px;
-  font-size: 14px;
+  font-size: var(--text-base);
 }
 .execute-button:disabled {
   opacity: 0.5;
@@ -184,7 +184,7 @@ button {
   background: var(--surface);
   border-color: var(--border);
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .outcome-buttons button.yes.selected {
   border-color: var(--yes);
@@ -215,7 +215,7 @@ button {
 .text-button,
 [data-theme="dark"] .text-button {
   color: var(--ink);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .overview-row {
   grid-template-columns: minmax(0, 1fr) minmax(280px, 0.55fr);
@@ -244,7 +244,7 @@ button {
 .feature-kicker,
 [data-theme="dark"] .featured-market .feature-kicker {
   color: #c0c1c5;
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 500;
 }
 .feature-kicker > span:last-child {
@@ -252,7 +252,7 @@ button {
   background: #ffffff14;
   border: 0;
   border-radius: 5px;
-  font-size: 11px;
+  font-size: var(--text-2xs);
 }
 .feature-dot {
   background: #b7ddc9;
@@ -271,10 +271,10 @@ button {
 .feature-bottom > span:first-child,
 [data-theme="dark"] .featured-market .feature-bottom span {
   color: #c0c1c5;
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .feature-bottom > span:last-child {
-  font-size: 11px;
+  font-size: var(--text-2xs);
   border-color: #ffffff29;
 }
 .feature-art {
@@ -292,7 +292,7 @@ button {
 .feature-art .feature-probability small,
 [data-theme="dark"] .feature-art .feature-probability small {
   color: #c0c1c5;
-  font-size: 12px;
+  font-size: var(--text-xs);
   letter-spacing: 0;
   font-weight: 450;
 }
@@ -309,11 +309,11 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 13px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 .radar-heading h2 {
-  font-size: 15px;
+  font-size: var(--text-base);
   font-weight: 600;
   letter-spacing: -0.4px;
   margin: 0;
@@ -336,7 +336,7 @@ button {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 500;
 }
 .radar-meta {
@@ -344,7 +344,7 @@ button {
   justify-content: space-between;
   gap: 10px;
   margin-top: 7px;
-  font-size: 11px;
+  font-size: var(--text-2xs);
   color: var(--muted);
 }
 .radar-meta strong {
@@ -352,12 +352,12 @@ button {
   color: var(--ink);
 }
 .radar-meta small {
-  font-size: 10px;
+  font-size: var(--text-3xs);
   color: var(--muted);
   font-weight: 450;
 }
 .market-radar > p {
-  font-size: 13px;
+  font-size: var(--text-sm);
   line-height: 1.7;
   margin: 20px 0 0;
   color: var(--muted);
@@ -377,14 +377,14 @@ button {
   gap: 6px;
 }
 .market-pulse strong {
-  font-size: 22px;
+  font-size: var(--text-2xl);
   font-weight: 550;
   letter-spacing: -0.6px;
   font-variant-numeric: tabular-nums;
   color: #f5f5f7;
 }
 .market-pulse small {
-  font-size: 11px;
+  font-size: var(--text-2xs);
   color: #c0c1c5;
 }
 .market-toolbar {
@@ -392,7 +392,7 @@ button {
   margin-bottom: 20px;
 }
 .section-title h2 {
-  font-size: 20px;
+  font-size: var(--text-xl);
   font-weight: 600;
   letter-spacing: -0.6px;
 }
@@ -403,7 +403,7 @@ button {
   color: var(--muted);
   border-color: transparent;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: var(--text-2xs);
 }
 .search-field,
 [data-theme="dark"] .search-field {
@@ -416,7 +416,7 @@ button {
 }
 .search-field input {
   color: var(--ink);
-  font-size: 13px;
+  font-size: var(--text-sm);
   width: 170px;
 }
 .search-field input::placeholder {
@@ -437,7 +437,7 @@ button {
   min-height: 40px;
   padding: 9px 15px;
   border-radius: 8px;
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .category-tabs button:hover {
   background: var(--subtle);
@@ -472,7 +472,7 @@ button {
   box-shadow: none;
   width: 38px;
   height: 38px;
-  font-size: 23px;
+  font-size: var(--text-3xl);
   color: #3d3e43;
 }
 .market-card-top {
@@ -483,10 +483,10 @@ button {
 .card-arrow,
 [data-theme="dark"] .market-card .category-label {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .market-card h3 {
-  font-size: 15px;
+  font-size: var(--text-base);
   line-height: 1.5;
   font-weight: 550;
   letter-spacing: -0.3px;
@@ -495,19 +495,19 @@ button {
   max-width: none;
 }
 .market-probability > strong {
-  font-size: 34px;
+  font-size: var(--text-4xl);
   font-weight: 550;
   letter-spacing: -1.5px;
 }
 .market-probability > span {
-  font-size: 11px;
+  font-size: var(--text-2xs);
   color: var(--muted);
 }
 .market-probability .market-open {
   color: var(--muted);
   background: var(--subtle);
   border-radius: 5px;
-  font-size: 10px;
+  font-size: var(--text-3xs);
   padding: 4px 6px;
 }
 .probability-track {
@@ -527,16 +527,24 @@ button {
   background: #edf6f2;
   color: #28735a;
   padding: 10px 12px;
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .binary-prices > span:last-child {
   background: #fbf0f0;
   color: #a34855;
 }
+[data-theme="dark"] .binary-prices > span {
+  background: #79d6b31f;
+  color: var(--yes);
+}
+[data-theme="dark"] .binary-prices > span:last-child {
+  background: #f3a0af1f;
+  color: var(--no);
+}
 .market-card-footer,
 [data-theme="dark"] .market-card-footer {
   border-color: var(--border);
-  font-size: 11px;
+  font-size: var(--text-2xs);
   padding: 15px 0;
   margin-top: 18px;
   color: var(--muted);
@@ -547,7 +555,7 @@ button {
   background: var(--surface);
   color: var(--ink);
   border-radius: 10px;
-  font-size: 13px;
+  font-size: var(--text-sm);
   min-height: 44px;
 }
 .select-options,
@@ -608,12 +616,12 @@ button {
   padding: 25px;
 }
 .detail-title h1 {
-  font-size: 26px;
+  font-size: var(--text-3xl);
   line-height: 1.3;
   letter-spacing: -0.8px;
 }
 .detail-title .category-label {
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .view-tabs,
 .action-tabs,
@@ -627,7 +635,7 @@ button {
 .view-tabs button,
 .action-tabs button {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
   border-radius: 6px;
   min-height: 40px;
 }
@@ -665,10 +673,10 @@ textarea,
 }
 .text-input,
 textarea {
-  font-size: 14px;
+  font-size: var(--text-base);
 }
 .form-label {
-  font-size: 13px;
+  font-size: var(--text-sm);
   font-weight: 500;
   color: var(--ink);
 }
@@ -725,13 +733,13 @@ button.notification-row:hover {
   box-shadow: 0 12px 40px #00000016;
 }
 .footer {
-  font-size: 11px;
+  font-size: var(--text-2xs);
   color: var(--muted);
   margin: auto 40px 0;
 }
 .footer button {
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--text-2xs);
 }
 .navigation-drawer .sidebar,
 [data-theme="dark"] .navigation-drawer .sidebar {
@@ -778,13 +786,13 @@ button.notification-row:hover {
   }
   .desktop-sidebar .brand {
     padding: 0 4px;
-    font-size: 22px;
+    font-size: var(--text-2xl);
     gap: 9px;
   }
   .desktop-sidebar .workspace-label {
     margin: 51px 12px 17px;
     color: var(--muted);
-    font-size: 11px;
+    font-size: var(--text-2xs);
   }
   .desktop-sidebar nav {
     display: grid;
@@ -795,7 +803,7 @@ button.notification-row:hover {
     padding: 12px 14px;
     min-height: 44px;
     color: var(--muted);
-    font-size: 13px;
+    font-size: var(--text-sm);
     border-radius: 8px;
   }
   .desktop-sidebar .nav-item:hover {
@@ -810,7 +818,7 @@ button.notification-row:hover {
     padding-top: 30px;
   }
   .desktop-sidebar .sidebar-bottom .nav-item {
-    font-size: 12px;
+    font-size: var(--text-xs);
     padding-left: 9px;
   }
   .desktop-sidebar .profile {
@@ -820,11 +828,11 @@ button.notification-row:hover {
   }
   .desktop-sidebar .profile strong {
     color: var(--ink);
-    font-size: 11px;
+    font-size: var(--text-2xs);
   }
   .desktop-sidebar .profile span:not(.status-dot) {
     color: var(--muted);
-    font-size: 10px;
+    font-size: var(--text-3xs);
   }
   .main-shell {
     margin-left: 226px;
@@ -846,12 +854,12 @@ button.notification-row:hover {
   border-bottom: 1px solid var(--border);
 }
 .landing .brand {
-  font-size: 23px;
+  font-size: var(--text-3xl);
   gap: 9px;
 }
 .landing-nav a {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .landing > main {
   display: flex;
@@ -866,7 +874,7 @@ button.notification-row:hover {
   max-width: 740px;
 }
 .landing-eyebrow {
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 500;
   color: var(--muted);
   background: var(--surface);
@@ -883,7 +891,7 @@ button.notification-row:hover {
   margin: 25px 0 24px;
 }
 .landing-copy > p {
-  font-size: 17px;
+  font-size: var(--text-lg);
   line-height: 1.7;
   color: var(--muted);
   max-width: 500px;
@@ -899,7 +907,7 @@ button.notification-row:hover {
   min-height: 48px;
   border-radius: 30px;
   padding: 14px 23px;
-  font-size: 13px;
+  font-size: var(--text-sm);
 }
 .landing-install {
   display: flex;
@@ -909,18 +917,18 @@ button.notification-row:hover {
   margin-top: 8px;
 }
 .landing-install .text-button {
-  font-size: 11px;
+  font-size: var(--text-2xs);
   min-height: 32px;
 }
 .landing-install > span {
-  font-size: 10px;
+  font-size: var(--text-3xs);
   color: var(--muted);
 }
 .landing-actions .text-button {
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .landing-copy > .landing-disclaimer {
-  font-size: 11px;
+  font-size: var(--text-2xs);
 }
 .product-preview {
   display: grid;
@@ -949,12 +957,12 @@ button.notification-row:hover {
   min-height: 38px;
   padding: 8px 12px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--text-2xs);
   border-radius: 7px;
 }
 .preview-navigation > .preview-wordmark {
   color: var(--ink);
-  font-size: 20px;
+  font-size: var(--text-xl);
   font-weight: 650;
   letter-spacing: -1px;
   padding: 0 8px;
@@ -966,7 +974,7 @@ button.notification-row:hover {
 }
 .preview-navigation > small {
   margin-top: auto;
-  font-size: 10px;
+  font-size: var(--text-3xs);
   color: var(--muted);
   display: flex;
   align-items: center;
@@ -981,7 +989,7 @@ button.notification-row:hover {
 .preview-topline {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--text-2xs);
   padding-bottom: 26px;
   color: var(--muted);
 }
@@ -1001,14 +1009,14 @@ button.notification-row:hover {
   margin-bottom: 22px;
 }
 .preview-heading h2 {
-  font-size: 24px;
+  font-size: var(--text-3xl);
   font-weight: 600;
   letter-spacing: -0.8px;
   margin: 0;
 }
 .preview-heading > span {
   color: var(--muted);
-  font-size: 10px;
+  font-size: var(--text-3xs);
 }
 .preview-dashboard {
   display: grid;
@@ -1026,7 +1034,7 @@ button.notification-row:hover {
 }
 .landing-preview-top {
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--text-2xs);
 }
 .landing-preview-top svg {
   width: 17px;
@@ -1034,7 +1042,7 @@ button.notification-row:hover {
   flex: none;
 }
 .landing-preview h3 {
-  font-size: 18px;
+  font-size: var(--text-lg);
   font-weight: 550;
   letter-spacing: -0.4px;
   line-height: 1.4;
@@ -1052,7 +1060,7 @@ button.notification-row:hover {
   margin-bottom: 18px;
 }
 .landing-preview-number small {
-  font-size: 11px;
+  font-size: var(--text-2xs);
   color: var(--muted);
   letter-spacing: 0;
 }
@@ -1083,17 +1091,17 @@ button.notification-row:hover {
   color: var(--muted);
 }
 .preview-ticket > span {
-  font-size: 11px;
+  font-size: var(--text-2xs);
   color: var(--muted);
 }
 .preview-ticket > strong {
-  font-size: 32px;
+  font-size: var(--text-4xl);
   letter-spacing: -1.5px;
   font-weight: 600;
 }
 .preview-ticket > strong small {
   display: block;
-  font-size: 11px;
+  font-size: var(--text-2xs);
   color: var(--muted);
   letter-spacing: 0;
   font-weight: 450;
@@ -1112,14 +1120,14 @@ button.notification-row:hover {
   align-items: flex-start;
   gap: 8px;
   padding: 12px;
-  font-size: 11px;
+  font-size: var(--text-2xs);
   border-radius: 8px;
 }
 .preview-ticket > .preview-trade-button {
   background: var(--selected);
   color: var(--on-selected);
   text-align: center;
-  font-size: 10px;
+  font-size: var(--text-3xs);
   padding: 12px 6px;
   border-radius: 7px;
   margin-top: auto;
@@ -1148,7 +1156,7 @@ button.notification-row:hover {
   background: #fdf0df;
   color: #9a6a21;
   flex-shrink: 0;
-  font-size: 18px;
+  font-size: var(--text-lg);
 }
 .preview-market-symbol.economy {
   background: #e9f2ee;
@@ -1166,13 +1174,13 @@ button.notification-row:hover {
 }
 .preview-market-list strong {
   display: block;
-  font-size: 10px;
+  font-size: var(--text-3xs);
   line-height: 1.4;
   font-weight: 500;
 }
 .preview-market-list > div > span:last-child {
   margin-left: auto;
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 600;
 }
 .landing-platforms {
@@ -1183,13 +1191,13 @@ button.notification-row:hover {
   padding: 70px 0;
 }
 .landing-platforms h2 {
-  font-size: 27px;
+  font-size: var(--text-4xl);
   font-weight: 600;
   letter-spacing: -1px;
   margin-bottom: 10px;
 }
 .landing-platforms p {
-  font-size: 13px;
+  font-size: var(--text-sm);
   line-height: 1.6;
   color: var(--muted);
   margin: 0;
@@ -1201,7 +1209,7 @@ button.notification-row:hover {
   flex-wrap: wrap;
 }
 .landing-downloads .secondary-button {
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 .landing-features {
   margin-top: 64px;
@@ -1220,18 +1228,18 @@ button.notification-row:hover {
   margin-bottom: 20px;
 }
 .landing-features h3 {
-  font-size: 14px;
+  font-size: var(--text-base);
   font-weight: 600;
   letter-spacing: -0.3px;
 }
 .landing-features p {
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--muted);
   line-height: 1.8;
 }
 .landing > footer {
   border-top: 1px solid var(--border);
-  font-size: 11px;
+  font-size: var(--text-2xs);
   color: var(--muted);
   padding: 24px 0;
   gap: 20px;
@@ -1263,7 +1271,7 @@ button.notification-row:hover {
 .landing-faq-heading p,
 .landing-faq-list p {
   color: var(--muted);
-  font-size: 14px;
+  font-size: var(--text-base);
   line-height: 1.8;
 }
 .landing-faq-heading p {
@@ -1284,7 +1292,7 @@ button.notification-row:hover {
   background: transparent;
   padding: 20px 0;
   color: var(--ink);
-  font-size: 14px;
+  font-size: var(--text-base);
   font-weight: 550;
   line-height: 1.5;
   text-align: left;
@@ -1333,7 +1341,7 @@ button.notification-row:hover {
     gap: 16px;
   }
   .featured-market h2 {
-    font-size: 23px;
+    font-size: var(--text-3xl);
   }
   .market-toolbar {
     flex-wrap: wrap;
@@ -1350,7 +1358,7 @@ button.notification-row:hover {
     padding: 24px 10px;
   }
   .preview-navigation > .preview-wordmark {
-    font-size: 17px;
+    font-size: var(--text-lg);
   }
   .preview-workspace {
     padding: 22px;
@@ -1401,7 +1409,7 @@ button.notification-row:hover {
   }
   .mobile-brand {
     gap: 8px;
-    font-size: 18px;
+    font-size: var(--text-lg);
     color: var(--ink);
   }
   .mobile-brand svg {
@@ -1413,7 +1421,7 @@ button.notification-row:hover {
     border: 0;
     padding: 8px;
     gap: 6px;
-    font-size: 12px;
+    font-size: var(--text-xs);
   }
   .balance-button small {
     display: none;
@@ -1426,11 +1434,11 @@ button.notification-row:hover {
     align-items: center;
   }
   .page-heading h1 {
-    font-size: 30px;
+    font-size: var(--text-4xl);
     margin-bottom: 7px;
   }
   .page-heading p {
-    font-size: 13px;
+    font-size: var(--text-sm);
     line-height: 1.6;
     max-width: 29ch;
   }
@@ -1455,16 +1463,16 @@ button.notification-row:hover {
     gap: 16px;
   }
   .featured-market h2 {
-    font-size: 21px;
+    font-size: var(--text-2xl);
     letter-spacing: -0.6px;
     margin: 17px 0 20px;
   }
   .feature-kicker {
-    font-size: 11px;
+    font-size: var(--text-2xs);
     gap: 6px;
   }
   .feature-kicker > span:last-child {
-    font-size: 10px;
+    font-size: var(--text-3xs);
     padding: 4px 7px;
   }
   .feature-art {
@@ -1474,13 +1482,13 @@ button.notification-row:hover {
     letter-spacing: -2px;
   }
   .feature-art .feature-probability small {
-    font-size: 10px;
+    font-size: var(--text-3xs);
   }
   .feature-bottom > span:last-child {
     display: none;
   }
   .feature-bottom > span:first-child {
-    font-size: 11px;
+    font-size: var(--text-2xs);
     gap: 7px;
   }
   .market-radar {
@@ -1490,17 +1498,17 @@ button.notification-row:hover {
     padding-top: 12px;
   }
   .market-pulse strong {
-    font-size: 20px;
+    font-size: var(--text-xl);
   }
   .market-pulse small {
-    font-size: 10px;
+    font-size: var(--text-3xs);
   }
   .market-toolbar {
     gap: 18px;
     margin-bottom: 17px;
   }
   .section-title h2 {
-    font-size: 19px;
+    font-size: var(--text-xl);
   }
   .market-controls {
     width: 100%;
@@ -1513,7 +1521,7 @@ button.notification-row:hover {
   .search-field input {
     width: 100%;
     min-width: 0;
-    font-size: 14px;
+    font-size: var(--text-base);
   }
   .sort-field .custom-select {
     min-width: 130px;
@@ -1523,7 +1531,7 @@ button.notification-row:hover {
   }
   .category-tabs button {
     min-height: 40px;
-    font-size: 12px;
+    font-size: var(--text-xs);
     padding: 9px 13px;
   }
   .market-grid {
@@ -1541,7 +1549,7 @@ button.notification-row:hover {
     margin-bottom: 14px;
   }
   .market-card h3 {
-    font-size: 16px;
+    font-size: var(--text-md);
     min-height: 0;
     margin-bottom: 18px;
     max-width: none;
@@ -1549,10 +1557,10 @@ button.notification-row:hover {
   .market-symbol {
     width: 34px;
     height: 34px;
-    font-size: 22px;
+    font-size: var(--text-2xl);
   }
   .market-probability > strong {
-    font-size: 32px;
+    font-size: var(--text-4xl);
   }
   .market-probability {
     flex-direction: row;
@@ -1569,7 +1577,7 @@ button.notification-row:hover {
     display: inline-flex;
   }
   .market-probability > span {
-    font-size: 11px;
+    font-size: var(--text-2xs);
   }
   .probability-track {
     display: block;
@@ -1581,7 +1589,7 @@ button.notification-row:hover {
     display: flex;
     justify-content: space-between;
     border-top: 1px solid var(--border);
-    font-size: 11px;
+    font-size: var(--text-2xs);
     padding: 14px 0;
     margin-top: 16px;
   }
@@ -1589,7 +1597,7 @@ button.notification-row:hover {
     padding: 21px 18px;
   }
   .detail-title h1 {
-    font-size: 23px;
+    font-size: var(--text-3xl);
     letter-spacing: -0.6px;
   }
   .trade-panel {
@@ -1598,7 +1606,7 @@ button.notification-row:hover {
   .text-input,
   textarea,
   .shares-input input {
-    font-size: 16px;
+    font-size: var(--text-md);
   }
   .mobile-dock,
   [data-theme="dark"] .mobile-dock {
@@ -1648,7 +1656,7 @@ button.notification-row:hover {
   }
   .footer {
     margin: auto 20px 0;
-    font-size: 10px;
+    font-size: var(--text-3xs);
   }
   .notification-panel {
     right: 12px;
@@ -1662,7 +1670,7 @@ button.notification-row:hover {
     min-height: 78px;
   }
   .landing .brand {
-    font-size: 20px;
+    font-size: var(--text-xl);
   }
   .landing .brand > svg {
     width: 27px;
@@ -1672,7 +1680,7 @@ button.notification-row:hover {
     gap: 13px;
   }
   .landing-nav a {
-    font-size: 12px;
+    font-size: var(--text-xs);
   }
   .landing > main {
     padding: 52px 0 0;
@@ -1682,7 +1690,7 @@ button.notification-row:hover {
     margin: 24px 0 20px;
   }
   .landing-copy > p {
-    font-size: 15px;
+    font-size: var(--text-base);
     line-height: 1.7;
     max-width: 34ch;
   }
@@ -1698,10 +1706,10 @@ button.notification-row:hover {
   }
   .landing-actions .primary-button {
     min-height: 48px;
-    font-size: 13px;
+    font-size: var(--text-sm);
   }
   .landing-copy > .landing-disclaimer {
-    font-size: 10px;
+    font-size: var(--text-3xs);
   }
   .product-preview {
     grid-template-columns: 1fr;
@@ -1716,7 +1724,7 @@ button.notification-row:hover {
   }
   .preview-topline {
     padding-bottom: 22px;
-    font-size: 10px;
+    font-size: var(--text-3xs);
   }
   .preview-heading {
     align-items: flex-start;
@@ -1725,7 +1733,7 @@ button.notification-row:hover {
     margin-bottom: 17px;
   }
   .preview-heading h2 {
-    font-size: 22px;
+    font-size: var(--text-2xl);
   }
   .preview-dashboard {
     grid-template-columns: 1fr;
@@ -1734,7 +1742,7 @@ button.notification-row:hover {
     padding: 18px;
   }
   .landing-preview h3 {
-    font-size: 17px;
+    font-size: var(--text-lg);
   }
   .landing-preview-number {
     font-size: 40px;
@@ -1758,17 +1766,17 @@ button.notification-row:hover {
     margin-bottom: 4px;
   }
   .preview-market-list strong {
-    font-size: 11px;
+    font-size: var(--text-2xs);
   }
   .landing-platforms {
     padding: 42px 0;
     gap: 22px;
   }
   .landing-platforms h2 {
-    font-size: 25px;
+    font-size: var(--text-3xl);
   }
   .landing-platforms p {
-    font-size: 13px;
+    font-size: var(--text-sm);
   }
   .landing-downloads {
     flex-direction: column;
@@ -1778,7 +1786,7 @@ button.notification-row:hover {
   .landing-downloads .secondary-button {
     min-height: 48px;
     width: 100%;
-    font-size: 12px;
+    font-size: var(--text-xs);
   }
   .landing-features {
     grid-template-columns: 1fr 1fr;
@@ -1786,11 +1794,11 @@ button.notification-row:hover {
     padding: 35px 0;
   }
   .landing-features h3 {
-    font-size: 13px;
+    font-size: var(--text-sm);
     line-height: 1.5;
   }
   .landing-features p {
-    font-size: 12px;
+    font-size: var(--text-xs);
     line-height: 1.7;
   }
   .landing-features svg {
@@ -1800,7 +1808,7 @@ button.notification-row:hover {
     padding: 22px 0;
     align-items: flex-start;
     flex-direction: column;
-    font-size: 10px;
+    font-size: var(--text-3xs);
     gap: 12px;
   }
 }
@@ -1814,7 +1822,7 @@ button.notification-row:hover {
     padding-right: 12px;
   }
   .mobile-brand {
-    font-size: 16px;
+    font-size: var(--text-md);
     gap: 6px;
   }
   .featured-market {
@@ -1826,7 +1834,7 @@ button.notification-row:hover {
     letter-spacing: -1.5px;
   }
   .featured-market h2 {
-    font-size: 19px;
+    font-size: var(--text-xl);
   }
   .landing {
     padding: 0 18px;
@@ -2158,12 +2166,12 @@ button.notification-row:hover {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: 15px;
+    font-size: var(--text-base);
     font-weight: 600;
   }
   .create-copy small {
     color: var(--muted);
-    font-size: 12px;
+    font-size: var(--text-xs);
   }
   .create-chevron {
     color: var(--muted);
@@ -2174,4 +2182,399 @@ button.notification-row:hover {
 .page-heading h1 .count-pill {
   margin-left: 10px;
   vertical-align: middle;
+}
+
+/* Numbers line up in columns everywhere they change or sit in lists. */
+:is(
+    .balance-button,
+    .market-probability,
+    .binary-prices,
+    .feature-probability,
+    .rank-badge,
+    .row-meta,
+    .count-pill,
+    .notification-badge,
+    table,
+    time
+  ) {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Page titles stay on one line at every width; long ones ellipsize. */
+.page-heading > :first-child {
+  min-width: 0;
+}
+.page-heading h1 {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Help disclosures ("?" + label): icon centred on the label's first line,
+   one size, one gap, the whole row is the 44px hit area. */
+.review-rule summary,
+.valuation-note summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap);
+  list-style: none;
+}
+.review-rule summary::-webkit-details-marker,
+.valuation-note summary::-webkit-details-marker {
+  display: none;
+}
+.review-rule summary svg,
+.valuation-note summary svg {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  vertical-align: 0;
+  color: var(--muted);
+}
+.review-rule summary::after,
+.valuation-note summary::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin: -3px 4px 0 auto;
+  border-right: 1.5px solid var(--muted);
+  border-bottom: 1.5px solid var(--muted);
+  transform: rotate(45deg);
+  transition: transform 0.2s var(--spring, ease);
+}
+.review-rule[open] summary::after,
+.valuation-note[open] summary::after {
+  margin-top: 3px;
+  transform: rotate(-135deg);
+}
+.review-rule {
+  padding: var(--space-1) var(--space-4) var(--space-1);
+}
+.review-rule[open] {
+  padding-bottom: var(--space-4);
+}
+.review-rule p {
+  margin-top: var(--space-1);
+}
+/* Header help icon: same box as the bell next to it, glyph centred.
+   (Phones hide it, styles.css; About is reached from Settings there.) */
+.top-actions .help-button {
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+/* Phones: compact, iOS-like density. Unlayered and last, so it settles the
+   earlier phone rules in styles.css and above. */
+@media (max-width: 760px), (pointer: coarse) and (max-width: 1024px) {
+  .topbar {
+    height: auto;
+    min-height: 56px;
+    padding: max(6px, env(safe-area-inset-top))
+      max(var(--space-4), env(safe-area-inset-right)) 6px
+      max(var(--space-4), env(safe-area-inset-left));
+  }
+  /* The page ends one normal margin above the dock (68px + safe area). */
+  main {
+    min-height: calc(100dvh - 56px);
+    padding-bottom: calc(68px + env(safe-area-inset-bottom) + var(--space-4));
+  }
+  .mobile-brand {
+    font-size: var(--text-lg);
+  }
+  .mobile-brand svg {
+    width: 26px;
+    height: 26px;
+  }
+  .balance-button {
+    font-size: var(--text-sm);
+  }
+  .page {
+    padding: var(--space-4) max(var(--space-4), env(safe-area-inset-right))
+      var(--space-2) max(var(--space-4), env(safe-area-inset-left));
+  }
+  .page-heading {
+    margin-bottom: var(--space-5);
+    gap: var(--space-3);
+  }
+  .page-heading h1 {
+    font-size: var(--text-4xl);
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    margin-bottom: var(--space-1);
+  }
+  .page-heading p {
+    font-size: var(--text-sm);
+    line-height: 1.45;
+  }
+  .search-field {
+    min-height: var(--tap);
+    padding: 0 var(--space-3);
+  }
+  .market-grid {
+    gap: var(--space-3);
+  }
+  .market-card {
+    padding: var(--space-4) var(--space-4) 0;
+    border-radius: var(--radius-card);
+  }
+  .market-card-top {
+    margin-bottom: var(--space-3);
+  }
+  .market-card h3 {
+    font-size: var(--text-md);
+    line-height: 1.35;
+    margin-bottom: var(--space-3);
+  }
+  .market-symbol {
+    width: 30px;
+    height: 30px;
+    font-size: var(--text-lg);
+  }
+  .market-probability > strong {
+    font-size: var(--text-3xl);
+  }
+  .market-card-footer {
+    padding: var(--space-3) 0;
+    margin-top: var(--space-3);
+  }
+  .featured-market {
+    padding: var(--space-5) var(--space-4);
+    border-radius: var(--radius-card);
+  }
+  .market-detail,
+  .trade-panel {
+    padding: var(--space-4);
+    border-radius: var(--radius-card);
+  }
+  .detail-title h1 {
+    font-size: var(--text-2xl);
+    line-height: 1.3;
+    letter-spacing: -0.02em;
+  }
+  .mobile-dock button span:not([class]) {
+    font-size: var(--text-3xs);
+  }
+}
+
+/* iOS segmented controls: Markets categories (scrolls sideways) and the
+   Leaderboard boards (equal widths). The motion pill (.tab-selection) is the
+   raised white segment. */
+:is(.explorer, .leaderboard) > .category-tabs,
+[data-theme="dark"] :is(.explorer, .leaderboard) > .category-tabs {
+  gap: 2px;
+  padding: 2px;
+  border-radius: 10px;
+  background: var(--segment-track, #7676801f);
+}
+.explorer > .category-tabs {
+  width: fit-content;
+  max-width: 100%;
+}
+[data-theme="dark"] :is(.explorer, .leaderboard) > .category-tabs {
+  --segment-track: #7676803d;
+  --segment-on: #636366;
+}
+:is(.explorer, .leaderboard) > .category-tabs button,
+[data-theme="dark"] :is(.explorer, .leaderboard) > .category-tabs button {
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+:is(.explorer, .leaderboard) > .category-tabs button:hover {
+  background: transparent;
+}
+:is(.explorer, .leaderboard) > .category-tabs button.selected,
+[data-theme="dark"] :is(.explorer, .leaderboard) > .category-tabs button.selected {
+  background: transparent;
+  color: var(--ink);
+  font-weight: 600;
+}
+:is(.explorer, .leaderboard) > .category-tabs .tab-selection {
+  background: var(--segment-on, #fff);
+  box-shadow:
+    0 3px 8px #0000001f,
+    0 1px 1px #0000000a;
+}
+.leaderboard > .category-tabs {
+  display: flex;
+  width: 100%;
+  max-width: 480px;
+}
+.leaderboard > .category-tabs button {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 var(--space-2);
+}
+
+/* Leaderboard: one inset grouped list; rank, name over detail, value right. */
+.leaderboard .rank-list,
+[data-theme="dark"] .leaderboard .rank-list {
+  --rank-inset: calc(var(--space-4) + 32px + var(--space-3));
+  margin-top: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+.leaderboard .rank-list .activity-row,
+[data-theme="dark"] .leaderboard .rank-list .activity-row {
+  gap: var(--space-3);
+  min-height: 56px;
+  padding: 10px var(--space-4);
+  border-bottom: 0;
+}
+.leaderboard .rank-list .activity-row + .activity-row::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: var(--rank-inset);
+  right: 0;
+  border-top: 1px solid var(--border);
+}
+.leaderboard .rank-list .rank-badge {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: var(--text-sm);
+}
+.leaderboard .rank-list .activity-row > div {
+  flex: 1;
+  gap: 2px;
+}
+.leaderboard .rank-list .activity-row > div > strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: var(--text-base);
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.leaderboard .rank-list .activity-row > div > span {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.leaderboard .rank-list .activity-row > strong {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+/* One notice system: compact, rounded, tinted, small leading icon, no heavy
+   borders. Errors use .form-error / .error-banner (role=alert); add
+   .notice-warning, .notice-success or .notice-info to change the tone.
+   .backend-connection-notice is the info tone with its own progress bar. */
+:root {
+  --notice-error-bg: #ff3b3012;
+  --notice-error-ink: #c4291f;
+  --notice-warning-bg: #ff9f0a1a;
+  --notice-warning-ink: #8f5300;
+  --notice-success-bg: #34c7591a;
+  --notice-success-ink: #1c7a3a;
+  --notice-info-bg: var(--subtle);
+  --notice-info-ink: var(--ink);
+}
+[data-theme="dark"] {
+  --notice-error-bg: #ff453a1f;
+  --notice-error-ink: #ff9c94;
+  --notice-warning-bg: #ffd60a1a;
+  --notice-warning-ink: #ffd27a;
+  --notice-success-bg: #30d1581f;
+  --notice-success-ink: #7ee2a0;
+}
+.form-error,
+.error-banner,
+.backend-connection-notice,
+.notice-info,
+[data-theme="dark"] :is(.form-error, .error-banner) {
+  --notice-bg: var(--notice-error-bg);
+  --notice-ink: var(--notice-error-ink);
+  --notice-glyph: "!";
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--notice-bg);
+  color: var(--notice-ink);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: 1.4;
+  box-shadow: none;
+}
+.form-error::before,
+.error-banner::before,
+.notice-info::before {
+  content: var(--notice-glyph);
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  border-radius: 50%;
+  background: var(--notice-ink);
+  color: var(--surface);
+  font-size: var(--text-3xs);
+  font-weight: 800;
+  line-height: 1;
+}
+.form-error > p,
+.error-banner > span,
+.backend-connection-notice p {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: inherit;
+  line-height: inherit;
+}
+.form-error .text-button,
+.error-banner button,
+[data-theme="dark"] .error-banner button {
+  align-self: center;
+  min-height: 32px;
+  margin: -6px -4px -6px 0;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  font-weight: 650;
+}
+.inline-error {
+  align-items: center;
+}
+.form-error.notice-warning {
+  --notice-bg: var(--notice-warning-bg);
+  --notice-ink: var(--notice-warning-ink);
+}
+.form-error.notice-success,
+.notice-success {
+  --notice-bg: var(--notice-success-bg);
+  --notice-ink: var(--notice-success-ink);
+  --notice-glyph: "✓";
+}
+.notice-info,
+.backend-connection-notice {
+  --notice-bg: var(--notice-info-bg);
+  --notice-ink: var(--notice-info-ink);
+  --notice-glyph: "i";
+}
+.backend-connection-notice {
+  align-items: center;
+  margin: var(--space-3) var(--space-4) 0;
+}
+.error-banner {
+  align-items: center;
+  margin: var(--space-3) var(--space-4) 0;
+}
+.leaderboard-help {
+  margin-top: var(--space-4);
 }

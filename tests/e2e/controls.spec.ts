@@ -6,7 +6,6 @@ test("all discovery filters, sorts and navigation controls work", async ({
 }) => {
   test.setTimeout(60000);
   await page.goto("/markets");
-  await expect(page.locator(".market-card")).toHaveCount(6);
   const markets = (await api<{ items: unknown[] }>(page, "/markets")).body
     .items as {
     title: string;
@@ -15,6 +14,11 @@ test("all discovery filters, sorts and navigation controls work", async ({
     volumeMicros: number;
     closesAt: string;
   }[];
+  // One continuous list: every market shows, with no pages to step through.
+  await expect(page.locator(".market-card")).toHaveCount(markets.length);
+  await expect(
+    page.getByRole("navigation", { name: "Market pages" }),
+  ).toHaveCount(0);
   for (const category of [
     "Economy",
     "Technology",
@@ -52,18 +56,23 @@ test("all discovery filters, sorts and navigation controls work", async ({
     await expect(page.locator(".market-card h3")).toHaveText(
       [...markets]
         .sort(compare)
-        .slice(0, 6)
         .map((market) => market.title),
     );
   }
   await page
     .getByRole("button", { name: "Draft a market", exact: true })
     .click();
-  await expect(page.locator(".route-surface:not([inert]) .page h1")).toHaveText("Draft studio");
+  await expect(page.locator(".route-surface:not([inert]) .page h1")).toHaveText(
+    "Draft studio",
+  );
   await page.getByRole("button", { name: "Peakcast home" }).click();
-  await expect(page.locator(".route-surface:not([inert]) .page h1")).toHaveText("Markets");
+  await expect(page.locator(".route-surface:not([inert]) .page h1")).toHaveText(
+    "Markets",
+  );
   await page.locator(".balance-button").click();
-  await expect(page.locator(".route-surface:not([inert]) .page h1")).toHaveText("Your portfolio");
+  await expect(page.locator(".route-surface:not([inert]) .page h1")).toHaveText(
+    "Your portfolio",
+  );
   await page
     .getByRole("button", { name: "Trade activity", exact: true })
     .click();
@@ -75,7 +84,9 @@ test("all discovery filters, sorts and navigation controls work", async ({
     .getByRole("button", { name: "Explore markets", exact: true })
     .click();
   await page.locator(".featured-market").click();
-  await expect(page.locator(".route-surface:not([inert]) .page h1")).toHaveText(markets[0].title);
+  await expect(page.locator(".route-surface:not([inert]) .page h1")).toHaveText(
+    markets[0].title,
+  );
   await page
     .getByRole("button", { name: "Rules & source", exact: true })
     .click();
@@ -94,8 +105,13 @@ test("all discovery filters, sorts and navigation controls work", async ({
   await expect(popup).toHaveURL(sourceUrl!);
   await popup.close();
   await page.getByRole("button", { name: "All markets", exact: true }).click();
-  await page.getByRole("button", { name: "About this app" }).click();
-  await expect(page.locator(".route-surface:not([inert]) .page h1")).toHaveText("About Peakcast");
+  // About lives in Settings now; there is no page-end footer.
+  await expect(page.locator("footer.footer")).toHaveCount(0);
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("link", { name: "About Peakcast" }).click();
+  await expect(page.locator(".route-surface:not([inert]) .page h1")).toHaveText(
+    "About Peakcast",
+  );
 });
 
 test("a buy can spend the available balance without requiring an unaffordable slippage buffer", async ({

@@ -1,0 +1,694 @@
+/* Portfolio: a phone-first, wallet-like layout. Sizes are in rem/em so the
+   global type scale applies here too. Every selector starts with `.page.pf`
+   so it wins over the shared row and card rules in styles.css and design.css
+   (this file loads before them). Colours come from the theme tokens, so dark
+   mode needs almost nothing of its own. */
+
+.page.pf {
+  --pf-radius: 16px;
+  --pf-gap: 12px;
+  --pf-pad: 16px;
+  max-width: 1180px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Header: one line, never wraps. */
+.page.pf .pf-header {
+  margin: 0 0 18px;
+  min-width: 0;
+}
+.page.pf .pf-header h1 {
+  margin: 0;
+  font-size: var(--text-4xl, 30px);
+  font-weight: 680;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.page.pf .pf-header p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: var(--text-base, 14px);
+  line-height: 1.5;
+}
+
+/* Shared card surface. */
+.page.pf :is(.pf-summary, .pf-card, .pf-list, .bonus-card) {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--pf-radius);
+  box-shadow: var(--glass-shadow, none);
+}
+
+/* Small grey label tag ("Demo credits", streak). */
+.page.pf .pf-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--subtle);
+  color: var(--muted);
+  font-size: var(--text-2xs, 11px);
+  font-weight: 560;
+  letter-spacing: 0;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.page.pf .pf-tag.streak {
+  color: #92600a;
+}
+[data-theme="dark"] .page.pf .pf-tag.streak {
+  color: #f2c46b;
+}
+
+/* ---------- Daily bonus: a slim row ---------- */
+.page.pf .pf-bonus-slot {
+  /* Clip while collapsing, but leave room for the card's shadow. The card's
+     margin stays inside the slot, so collapsing the height closes the gap too. */
+  overflow: clip;
+  overflow-clip-margin: 6px;
+  display: flow-root;
+}
+.page.pf .bonus-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px 12px;
+  margin: 0 0 var(--pf-gap);
+  padding: 10px 10px 10px 12px;
+}
+.page.pf .bonus-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 0;
+  background: #fff3df;
+  color: #a3600b;
+}
+[data-theme="dark"] .page.pf .bonus-icon {
+  background: #3a2a10;
+  color: #f2c46b;
+}
+.page.pf .bonus-copy {
+  min-width: 0;
+  flex: none;
+}
+.page.pf .bonus-copy h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  margin: 0;
+  font-size: var(--text-base, 14px);
+  font-weight: 640;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+.page.pf .bonus-copy h2 .streak-pill {
+  padding: 1px 6px;
+  font-size: var(--text-2xs, 11px);
+}
+.page.pf .bonus-copy p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: var(--text-xs, 12px);
+  line-height: 1.35;
+}
+.page.pf .bonus-card .pf-claim,
+.page.pf .bonus-claimed {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-size: var(--text-sm, 13px);
+  font-weight: 620;
+  letter-spacing: -0.01em;
+  width: auto;
+}
+.page.pf .bonus-claimed {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  color: var(--yes);
+}
+.page.pf .bonus-card .form-error {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+/* ---------- Summary card ---------- */
+.page.pf .pf-summary {
+  padding: var(--pf-pad);
+  margin-bottom: 18px;
+}
+.page.pf .pf-summary-top {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.page.pf .pf-summary-total {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.page.pf .pf-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: var(--text-sm, 13px);
+  font-weight: 520;
+}
+.page.pf .pf-total {
+  font-size: max(var(--text-4xl, 32px), 32px);
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.page.pf .pf-pnl {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: var(--text-base, 14px);
+  font-weight: 620;
+}
+.page.pf .pf-pnl-label {
+  color: var(--muted);
+  font-size: var(--text-xs, 12px);
+  font-weight: 480;
+}
+.page.pf .pf-mini {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.page.pf .pf-mini > div {
+  min-width: 0;
+}
+.page.pf .pf-mini > div + div {
+  padding-left: 14px;
+  border-left: 1px solid var(--border);
+}
+.page.pf .pf-mini dt {
+  color: var(--muted);
+  font-size: var(--text-xs, 12px);
+  margin-bottom: 2px;
+}
+.page.pf .pf-mini dd {
+  margin: 0;
+  font-size: var(--text-lg, 17px);
+  font-weight: 610;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.page.pf .pf-note {
+  margin-top: 10px;
+  font-size: var(--text-xs, 12px);
+  color: var(--muted);
+}
+.page.pf .pf-note summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  cursor: pointer;
+  list-style: none;
+}
+.page.pf .pf-note summary::-webkit-details-marker {
+  display: none;
+}
+.page.pf .pf-note p {
+  margin: 2px 0 0;
+  line-height: 1.5;
+}
+.page.pf .pf-bonus-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--subtle);
+  color: var(--muted);
+  font-size: var(--text-xs, 12px);
+  line-height: 1.35;
+}
+.page.pf .pf-bonus-note > svg {
+  color: var(--yes);
+  flex: none;
+}
+.page.pf .pf-bonus-note > span:not(.pf-tag) {
+  flex: 1 1 12em;
+  min-width: 0;
+}
+.page.pf .pf-bonus-note .pf-tag {
+  background: var(--surface);
+}
+
+/* ---------- Segmented control ---------- */
+.page.pf .pf-segments {
+  display: flex;
+  gap: 0;
+  padding: 3px;
+  margin-bottom: var(--pf-gap);
+  border-radius: 12px;
+  background: var(--subtle);
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+.page.pf .pf-segments::-webkit-scrollbar {
+  display: none;
+}
+.page.pf .pf-segments button {
+  position: relative;
+  isolation: isolate;
+  flex: 1 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 34px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--text-sm, 13px);
+  font-weight: 560;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  scroll-snap-align: center;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.page.pf .pf-segments button.selected {
+  color: var(--ink);
+}
+.page.pf .pf-segment-pill {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--surface);
+  box-shadow:
+    0 1px 3px #0000001a,
+    0 0 0 0.5px #0000000a;
+  pointer-events: none;
+}
+[data-theme="dark"] .page.pf .pf-segment-pill {
+  background: #3a3a3e;
+  box-shadow: none;
+}
+.page.pf .pf-segment-count {
+  min-width: 1.45em;
+  padding: 0 3px;
+  border-radius: 99px;
+  background: var(--border);
+  color: var(--ink);
+  font-size: var(--text-2xs, 11px);
+  font-weight: 620;
+  line-height: 1.45em;
+  text-align: center;
+}
+@media (forced-colors: active) {
+  .page.pf .pf-segments button.selected {
+    outline: 1px solid Highlight;
+  }
+}
+
+/* ---------- Lists ---------- */
+.page.pf .pf-list {
+  position: relative;
+  overflow: hidden;
+  margin: 0 0 var(--pf-gap);
+  padding: 0;
+}
+.page.pf .pf-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--text-base, 14px);
+  text-align: left;
+}
+.page.pf .pf-row:last-child {
+  border-bottom: 0;
+}
+.page.pf button.pf-row {
+  cursor: pointer;
+}
+.page.pf button.pf-row:disabled {
+  cursor: default;
+  opacity: 1;
+}
+.page.pf button.pf-row:hover:not(:disabled) {
+  background: var(--subtle);
+}
+.page.pf .pf-row > svg {
+  display: none;
+}
+.page.pf .pf-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.page.pf .pf-row strong {
+  font-size: var(--text-base, 14px);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+.page.pf .pf-row-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.page.pf .pf-row span.pf-row-meta,
+.page.pf .pf-row-end > span {
+  color: var(--muted);
+  font-size: var(--text-xs, 12px);
+  line-height: 1.35;
+}
+.page.pf .pf-one-line {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.page.pf .pf-row-end {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  text-align: right;
+  white-space: nowrap;
+}
+.page.pf .pf-row-end > span.positive,
+.page.pf .pf-row-end > span.negative {
+  font-weight: 600;
+}
+/* Watchlist rows have no right column: let the text use the space. */
+.page.pf .pf-row:not(:has(.pf-row-end)) {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+/* YES / NO / % chip, fixed width so titles line up. */
+.page.pf .pf-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  height: 26px;
+  padding: 0 7px;
+  border-radius: 8px;
+  background: var(--subtle);
+  color: var(--ink);
+  font-size: var(--text-2xs, 11px);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.page.pf .pf-chip.yes {
+  color: var(--yes);
+  background: color-mix(in srgb, var(--yes) 13%, transparent);
+}
+.page.pf .pf-chip.no {
+  color: var(--no);
+  background: color-mix(in srgb, var(--no) 13%, transparent);
+}
+.page.pf .pf-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--subtle);
+  color: var(--muted);
+}
+.page.pf .pf-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--subtle);
+  color: var(--ink);
+  font-size: var(--text-xs, 12px);
+  font-weight: 600;
+  cursor: pointer;
+}
+.page.pf .pf-link:hover {
+  background: var(--border);
+}
+.page.pf .pf-error {
+  margin: 0 0 var(--pf-gap);
+}
+
+/* Statement header inside Activity. */
+.page.pf .pf-statement {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 18px 2px 8px;
+}
+.page.pf .pf-statement h2 {
+  margin: 0;
+  font-size: var(--text-base, 14px);
+  font-weight: 640;
+}
+.page.pf .pf-statement p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: var(--text-xs, 12px);
+  line-height: 1.4;
+}
+
+/* Empty states: quiet, inside the flow. */
+.page.pf .empty-state {
+  margin: 0 0 var(--pf-gap);
+  padding: 28px 20px;
+  border-radius: var(--pf-radius);
+  text-align: center;
+}
+.page.pf .empty-state > svg {
+  width: 26px;
+  height: 26px;
+  color: var(--muted);
+}
+.page.pf .empty-state h2 {
+  margin: 10px 0 4px;
+  font-size: var(--text-md, 16px);
+  font-weight: 640;
+  letter-spacing: -0.01em;
+}
+.page.pf .empty-state p {
+  margin: 0 auto;
+  max-width: 34ch;
+  color: var(--muted);
+  font-size: var(--text-sm, 13px);
+  line-height: 1.5;
+}
+.page.pf .empty-state .primary-button {
+  margin-top: 14px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: var(--text-sm, 13px);
+}
+
+/* ---------- Insights: trading record and accuracy, as compact lists ---------- */
+.page.pf .pf-insights {
+  display: grid;
+  gap: var(--pf-gap);
+  align-content: start;
+  margin-top: 6px;
+}
+.page.pf .pf-card {
+  margin: 0;
+  padding: 14px var(--pf-pad) 6px;
+}
+.page.pf .pf-card h2 {
+  margin: 0 0 4px;
+  font-size: var(--text-base, 14px);
+  font-weight: 640;
+  letter-spacing: -0.01em;
+}
+.page.pf .accuracy-intro {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: var(--text-xs, 12px);
+  line-height: 1.45;
+}
+.page.pf .pf-stats {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+.page.pf .pf-stat {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+.page.pf .pf-stat:last-child {
+  border-bottom: 0;
+}
+.page.pf .pf-stat > span {
+  font-size: var(--text-sm, 13px);
+  color: var(--ink);
+}
+.page.pf .pf-stat > strong {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  font-size: var(--text-base, 14px);
+  font-weight: 620;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.page.pf .pf-stat > small {
+  grid-column: 1;
+  color: var(--muted);
+  font-size: var(--text-2xs, 11px);
+  line-height: 1.35;
+}
+.page.pf .accuracy-empty,
+.page.pf .accuracy .form-error {
+  margin: 6px 0 10px;
+  padding: 0;
+  color: var(--muted);
+  font-size: var(--text-xs, 12px);
+  line-height: 1.45;
+}
+.page.pf .reliability {
+  margin: 8px 0 10px;
+  padding: 0;
+  max-width: 260px;
+}
+
+/* ---------- Wider screens ---------- */
+@media (min-width: 600px) {
+  .page.pf .pf-summary-top {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  .page.pf .pf-mini {
+    border-top: 0;
+    padding-top: 0;
+    gap: 0;
+    min-width: 260px;
+  }
+  .page.pf .pf-mini > div {
+    padding-left: 18px;
+    border-left: 1px solid var(--border);
+  }
+  .page.pf .pf-summary {
+    padding: 20px 22px;
+  }
+  .page.pf .pf-total {
+    font-size: calc(var(--text-4xl, 34px) * 1.15);
+  }
+  .page.pf .pf-segments button {
+    flex: 1 1 0;
+  }
+}
+@media (min-width: 1100px) {
+  .page.pf .pf-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 20px;
+    align-items: start;
+  }
+  .page.pf .pf-insights {
+    margin-top: 0;
+    position: sticky;
+    top: 20px;
+  }
+}
+
+/* Phones: tighter type, the subtitle steps aside. */
+@media (max-width: 599px) {
+  .page.pf .pf-header {
+    margin-bottom: 14px;
+  }
+  .page.pf .pf-header h1 {
+    font-size: var(--text-3xl, 24px);
+  }
+  .page.pf .pf-header p {
+    display: none;
+  }
+  .page.pf .pf-summary {
+    margin-bottom: 14px;
+  }
+}
+@media (max-width: 440px) {
+  .page.pf .pf-segments button {
+    font-size: var(--text-xs, 12px);
+    padding: 0 6px;
+  }
+}
+@media (max-width: 359px) {
+  .page.pf {
+    --pf-pad: 14px;
+  }
+  .page.pf .pf-header h1 {
+    font-size: var(--text-2xl, 21px);
+  }
+  .page.pf .pf-total {
+    font-size: 28px;
+  }
+  .page.pf .pf-row {
+    gap: 10px;
+    padding: 11px 12px;
+  }
+  .page.pf .pf-chip {
+    min-width: 38px;
+  }
+  .page.pf .bonus-card {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .page.pf .bonus-icon {
+    display: none;
+  }
+}
+
+/* The page ends at its last card: no trailing margins below it. */
+.page.pf > :last-child,
+.page.pf .pf-body > :last-child,
+.page.pf .pf-insights > :last-child,
+.page.pf .pf-main > :last-child {
+  margin-bottom: 0;
+}

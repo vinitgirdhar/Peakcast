@@ -157,3 +157,13 @@ export const test = base.extend<{ onboarded: boolean }>({
     await use(page);
   },
 });
+
+/** Markets shows every market in one list: waits until all of them are on screen. */
+export async function expectAllMarkets(page: Page): Promise<void> {
+  const total = await page.evaluate(
+    async () =>
+      ((await (await fetch("/api/v1/markets")).json()) as { items: unknown[] })
+        .items.length,
+  );
+  await expect(page.locator(".market-card")).toHaveCount(total);
+}

@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures.js";
+import { test, expect, expectAllMarkets } from "./fixtures.js";
 
 test.use({ onboarded: false });
 
@@ -16,7 +16,7 @@ test("first launch onboards, starts with 5,000 credits and keeps Playground on",
   await expect(start).toBeDisabled();
   await page.getByRole("checkbox", { name: /I agree/ }).check();
   await start.click();
-  await expect(page.locator(".market-card")).toHaveCount(6);
+  await expectAllMarkets(page);
   await expect(page.getByText("5,000.00").first()).toBeVisible();
 
   await page.goto("/settings");
@@ -67,9 +67,21 @@ test("the Android app skips the landing page and asks for a name before the intr
   await expect(
     page.getByRole("heading", { name: /Forecast the future/ }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Next" }).click();
-  await page.getByRole("button", { name: "Next" }).click();
-  await page.getByRole("button", { name: "Start with 5,000 credits" }).click();
-  await expect(page.locator(".market-card").first()).toBeVisible();
+  // Taps during a step change are ignored on purpose, so retry until each step lands.
+  for (const heading of [/Prices are probabilities/, /Start in Playground mode/])
+    await expect(async () => {
+      await page.getByRole("button", { name: /^(Next|Get started)/ }).click();
+      await expect(page.getByRole("heading", { name: heading })).toBeVisible({
+        timeout: 600,
+      });
+    }).toPass();
+  await expect(async () => {
+    await page
+      .getByRole("button", { name: "Start with 5,000 credits" })
+      .click({ timeout: 600 });
+    await expect(page.locator(".market-card").first()).toBeVisible({
+      timeout: 1500,
+    });
+  }).toPass();
   await expect(page.getByText("5,000.00").first()).toBeVisible();
 });

@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures.js";
+import { test, expect, expectAllMarkets } from "./fixtures.js";
 import { choose } from "./select.js";
 test("appearance persists between Settings, the app and short landing page", async ({
   page,
@@ -22,7 +22,7 @@ test("appearance persists between Settings, the app and short landing page", asy
   await page.getByRole("button", { name: "Continue on the web" }).click();
   await expect(page).toHaveURL(/\/markets$/);
   await expect(page.locator('filter[id^="lg-filter-"]')).toHaveCount(0);
-  await expect(page.locator(".market-card")).toHaveCount(6);
+  await expectAllMarkets(page);
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await page.getByRole("button", { name: "Light", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");

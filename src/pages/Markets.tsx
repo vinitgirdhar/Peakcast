@@ -3,8 +3,6 @@ import { useEffect, useState } from "react";
 import {
   ArrowRight,
   ArrowUpRight,
-  ChevronLeft,
-  ChevronRight,
   LayoutGrid,
   Plus,
   Search,
@@ -63,7 +61,6 @@ export function MarketExplorer({
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All markets");
   const [sort, setSort] = useState("featured");
-  const [page, setPage] = useState(1);
   const filtered = markets.filter(
     (market) =>
       (category === "All markets" || market.category === category) &&
@@ -99,8 +96,6 @@ export function MarketExplorer({
   useEffect(() => {
     if (markets.length) gridShown = true;
   }, [markets.length]);
-  const pages = Math.max(1, Math.ceil(ordered.length / 6));
-  const currentPage = Math.min(page, pages);
   return (
     <div className={embedded ? "explorer" : "page explorer"}>
       {!embedded && (
@@ -217,7 +212,6 @@ export function MarketExplorer({
               value={search}
               onChange={(event) => {
                 setSearch(event.target.value);
-                setPage(1);
               }}
             />
           </label>
@@ -228,7 +222,6 @@ export function MarketExplorer({
               value={sort}
               onChange={(value) => {
                 setSort(value);
-                setPage(1);
               }}
               options={[
                 { value: "featured", label: "Featured" },
@@ -254,7 +247,6 @@ export function MarketExplorer({
             onClick={(event) => {
               if (category !== item) haptic("selection");
               setCategory(item);
-              setPage(1);
               event.currentTarget.scrollIntoView({
                 block: "nearest",
                 inline: "nearest",
@@ -275,19 +267,18 @@ export function MarketExplorer({
       </div>
       {ordered.length ? (
         <motion.div className="market-grid">
-          {/* Filter, sort, search and paging: leaving cards fade out of flow while the rest glide to their new slots. */}
+          {/* Filter, sort and search: leaving cards fade out of flow while the rest glide to their new slots. */}
           <AnimatePresence mode="popLayout">
-            {ordered
-              .slice((currentPage - 1) * 6, currentPage * 6)
-              .map((market, index) => (
-                <MarketCard
-                  key={market.id}
-                  // The first launch cascades the cards; later visits and filtering fade them in together.
-                  index={stagger ? index : 0}
-                  market={market}
-                  onOpen={() => onOpen(market)}
-                />
-              ))}
+            {ordered.map((market, index) => (
+              <MarketCard
+                key={market.id}
+                // The first launch cascades the first cards (capped, so long
+                // lists stay cheap); later visits and filtering fade them in together.
+                index={stagger ? Math.min(index, 6) : 0}
+                market={market}
+                onOpen={() => onOpen(market)}
+              />
+            ))}
           </AnimatePresence>
         </motion.div>
       ) : (
@@ -301,7 +292,6 @@ export function MarketExplorer({
                 onClick={() => {
                   setSearch("");
                   setCategory("All markets");
-                  setPage(1);
                 }}
               >
                 Clear filters
@@ -309,29 +299,6 @@ export function MarketExplorer({
             }
           />
         </motion.div>
-      )}
-      {pages > 1 && (
-        <nav className="market-pagination" aria-label="Market pages">
-          <button
-            className="icon-button"
-            aria-label="Previous markets"
-            disabled={currentPage === 1}
-            onClick={() => setPage(currentPage - 1)}
-          >
-            <ChevronLeft size={19} />
-          </button>
-          <span aria-live="polite">
-            {currentPage} of {pages}
-          </span>
-          <button
-            className="icon-button"
-            aria-label="Next markets"
-            disabled={currentPage === pages}
-            onClick={() => setPage(currentPage + 1)}
-          >
-            <ChevronRight size={19} />
-          </button>
-        </nav>
       )}
     </div>
   );

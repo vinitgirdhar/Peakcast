@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { test, expect, api, mockApi, type Page } from "./fixtures.js";
+import { test, expect, api, mockApi, type Page, expectAllMarkets } from "./fixtures.js";
 import { choose } from "./select.js";
 
 // These journeys never create markets. The one real trade below moves a seeded
@@ -149,12 +149,11 @@ test("biggest movers sorts by absolute 24h change and labels each move", async (
     change24h: moves[index] ?? 0,
   }));
   await page.goto("/markets");
-  await expect(page.locator(".market-card")).toHaveCount(6);
+  await expectAllMarkets(page);
   await choose(page, "Sort markets", "movers");
   await expect(page.locator(".market-card h3")).toHaveText(
     [...served]
       .sort((a, b) => Math.abs(b.change24h) - Math.abs(a.change24h))
-      .slice(0, 6)
       .map((market) => market.title),
   );
   // Under half a point (and flat) shows no chip.
