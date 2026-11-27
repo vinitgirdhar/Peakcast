@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, type Variants } from "motion/react";
 import {
+  Blocks,
   Check,
   CircleHelp,
   LayoutGrid,
@@ -42,12 +43,16 @@ import { JoinWorkspace } from "./pages/JoinWorkspace.js";
 import { Onboarding, type OnboardingInput } from "./pages/Onboarding.js";
 import { Legal, legalPaths } from "./pages/Legal.js";
 import { TERMS_VERSION } from "../shared/legal.js";
+import { MicroHub } from "./micro/Hub.js";
+import { MicroHost } from "./micro/MicroHost.js";
+import { clearMicroData } from "./micro/storage.js";
 // About lives inside Settings (its "About this app" section links to /about).
 const navItems = [
   { path: "/markets", label: "Markets", icon: LayoutGrid },
   { path: "/portfolio", label: "Portfolio", icon: Wallet },
   { path: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { path: "/studio", label: "Draft studio", icon: Sparkles },
+  { path: "/apps", label: "Micro apps", icon: Blocks },
   { path: "/settings", label: "Settings", icon: SettingsIcon },
 ];
 // Shown only where the server offers workspaces (not in the Windows app).
@@ -56,8 +61,10 @@ const teamsNavItems = [
   { path: "/teams", label: "Teams", icon: Users },
   ...navItems.slice(4),
 ];
-// Phone tabs: the raised + in the middle replaces Draft studio (and Teams).
-const dockItems = navItems.filter((item) => item.path !== "/studio");
+// Phone tabs: the raised + in the middle opens Draft studio, Micro apps (and Teams).
+const dockItems = navItems.filter(
+  (item) => item.path !== "/studio" && item.path !== "/apps",
+);
 const workspaceRoute =
   /^\/teams\/([0-9a-f-]{36})(?:\/(leaderboard|members)|\/markets\/([^/]+)(\/rules)?)?$/;
 const storageKey = "peakcast.token.v1";
@@ -333,6 +340,7 @@ export function App() {
   const selected = markets.find((m) => m.id === marketId);
   const studio = path === "/studio" || path === "/studio/drafts";
   const about = path === "/about";
+  const micro = /^\/apps(?:\/([a-z0-9-]+))?$/.exec(path);
   // The marketing landing page is for the website; the Android app opens on markets.
   const landing = !isAndroidApp && (path === "/" || path === "/welcome");
   const teams = capabilities?.teams ?? false;
@@ -346,9 +354,11 @@ export function App() {
       ? "Draft studio"
       : about
         ? "Settings"
-        : teamsPage
-          ? "Teams"
-          : (nav.find((n) => n.path === path)?.label ?? "Page not found");
+        : micro
+          ? "Micro apps"
+          : teamsPage
+            ? "Teams"
+            : (nav.find((n) => n.path === path)?.label ?? "Page not found");
   async function finishOnboarding(input: OnboardingInput) {
     let current = token;
     // Reuse an account a failed earlier attempt already created.
@@ -363,6 +373,7 @@ export function App() {
   }
   function signedOut() {
     localStorage.removeItem(storageKey);
+    clearMicroData();
     setToken("");
     setPortfolio(null);
     setInbox(null);
@@ -861,6 +872,19 @@ export function App() {
                           shareOrigin={capabilities?.shareOrigin ?? null}
                         />
                       )}
+                      {micro &&
+                        (micro[1] ? (
+                          <MicroHost
+                            appId={micro[1]}
+                            client={client}
+                            markets={markets}
+                            portfolio={portfolio}
+                            navigate={navigate}
+                            onNotice={setNotice}
+                          />
+                        ) : (
+                          <MicroHub navigate={navigate} />
+                        ))}
                       {about && (
                         <About
                           canInstall={!!install}
@@ -871,6 +895,7 @@ export function App() {
                       {!marketId &&
                         !studio &&
                         !about &&
+                        !micro &&
                         !teamsPage &&
                         !nav.some((n) => n.path === path) && (
                           <EmptyState

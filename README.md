@@ -56,6 +56,14 @@ Music: “Happy Beats / Business Moves, Vol. 12” by Sascha Ende, [ende.app](ht
 
 Winning shares redeem for 1 credit, INVALID pays 0.5 on both sides, and every credit movement is written to a per-account ledger. Operator rulings for disputed and house markets exist in the code but are switched off in the apps, which have no operator.
 
+### Practise
+
+**Micro apps** (`/apps`): small forecasting tools that run on the device, open from the sidebar or the phone's create sheet, and keep their data locally ([plan](docs/plans/micro-apps.md)).
+
+- **Forecast journal**: log a probability for a market or your own question, update it over time, and see your Brier score, log score, calibration and skill against the crowd.
+- **Stake sizer**: fractional-Kelly sizing for practice credits, with fees, expected value and an on-device quote that checks whether the edge survives price impact. Educational only, never advice.
+- **Evidence updater**: Bayes' rule in log-odds form, starting from a market's price and adding evidence step by step, plus a converter between percent, decimal, American and fractional odds.
+
 ### Engage
 
 - Trade feed and discussion on every market; comments show which side the commenter holds.

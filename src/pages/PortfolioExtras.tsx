@@ -434,7 +434,11 @@ const SPAN = 155;
 const plotX = (value: number) => LEFT + value * SPAN;
 const plotY = (value: number) => TOP + (1 - value) * SPAN;
 
-function ReliabilityDiagram({ buckets }: { buckets: CalibrationBucket[] }) {
+export function ReliabilityDiagram({
+  buckets,
+}: {
+  buckets: CalibrationBucket[];
+}) {
   const points = buckets.flatMap((bucket) =>
     bucket.meanForecast === null || bucket.observedRate === null
       ? []

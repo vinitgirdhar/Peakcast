@@ -16,7 +16,14 @@ import {
   useVelocity,
   type Variants,
 } from "motion/react";
-import { ChevronRight, FilePen, Files, Plus, Users } from "lucide-react";
+import {
+  Blocks,
+  ChevronRight,
+  FilePen,
+  Files,
+  Plus,
+  Users,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { PeakcastClient } from "../shared/client.js";
 import { haptic } from "./haptics.js";
@@ -133,6 +140,12 @@ export function MobileDock({
       hint: "Review, edit or launch",
       icon: Files,
       count: drafts,
+    },
+    {
+      path: "/apps",
+      label: "Micro apps",
+      hint: "Journal, stake sizer, evidence updater",
+      icon: Blocks,
     },
     ...(teams
       ? [
@@ -367,9 +380,7 @@ function useDockGlass(
     // Appearing from nothing (e.g. from Draft studio) lands in place instead of gliding.
     place(measure()[selected], !shown.current);
     shown.current = true;
-    const observer = new ResizeObserver(() =>
-      place(measure()[selected], true),
-    );
+    const observer = new ResizeObserver(() => place(measure()[selected], true));
     if (nav.current) observer.observe(nav.current);
     return () => observer.disconnect();
   }, [selected, under, reduce]);

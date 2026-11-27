@@ -18,6 +18,7 @@ Opaque surfaces replace the previous SVG refraction effects. The third-party gla
 - Markets include a compact charcoal feature with live demo activity totals and an upcoming-deadlines list on larger screens. Totals come from actual market data; closed or expired markets are excluded from upcoming deadlines. The available balance stays in the header. Search and filtering cover the full list, with six results per page. Mobile cards retain outcome prices and deadlines.
 - Forecasts, rules, portfolios, leaderboards, studio, saved drafts, developer tools and settings share the same surfaces and controls. An unfinished trade survives switching between forecast and rules.
 - The landing hero offers web entry, Windows desktop download and Android download together. The page introduces the product through a clearly labeled illustrative workspace. Its example chart and probabilities are presentation content, not live market data.
+- Micro apps live at `/apps`: a hub of cards (one column on phones, two from 760px, three from 1100px) and one page per app with a back button, the app's name as the heading and a practice-credits footer. Each app loads lazily inside its own error boundary, so one failing app never takes down the shell. The hub sits in the sidebar and the phone's create sheet; the dock keeps four tabs.
 - Scrollbars are visually hidden across browser, PWA and native app content, while wheel, touch, keyboard and programmatic scrolling remain enabled.
 
 ## Motion and accessibility
